@@ -3,7 +3,7 @@ import TrialChoice from './TrialChoice';
 import './TrialChoice.css';
 
 function App() {
-  const [capturedText, setCapturedText] = useState<string>('identificar seu arquétipo de bruxa');
+  const [capturedText, setCapturedText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -14,13 +14,16 @@ function App() {
         const response = await fetch('/api/captured-text');
         const data = await response.json();
         
-        if (data.capturedText) {
+        if (data.capturedText && data.capturedText.trim()) {
           console.log('Texto recebido do servidor:', data.capturedText);
           setCapturedText(data.capturedText);
+        } else {
+          console.log('Nenhum texto capturado, usando fallback');
+          setCapturedText('identificar seu arquétipo de bruxa');
         }
       } catch (error) {
         console.error('Erro ao buscar texto capturado:', error);
-        // Mantém o fallback padrão
+        setCapturedText('identificar seu arquétipo de bruxa');
       } finally {
         setLoading(false);
       }
@@ -34,7 +37,7 @@ function App() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
+          <p className="text-gray-600">Capturando informações...</p>
         </div>
       </div>
     );

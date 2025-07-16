@@ -19,7 +19,7 @@ const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
 // Variável para armazenar o texto capturado
-let capturedBoldText = 'identificar seu arquétipo de bruxa'; // fallback padrão
+let capturedBoldText = '';
 
 // Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
@@ -42,6 +42,9 @@ app.get('/api/captured-text', (req, res) => {
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('=== INTERCEPTANDO TRIALCHOICE ===');
     console.log('URL acessada:', req.url);
+    
+    // RESET do texto capturado para garantir captura fresca
+    capturedBoldText = '';
     
     try {
         console.log('Fazendo requisição para capturar texto do <b>...');
@@ -74,18 +77,20 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                 console.log('✅ Texto capturado do <b> específico:', capturedBoldText);
             } else {
                 console.log('❌ Elemento <b> não encontrado no parágrafo específico');
+                capturedBoldText = ''; // Reset para tentar fallback
             }
         } else {
             console.log('❌ Parágrafo com classe sc-edafe909-6 pLaXn não encontrado');
+            capturedBoldText = ''; // Reset para tentar fallback
         }
 
         // Fallback: procura por qualquer <b> que contenha texto relacionado
-        if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa') {
+        if (!capturedBoldText) {
             console.log('Tentando fallback - procurando por qualquer <b> relevante...');
             $('b').each((i, el) => {
                 const text = $(el).text().trim();
                 console.log(`<b> encontrado [${i}]:`, text);
-                if (text.includes('arquétipo') || text.includes('bruxa') || text.includes('identificar') || text.length > 10) {
+                if (text.length > 5 && !text.includes('$') && !text.includes('€')) { // Qualquer texto relevante, exceto preços
                     capturedBoldText = text;
                     console.log('✅ Texto capturado via fallback:', capturedBoldText);
                     return false; // break
@@ -94,7 +99,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         }
 
         // Fallback final: procura em parágrafos que contenham "Ajudamos milhões"
-        if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa') {
+        if (!capturedBoldText) {
             console.log('Tentando fallback final - procurando em parágrafos com "Ajudamos milhões"...');
             $('p').each((i, el) => {
                 const paragraphText = $(el).text();
@@ -107,6 +112,12 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                     }
                 }
             });
+        }
+
+        // Fallback absoluto se nada foi encontrado
+        if (!capturedBoldText) {
+            capturedBoldText = 'identificar seu arquétipo de bruxa';
+            console.log('⚠️ Usando fallback absoluto:', capturedBoldText);
         }
 
         console.log('=== RESULTADO FINAL ===');

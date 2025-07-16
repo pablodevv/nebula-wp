@@ -33,9 +33,51 @@ app.use(fileUpload({
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Rota específica para a página customizada de trialChoice
-app.get('/pt/witch-power/trialChoice', (req, res) => {
-    console.log('Servindo página customizada de trialChoice com texto capturado:', capturedBoldText);
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+app.get('/pt/witch-power/trialChoice', async (req, res) => {
+    console.log('Interceptando trialChoice para capturar texto do <b></b>');
+    
+    try {
+        const response = await axios({
+            method: 'GET',
+            url: `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            },
+            responseType: 'text'
+        });
+
+        const $ = cheerio.load(response.data);
+        
+        // Procura pelo texto específico no <b></b>
+        const targetElement = $('.sc-edafe909-6.pLaXn').find('b');
+        if (targetElement.length > 0) {
+            capturedBoldText = targetElement.text();
+            console.log('Texto capturado do <b></b>:', capturedBoldText);
+        } else {
+            // Fallback: procura por qualquer <b> com texto relacionado
+            $('b').each((i, el) => {
+                const text = $(el).text();
+                if (text.includes('encontrar') || text.includes('marcas') || text.includes('símbolos')) {
+                    capturedBoldText = text;
+                    console.log('Texto capturado do <b></b> (fallback):', capturedBoldText);
+                    return false; // break
+                }
+            });
+        }
+
+        if (!capturedBoldText) {
+            capturedBoldText = 'encontrar marcas e símbolos que as guiam'; // fallback padrão
+        }
+
+        // Serve a página React customizada
+        console.log('Servindo página customizada de trialChoice com texto capturado:', capturedBoldText);
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        
+    } catch (error) {
+        console.error('Erro ao capturar texto do <b></b>:', error.message);
+        capturedBoldText = 'encontrar marcas e símbolos que as guiam'; // fallback
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    }
 });
 
 // API endpoint para obter o texto capturado
@@ -54,46 +96,6 @@ app.use(async (req, res) => {
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
     delete requestHeaders['accept-encoding'];
-
-    // Interceptação especial para capturar texto do <b></b> na página trialChoice
-    if (req.url === '/pt/witch-power/trialChoice' && req.method === 'GET') {
-        console.log('Interceptando trialChoice para capturar texto do <b></b>');
-        
-        try {
-            const response = await axios({
-                method: 'GET',
-                url: `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`,
-                headers: requestHeaders,
-                responseType: 'text'
-            });
-
-            const $ = cheerio.load(response.data);
-            
-            // Procura pelo texto específico no <b></b>
-            const targetElement = $('.sc-edafe909-6.pLaXn').find('b');
-            if (targetElement.length > 0) {
-                capturedBoldText = targetElement.text();
-                console.log('Texto capturado do <b></b>:', capturedBoldText);
-            } else {
-                // Fallback: procura por qualquer <b> com texto relacionado
-                $('b').each((i, el) => {
-                    const text = $(el).text();
-                    if (text.includes('encontrar') || text.includes('marcas') || text.includes('símbolos')) {
-                        capturedBoldText = text;
-                        console.log('Texto capturado do <b></b> (fallback):', capturedBoldText);
-                        return false; // break
-                    }
-                });
-            }
-
-            // Redireciona para a página customizada
-            return res.redirect('/pt/witch-power/trialChoice');
-            
-        } catch (error) {
-            console.error('Erro ao capturar texto do <b></b>:', error.message);
-            capturedBoldText = 'encontrar marcas e símbolos que as guiam'; // fallback
-        }
-    }
 
     // Lógica para Proxeamento do Subdomínio de Leitura (Mão)
     if (req.url.startsWith('/reading/')) {
@@ -324,23 +326,6 @@ app.use(async (req, res) => {
                 </script>
             `);
             // ---
-
-            // MODIFICAÇÕES ESPECÍFICAS PARA /pt/witch-power/trialChoice
-            if (req.url.includes('/pt/witch-power/trialChoice')) {
-                console.log('Modificando conteúdo para /trialChoice (preços e textos).');
-                $('body').html(function(i, originalHtml) {
-                    return originalHtml.replace(CONVERSION_PATTERN, (match, p1) => {
-                        const usdValue = parseFloat(p1);
-                        const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2).replace('.', ',');
-                        return `R$ ${brlValue}`;
-                    });
-                });
-                $('#buyButtonAncestral').attr('href', 'https://seusite.com/link-de-compra-ancestral-em-reais');
-                $('.cta-button-trial').attr('href', 'https://seusite.com/novo-link-de-compra-geral');
-                $('a:contains("Comprar Agora")').attr('href', 'https://seusite.com/meu-novo-link-de-compra-agora');
-                $('h2:contains("Trial Choice")').text('Escolha sua Prova Gratuita (Preços em Reais)');
-                $('p:contains("Selecione sua opção de teste")').text('Agora com preços adaptados para o Brasil!');
-            }
 
             // MODIFICAÇÕES ESPECÍFICAS PARA /pt/witch-power/trialPaymentancestral
             if (req.url.includes('/pt/witch-power/trialPaymentancestral')) {

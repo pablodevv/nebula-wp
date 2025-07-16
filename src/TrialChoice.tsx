@@ -20,14 +20,9 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar mar
     if (capturedText && capturedText.trim()) {
       console.log('🔄 TrialChoice: Atualizando texto exibido:', `"${capturedText}"`);
       setDisplayText(capturedText);
-    }
-  }, [capturedText]);
-
-  // Atualiza o texto exibido quando capturedText muda
-  useEffect(() => {
-    if (capturedText && capturedText.trim()) {
-      console.log('🔄 TrialChoice: Atualizando texto exibido:', `"${capturedText}"`);
-      setDisplayText(capturedText);
+    } else {
+      console.log('⚠️ TrialChoice: Texto vazio, mantendo padrão');
+      setDisplayText("encontrar marcas e símbolos que as guiam");
     }
   }, [capturedText]);
 

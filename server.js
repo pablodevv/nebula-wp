@@ -20,11 +20,13 @@ const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
 // Variável para armazenar o texto capturado
-let capturedBoldText = 'descobrir seus poderes ocultos'; // Fallback padrão
+let capturedBoldText = '';
+let lastCaptureTime = 0;
+let isCapturing = false;
 
 // Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
-    limits: { fileSize: 50 * 1024 * 1024 }, // Limite de 50MB, ajuste se necessário
+    limits: { fileSize: 50 * 1024 * 1024 },
     createParentPath: true,
     uriDecodeFileNames: true,
     preserveExtension: true
@@ -37,24 +39,30 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.get('/api/captured-text', (req, res) => {
     console.log('📡 API /api/captured-text chamada');
     console.log('📝 Texto atual na variável:', `"${capturedBoldText}"`);
-    res.json({ capturedText: capturedBoldText });
+    console.log('🕐 Último tempo de captura:', new Date(lastCaptureTime).toISOString());
+    console.log('🔄 Está capturando:', isCapturing);
+    
+    res.json({ 
+        capturedText: capturedBoldText,
+        lastCaptureTime: lastCaptureTime,
+        isCapturing: isCapturing,
+        timestamp: Date.now()
+    });
 });
 
-// Rota específica para a página customizada de trialChoice
-app.get('/pt/witch-power/trialChoice', async (req, res) => {
-    console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('URL acessada:', req.url);
+// Função melhorada para capturar texto com Puppeteer
+async function captureTextWithPuppeteer() {
+    if (isCapturing) {
+        console.log('⏳ Captura já em andamento, aguardando...');
+        return capturedBoldText;
+    }
     
-    // RESET do texto capturado para garantir captura fresca
-    const oldText = capturedBoldText;
-    capturedBoldText = '';
-    console.log('Texto anterior:', oldText);
-    console.log('Texto resetado para captura fresca');
-    
+    isCapturing = true;
     let browser;
+    
     try {
-        console.log('\n--- INICIANDO PUPPETEER PARA PÁGINA JAVASCRIPT ---');
+        console.log('\n=== INICIANDO CAPTURA AVANÇADA COM PUPPETEER ===');
+        console.log('Timestamp início:', new Date().toISOString());
         
         browser = await puppeteer.launch({
             headless: true,
@@ -66,148 +74,217 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                 '--no-first-run',
                 '--no-zygote',
                 '--single-process',
-                '--disable-gpu'
+                '--disable-gpu',
+                '--disable-web-security',
+                '--disable-features=VizDisplayCompositor'
             ]
         });
 
         const page = await browser.newPage();
         
-        // Configurar User-Agent
+        // Configurações avançadas da página
+        await page.setViewport({ width: 1920, height: 1080 });
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        
+        // Interceptar console.log da página para debug
+        page.on('console', msg => {
+            console.log('🌐 BROWSER LOG:', msg.text());
+        });
         
         console.log('🌐 Navegando para:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
         
-        // Navegar para a página e aguardar o carregamento completo
+        // Navegar para a página
         await page.goto(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
-            waitUntil: 'networkidle0', // Aguarda até não haver requisições por 500ms
-            timeout: 30000
+            waitUntil: 'networkidle0',
+            timeout: 45000
         });
         
-        console.log('✅ Página carregada, aguardando renderização...');
+        console.log('✅ Página carregada, iniciando processo de captura...');
         
-        // Aguardar MUITO mais tempo para garantir que o JavaScript renderizou completamente
+        // Aguardar renderização inicial
         await page.waitForTimeout(8000);
         
-        // Tentar aguardar pelo elemento específico aparecer com timeout maior
-        try {
-            await page.waitForSelector('p.sc-edafe909-6.pLaXn', { timeout: 10000 });
-            console.log('✅ Elemento com classe sc-edafe909-6 pLaXn encontrado!');
-        } catch (e) {
-            console.log('⚠️ Elemento específico não encontrado, continuando...');
-        }
+        // Injetar script para monitorar mudanças no DOM
+        await page.evaluate(() => {
+            console.log('🔍 Script de monitoramento DOM injetado');
+            window.domChangeCount = 0;
+            
+            const observer = new MutationObserver((mutations) => {
+                window.domChangeCount++;
+                if (window.domChangeCount % 10 === 0) {
+                    console.log(`DOM mudou ${window.domChangeCount} vezes`);
+                }
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true
+            });
+        });
         
-        // Aguardar mais um pouco após encontrar o elemento
-        await page.waitForTimeout(2000);
+        // Aguardar mais tempo para mudanças no DOM
+        await page.waitForTimeout(5000);
         
-        // Usar Puppeteer para extrair o texto diretamente
-        console.log('\n--- EXTRAINDO TEXTO COM PUPPETEER ---');
-        
-        // Estratégia 1: Procurar pelo seletor específico
+        // ESTRATÉGIA 1: Procurar pelo seletor específico
+        console.log('\n--- ESTRATÉGIA 1: Seletor específico ---');
         let boldText = await page.evaluate(() => {
             const paragraph = document.querySelector('p.sc-edafe909-6.pLaXn');
+            console.log('Parágrafo encontrado:', paragraph);
             if (paragraph) {
+                console.log('Conteúdo do parágrafo:', paragraph.innerHTML);
                 const boldElement = paragraph.querySelector('b');
+                console.log('Elemento bold encontrado:', boldElement);
                 if (boldElement) {
-                    return boldElement.textContent.trim();
+                    const text = boldElement.textContent.trim();
+                    console.log('Texto do bold:', text);
+                    return text;
                 }
             }
             return null;
         });
         
-        if (boldText) {
+        if (boldText && boldText.length > 3) {
+            console.log('✅ ESTRATÉGIA 1 SUCESSO:', `"${boldText}"`);
             capturedBoldText = boldText;
-            console.log('✅ Texto capturado com seletor específico:', `"${capturedBoldText}"`);
         } else {
-            console.log('❌ Seletor específico não funcionou, tentando alternativas...');
+            console.log('❌ ESTRATÉGIA 1 falhou, tentando estratégia 2...');
             
-            // Estratégia 2: Procurar em parágrafos que contenham "Ajudamos milhões"
+            // ESTRATÉGIA 2: Procurar por classe parcial
+            console.log('\n--- ESTRATÉGIA 2: Classe parcial ---');
             boldText = await page.evaluate(() => {
-                const paragraphs = document.querySelectorAll('p');
-                for (const p of paragraphs) {
-                    if (p.textContent.includes('Ajudamos milhões')) {
-                        const boldElement = p.querySelector('b');
+                const elements = document.querySelectorAll('[class*="sc-edafe909-6"]');
+                console.log('Elementos com classe parcial encontrados:', elements.length);
+                
+                for (const element of elements) {
+                    console.log('Elemento:', element, 'Conteúdo:', element.textContent);
+                    if (element.textContent.includes('Ajudamos milhões')) {
+                        const boldElement = element.querySelector('b');
                         if (boldElement) {
-                            return boldElement.textContent.trim();
+                            const text = boldElement.textContent.trim();
+                            console.log('Texto encontrado na estratégia 2:', text);
+                            return text;
                         }
                     }
                 }
                 return null;
             });
             
-            if (boldText) {
+            if (boldText && boldText.length > 3) {
+                console.log('✅ ESTRATÉGIA 2 SUCESSO:', `"${boldText}"`);
                 capturedBoldText = boldText;
-                console.log('✅ Texto capturado em parágrafo "Ajudamos milhões":', `"${capturedBoldText}"`);
             } else {
-                console.log('❌ Parágrafo "Ajudamos milhões" não encontrado, tentando busca geral...');
+                console.log('❌ ESTRATÉGIA 2 falhou, tentando estratégia 3...');
                 
-                // Estratégia 3: Buscar qualquer <b> relevante
-                const allBoldTexts = await page.evaluate(() => {
-                    const boldElements = document.querySelectorAll('b');
-                    const texts = [];
-                    boldElements.forEach(b => {
-                        const text = b.textContent.trim();
-                        if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
-                            texts.push(text);
+                // ESTRATÉGIA 3: Procurar por texto "Ajudamos milhões"
+                console.log('\n--- ESTRATÉGIA 3: Busca por texto ---');
+                boldText = await page.evaluate(() => {
+                    const walker = document.createTreeWalker(
+                        document.body,
+                        NodeFilter.SHOW_TEXT,
+                        null,
+                        false
+                    );
+                    
+                    let node;
+                    while (node = walker.nextNode()) {
+                        if (node.textContent.includes('Ajudamos milhões')) {
+                            console.log('Nó com texto encontrado:', node.textContent);
+                            const parent = node.parentElement;
+                            if (parent) {
+                                console.log('Elemento pai:', parent);
+                                const boldElement = parent.querySelector('b');
+                                if (boldElement) {
+                                    const text = boldElement.textContent.trim();
+                                    console.log('Texto do bold na estratégia 3:', text);
+                                    return text;
+                                }
+                            }
                         }
-                    });
-                    return texts;
+                    }
+                    return null;
                 });
                 
-                console.log('📝 Todos os <b> relevantes encontrados:', allBoldTexts);
-                
-                if (allBoldTexts.length > 0) {
-                    capturedBoldText = allBoldTexts[0]; // Pega o primeiro
-                    console.log('✅ Texto capturado do primeiro <b> relevante:', `"${capturedBoldText}"`);
+                if (boldText && boldText.length > 3) {
+                    console.log('✅ ESTRATÉGIA 3 SUCESSO:', `"${boldText}"`);
+                    capturedBoldText = boldText;
                 } else {
-                    // Estratégia 4: Buscar <strong> também
-                    const allStrongTexts = await page.evaluate(() => {
-                        const strongElements = document.querySelectorAll('strong');
+                    console.log('❌ ESTRATÉGIA 3 falhou, tentando estratégia 4...');
+                    
+                    // ESTRATÉGIA 4: Buscar qualquer <b> relevante
+                    console.log('\n--- ESTRATÉGIA 4: Busca geral ---');
+                    const allBoldTexts = await page.evaluate(() => {
+                        const boldElements = document.querySelectorAll('b, strong');
                         const texts = [];
-                        strongElements.forEach(s => {
-                            const text = s.textContent.trim();
-                            if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
+                        
+                        boldElements.forEach(element => {
+                            const text = element.textContent.trim();
+                            console.log('Bold/Strong encontrado:', text);
+                            
+                            if (text.length > 5 && 
+                                !text.includes('$') && 
+                                !text.includes('€') && 
+                                !text.includes('R$') &&
+                                !text.includes('©') &&
+                                !text.includes('Menu') &&
+                                !text.includes('Button') &&
+                                !text.toLowerCase().includes('política')) {
                                 texts.push(text);
                             }
                         });
+                        
+                        console.log('Todos os textos bold relevantes:', texts);
                         return texts;
                     });
                     
-                    console.log('📝 Todos os <strong> relevantes encontrados:', allStrongTexts);
-                    
-                    if (allStrongTexts.length > 0) {
-                        capturedBoldText = allStrongTexts[0];
-                        console.log('✅ Texto capturado do primeiro <strong> relevante:', `"${capturedBoldText}"`);
+                    if (allBoldTexts.length > 0) {
+                        // Priorizar textos que parecem ser sobre bruxaria/poderes
+                        const relevantTexts = allBoldTexts.filter(text => 
+                            text.toLowerCase().includes('bruxa') ||
+                            text.toLowerCase().includes('poder') ||
+                            text.toLowerCase().includes('arquétipo') ||
+                            text.toLowerCase().includes('identificar') ||
+                            text.toLowerCase().includes('descobrir') ||
+                            text.toLowerCase().includes('encontrar')
+                        );
+                        
+                        if (relevantTexts.length > 0) {
+                            capturedBoldText = relevantTexts[0];
+                            console.log('✅ ESTRATÉGIA 4 SUCESSO (relevante):', `"${capturedBoldText}"`);
+                        } else {
+                            capturedBoldText = allBoldTexts[0];
+                            console.log('✅ ESTRATÉGIA 4 SUCESSO (geral):', `"${capturedBoldText}"`);
+                        }
+                    } else {
+                        console.log('❌ ESTRATÉGIA 4 falhou, usando fallback');
+                        capturedBoldText = 'descobrir seus poderes ocultos';
                     }
                 }
             }
         }
         
-        // Fechar o browser
-        await browser.close();
-        browser = null;
+        // Aguardar mais um pouco para garantir
+        await page.waitForTimeout(2000);
         
-        // Fallback se nada foi encontrado
-        if (!capturedBoldText) {
-            capturedBoldText = 'descobrir seus poderes ocultos';
-            console.log('⚠️ Usando fallback absoluto:', `"${capturedBoldText}"`);
-        }
-        
-        console.log('\n=== RESULTADO FINAL ===');
-        console.log('Texto que será usado:', `"${capturedBoldText}"`);
-        console.log('Comprimento do texto:', capturedBoldText.length);
+        console.log('\n=== RESULTADO FINAL DA CAPTURA ===');
+        console.log('Texto capturado:', `"${capturedBoldText}"`);
+        console.log('Comprimento:', capturedBoldText.length);
         console.log('Timestamp final:', new Date().toISOString());
         
-        // Aguarda um pouco mais antes de servir a página para garantir que tudo está pronto
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        lastCaptureTime = Date.now();
         
-        // Serve a página React customizada IMEDIATAMENTE
-        console.log('✅ Servindo página React customizada...\n');
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        return capturedBoldText;
         
     } catch (error) {
-        console.error('\n❌ ERRO no Puppeteer:', error.message);
+        console.error('\n❌ ERRO GRAVE no Puppeteer:', error.message);
+        console.error('Stack trace:', error.stack);
         
-        // Fechar browser se ainda estiver aberto
+        // Fallback em caso de erro
+        capturedBoldText = 'descobrir seus poderes ocultos';
+        lastCaptureTime = Date.now();
+        
+        return capturedBoldText;
+    } finally {
         if (browser) {
             try {
                 await browser.close();
@@ -215,9 +292,35 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                 console.error('Erro ao fechar browser:', closeError.message);
             }
         }
+        isCapturing = false;
+    }
+}
+
+// Rota específica para a página customizada de trialChoice
+app.get('/pt/witch-power/trialChoice', async (req, res) => {
+    console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('URL acessada:', req.url);
+    
+    try {
+        // Capturar texto com a função melhorada
+        const capturedText = await captureTextWithPuppeteer();
+        
+        console.log('✅ Texto capturado com sucesso:', `"${capturedText}"`);
+        
+        // Aguardar um pouco antes de servir a página
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log('✅ Servindo página React customizada...\n');
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        
+    } catch (error) {
+        console.error('\n❌ ERRO CRÍTICO:', error.message);
         
         // Mesmo com erro, serve a página React com fallback
         capturedBoldText = 'descobrir seus poderes ocultos';
+        lastCaptureTime = Date.now();
+        
         console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     }

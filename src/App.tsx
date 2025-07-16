@@ -6,7 +6,6 @@ function App() {
   const [capturedText, setCapturedText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     // Busca o texto capturado do servidor com retry mais agressivo

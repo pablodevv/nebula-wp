@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TrialChoiceProps {
   capturedText?: string;
@@ -6,6 +6,7 @@ interface TrialChoiceProps {
 
 const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar marcas e símbolos que as guiam" }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
+  const [displayText, setDisplayText] = useState<string>(capturedText);
 
   const prices = [
     { value: '$1', link: '/pt/witch-power/trial-1' },
@@ -13,6 +14,14 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar mar
     { value: '$9', link: '/pt/witch-power/trial-9' },
     { value: '$13.67', link: '/pt/witch-power/trial-13' }
   ];
+
+  // Atualiza o texto exibido quando capturedText muda
+  useEffect(() => {
+    if (capturedText && capturedText.trim()) {
+      console.log('🔄 TrialChoice: Atualizando texto exibido:', `"${capturedText}"`);
+      setDisplayText(capturedText);
+    }
+  }, [capturedText]);
 
   const handlePriceSelect = (price: string) => {
     setSelectedPrice(price);
@@ -50,8 +59,14 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar mar
             <div className="satisfaction-section">
               <h2 className="section-title">SUA SATISFAÇÃO É IMPORTANTE PARA NÓS</h2>
               <p className="description">
-                Ajudamos milhões de pessoas a <b>{capturedText}</b>, e queremos ajudar você também.
+                Ajudamos milhões de pessoas a <b>{displayText}</b>, e queremos ajudar você também.
               </p>
+              {/* Debug info - remover em produção */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-gray-400 mt-2">
+                  Debug: "{displayText}" (prop: "{capturedText}")
+                </div>
+              )}
             </div>
 
             <div className="economy-section">

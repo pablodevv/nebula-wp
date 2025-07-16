@@ -3,7 +3,6 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const puppeteer = require('puppeteer');
 const path = require('path');
 const { URL } = require('url');
 const fileUpload = require('express-fileupload');
@@ -50,249 +49,200 @@ app.get('/api/captured-text', (req, res) => {
     });
 });
 
-// Função melhorada para capturar texto com Puppeteer
-async function captureTextWithPuppeteer() {
+// Função para capturar texto com múltiplas estratégias
+async function captureTextAdvanced() {
     if (isCapturing) {
         console.log('⏳ Captura já em andamento, aguardando...');
         return capturedBoldText;
     }
     
     isCapturing = true;
-    let browser;
     
     try {
-        console.log('\n=== INICIANDO CAPTURA AVANÇADA COM PUPPETEER ===');
+        console.log('\n=== INICIANDO CAPTURA AVANÇADA MULTI-ESTRATÉGIA ===');
         console.log('Timestamp início:', new Date().toISOString());
         
-        browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process',
-                '--disable-gpu',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor'
-            ]
-        });
+        // ESTRATÉGIA 1: Tentar com Playwright (melhor para produção)
+        try {
+            console.log('\n--- ESTRATÉGIA 1: PLAYWRIGHT ---');
+            const { chromium } = require('playwright');
+            
+            const browser = await chromium.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor'
+                ]
+            });
 
-        const page = await browser.newPage();
-        
-        // Configurações avançadas da página
-        await page.setViewport({ width: 1920, height: 1080 });
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        
-        // Interceptar console.log da página para debug
-        page.on('console', msg => {
-            console.log('🌐 BROWSER LOG:', msg.text());
-        });
-        
-        console.log('🌐 Navegando para:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
-        
-        // Navegar para a página
-        await page.goto(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
-            waitUntil: 'networkidle0',
-            timeout: 45000
-        });
-        
-        console.log('✅ Página carregada, iniciando processo de captura...');
-        
-        // Aguardar renderização inicial
-        await page.waitForTimeout(8000);
-        
-        // Injetar script para monitorar mudanças no DOM
-        await page.evaluate(() => {
-            console.log('🔍 Script de monitoramento DOM injetado');
-            window.domChangeCount = 0;
+            const page = await browser.newPage();
+            await page.setViewportSize({ width: 1920, height: 1080 });
             
-            const observer = new MutationObserver((mutations) => {
-                window.domChangeCount++;
-                if (window.domChangeCount % 10 === 0) {
-                    console.log(`DOM mudou ${window.domChangeCount} vezes`);
-                }
+            console.log('🌐 Navegando para:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
+            
+            await page.goto(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
+                waitUntil: 'networkidle',
+                timeout: 45000
             });
             
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true,
-                attributes: true
-            });
-        });
-        
-        // Aguardar mais tempo para mudanças no DOM
-        await page.waitForTimeout(5000);
-        
-        // ESTRATÉGIA 1: Procurar pelo seletor específico
-        console.log('\n--- ESTRATÉGIA 1: Seletor específico ---');
-        let boldText = await page.evaluate(() => {
-            const paragraph = document.querySelector('p.sc-edafe909-6.pLaXn');
-            console.log('Parágrafo encontrado:', paragraph);
-            if (paragraph) {
-                console.log('Conteúdo do parágrafo:', paragraph.innerHTML);
-                const boldElement = paragraph.querySelector('b');
-                console.log('Elemento bold encontrado:', boldElement);
-                if (boldElement) {
-                    const text = boldElement.textContent.trim();
-                    console.log('Texto do bold:', text);
-                    return text;
+            console.log('✅ Página carregada, aguardando renderização...');
+            await page.waitForTimeout(10000);
+            
+            // Tentar múltiplos seletores
+            const selectors = [
+                'p.sc-edafe909-6.pLaXn b',
+                'p[class*="sc-edafe909-6"] b',
+                'p:has-text("Ajudamos milhões") b',
+                'b:has-text("desvendar")',
+                'b:has-text("descobrir")',
+                'b:has-text("identificar")'
+            ];
+            
+            let boldText = null;
+            for (const selector of selectors) {
+                try {
+                    const element = await page.locator(selector).first();
+                    if (await element.count() > 0) {
+                        boldText = await element.textContent();
+                        if (boldText && boldText.trim().length > 5) {
+                            console.log(`✅ PLAYWRIGHT: Texto encontrado com seletor "${selector}":`, `"${boldText.trim()}"`);
+                            boldText = boldText.trim();
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.log(`⚠️ Seletor "${selector}" falhou:`, e.message);
                 }
             }
-            return null;
-        });
-        
-        if (boldText && boldText.length > 3) {
-            console.log('✅ ESTRATÉGIA 1 SUCESSO:', `"${boldText}"`);
-            capturedBoldText = boldText;
-        } else {
-            console.log('❌ ESTRATÉGIA 1 falhou, tentando estratégia 2...');
             
-            // ESTRATÉGIA 2: Procurar por classe parcial
-            console.log('\n--- ESTRATÉGIA 2: Classe parcial ---');
-            boldText = await page.evaluate(() => {
-                const elements = document.querySelectorAll('[class*="sc-edafe909-6"]');
-                console.log('Elementos com classe parcial encontrados:', elements.length);
-                
-                for (const element of elements) {
-                    console.log('Elemento:', element, 'Conteúdo:', element.textContent);
-                    if (element.textContent.includes('Ajudamos milhões')) {
-                        const boldElement = element.querySelector('b');
-                        if (boldElement) {
-                            const text = boldElement.textContent.trim();
-                            console.log('Texto encontrado na estratégia 2:', text);
-                            return text;
-                        }
-                    }
-                }
-                return null;
-            });
+            await browser.close();
             
-            if (boldText && boldText.length > 3) {
-                console.log('✅ ESTRATÉGIA 2 SUCESSO:', `"${boldText}"`);
+            if (boldText && boldText.length > 5) {
                 capturedBoldText = boldText;
-            } else {
-                console.log('❌ ESTRATÉGIA 2 falhou, tentando estratégia 3...');
+                lastCaptureTime = Date.now();
+                console.log('✅ ESTRATÉGIA 1 (PLAYWRIGHT) SUCESSO:', `"${capturedBoldText}"`);
+                return capturedBoldText;
+            }
+            
+        } catch (playwrightError) {
+            console.log('❌ ESTRATÉGIA 1 (PLAYWRIGHT) falhou:', playwrightError.message);
+        }
+        
+        // ESTRATÉGIA 2: Axios + Cheerio com múltiplas tentativas
+        console.log('\n--- ESTRATÉGIA 2: AXIOS + CHEERIO ---');
+        
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                console.log(`Tentativa ${attempt}/3 com Axios...`);
                 
-                // ESTRATÉGIA 3: Procurar por texto "Ajudamos milhões"
-                console.log('\n--- ESTRATÉGIA 3: Busca por texto ---');
-                boldText = await page.evaluate(() => {
-                    const walker = document.createTreeWalker(
-                        document.body,
-                        NodeFilter.SHOW_TEXT,
-                        null,
-                        false
-                    );
-                    
-                    let node;
-                    while (node = walker.nextNode()) {
-                        if (node.textContent.includes('Ajudamos milhões')) {
-                            console.log('Nó com texto encontrado:', node.textContent);
-                            const parent = node.parentElement;
-                            if (parent) {
-                                console.log('Elemento pai:', parent);
-                                const boldElement = parent.querySelector('b');
-                                if (boldElement) {
-                                    const text = boldElement.textContent.trim();
-                                    console.log('Texto do bold na estratégia 3:', text);
-                                    return text;
-                                }
-                            }
-                        }
-                    }
-                    return null;
+                const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1'
+                    },
+                    timeout: 30000
                 });
                 
-                if (boldText && boldText.length > 3) {
-                    console.log('✅ ESTRATÉGIA 3 SUCESSO:', `"${boldText}"`);
-                    capturedBoldText = boldText;
-                } else {
-                    console.log('❌ ESTRATÉGIA 3 falhou, tentando estratégia 4...');
-                    
-                    // ESTRATÉGIA 4: Buscar qualquer <b> relevante
-                    console.log('\n--- ESTRATÉGIA 4: Busca geral ---');
-                    const allBoldTexts = await page.evaluate(() => {
-                        const boldElements = document.querySelectorAll('b, strong');
-                        const texts = [];
-                        
-                        boldElements.forEach(element => {
-                            const text = element.textContent.trim();
-                            console.log('Bold/Strong encontrado:', text);
-                            
-                            if (text.length > 5 && 
-                                !text.includes('$') && 
-                                !text.includes('€') && 
-                                !text.includes('R$') &&
-                                !text.includes('©') &&
-                                !text.includes('Menu') &&
-                                !text.includes('Button') &&
-                                !text.toLowerCase().includes('política')) {
-                                texts.push(text);
-                            }
-                        });
-                        
-                        console.log('Todos os textos bold relevantes:', texts);
-                        return texts;
-                    });
-                    
-                    if (allBoldTexts.length > 0) {
-                        // Priorizar textos que parecem ser sobre bruxaria/poderes
-                        const relevantTexts = allBoldTexts.filter(text => 
-                            text.toLowerCase().includes('bruxa') ||
-                            text.toLowerCase().includes('poder') ||
-                            text.toLowerCase().includes('arquétipo') ||
-                            text.toLowerCase().includes('identificar') ||
-                            text.toLowerCase().includes('descobrir') ||
-                            text.toLowerCase().includes('encontrar')
-                        );
-                        
-                        if (relevantTexts.length > 0) {
-                            capturedBoldText = relevantTexts[0];
-                            console.log('✅ ESTRATÉGIA 4 SUCESSO (relevante):', `"${capturedBoldText}"`);
-                        } else {
-                            capturedBoldText = allBoldTexts[0];
-                            console.log('✅ ESTRATÉGIA 4 SUCESSO (geral):', `"${capturedBoldText}"`);
+                const $ = cheerio.load(response.data);
+                
+                // Procurar por diferentes padrões
+                const patterns = [
+                    'p.sc-edafe909-6.pLaXn b',
+                    'p[class*="sc-edafe909-6"] b',
+                    'p:contains("Ajudamos milhões") b',
+                    'b:contains("desvendar")',
+                    'b:contains("descobrir")',
+                    'b:contains("identificar")'
+                ];
+                
+                let foundText = null;
+                for (const pattern of patterns) {
+                    const element = $(pattern).first();
+                    if (element.length > 0) {
+                        const text = element.text().trim();
+                        if (text.length > 5) {
+                            console.log(`✅ AXIOS: Texto encontrado com padrão "${pattern}":`, `"${text}"`);
+                            foundText = text;
+                            break;
                         }
-                    } else {
-                        console.log('❌ ESTRATÉGIA 4 falhou, usando fallback');
-                        capturedBoldText = 'descobrir seus poderes ocultos';
                     }
                 }
+                
+                if (foundText) {
+                    capturedBoldText = foundText;
+                    lastCaptureTime = Date.now();
+                    console.log('✅ ESTRATÉGIA 2 (AXIOS) SUCESSO:', `"${capturedBoldText}"`);
+                    return capturedBoldText;
+                }
+                
+                // Se não encontrou, aguardar antes da próxima tentativa
+                if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                
+            } catch (axiosError) {
+                console.log(`❌ Tentativa ${attempt} com Axios falhou:`, axiosError.message);
             }
         }
         
-        // Aguardar mais um pouco para garantir
-        await page.waitForTimeout(2000);
+        // ESTRATÉGIA 3: Busca por texto específico conhecido
+        console.log('\n--- ESTRATÉGIA 3: TEXTOS CONHECIDOS ---');
+        const knownTexts = [
+            'desvendar seu destino e propósito',
+            'identificar seu arquétipo de bruxa',
+            'descobrir seus poderes ocultos',
+            'encontrar marcas e símbolos que as guiam',
+            'revelar seus dons espirituais'
+        ];
         
-        console.log('\n=== RESULTADO FINAL DA CAPTURA ===');
-        console.log('Texto capturado:', `"${capturedBoldText}"`);
-        console.log('Comprimento:', capturedBoldText.length);
-        console.log('Timestamp final:', new Date().toISOString());
+        // Tentar uma última requisição para pegar qualquer conteúdo
+        try {
+            const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
+                timeout: 15000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; TextCapture/1.0)'
+                }
+            });
+            
+            const pageContent = response.data.toLowerCase();
+            
+            for (const text of knownTexts) {
+                if (pageContent.includes(text.toLowerCase())) {
+                    capturedBoldText = text;
+                    lastCaptureTime = Date.now();
+                    console.log('✅ ESTRATÉGIA 3 (TEXTO CONHECIDO) SUCESSO:', `"${capturedBoldText}"`);
+                    return capturedBoldText;
+                }
+            }
+        } catch (e) {
+            console.log('❌ ESTRATÉGIA 3 falhou:', e.message);
+        }
         
+        // FALLBACK FINAL
+        console.log('\n--- USANDO FALLBACK INTELIGENTE ---');
+        capturedBoldText = 'desvendar seu destino e propósito';
         lastCaptureTime = Date.now();
+        console.log('⚠️ Usando fallback inteligente:', `"${capturedBoldText}"`);
         
         return capturedBoldText;
         
     } catch (error) {
-        console.error('\n❌ ERRO GRAVE no Puppeteer:', error.message);
-        console.error('Stack trace:', error.stack);
-        
-        // Fallback em caso de erro
-        capturedBoldText = 'descobrir seus poderes ocultos';
+        console.error('\n❌ ERRO CRÍTICO na captura:', error.message);
+        capturedBoldText = 'desvendar seu destino e propósito';
         lastCaptureTime = Date.now();
-        
         return capturedBoldText;
     } finally {
-        if (browser) {
-            try {
-                await browser.close();
-            } catch (closeError) {
-                console.error('Erro ao fechar browser:', closeError.message);
-            }
-        }
         isCapturing = false;
+        console.log('\n=== CAPTURA FINALIZADA ===');
+        console.log('Texto final:', `"${capturedBoldText}"`);
+        console.log('Timestamp final:', new Date().toISOString());
     }
 }
 
@@ -304,7 +254,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     
     try {
         // Capturar texto com a função melhorada
-        const capturedText = await captureTextWithPuppeteer();
+        const capturedText = await captureTextAdvanced();
         
         console.log('✅ Texto capturado com sucesso:', `"${capturedText}"`);
         
@@ -318,7 +268,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         console.error('\n❌ ERRO CRÍTICO:', error.message);
         
         // Mesmo com erro, serve a página React com fallback
-        capturedBoldText = 'descobrir seus poderes ocultos';
+        capturedBoldText = 'desvendar seu destino e propósito';
         lastCaptureTime = Date.now();
         
         console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);

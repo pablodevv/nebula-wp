@@ -10,25 +10,29 @@ function App() {
     // Busca o texto capturado do servidor
     const fetchCapturedText = async () => {
       try {
-        console.log('Buscando texto capturado do servidor...');
+        console.log('🔄 React: Buscando texto capturado do servidor...');
         const response = await fetch('/api/captured-text');
         const data = await response.json();
         
+        console.log('📨 React: Resposta recebida:', data);
+        
         if (data.capturedText && data.capturedText.trim()) {
-          console.log('Texto recebido do servidor:', data.capturedText);
+          console.log('✅ React: Texto recebido do servidor:', `"${data.capturedText}"`);
           setCapturedText(data.capturedText);
         } else {
-          console.log('Nenhum texto capturado, usando fallback');
-          setCapturedText('identificar seu arquétipo de bruxa');
+          console.log('⚠️ React: Nenhum texto capturado, usando fallback');
+          setCapturedText('descobrir seus poderes ocultos');
         }
       } catch (error) {
-        console.error('Erro ao buscar texto capturado:', error);
-        setCapturedText('identificar seu arquétipo de bruxa');
+        console.error('❌ React: Erro ao buscar texto capturado:', error);
+        setCapturedText('descobrir seus poderes ocultos');
       } finally {
+        console.log('🏁 React: Finalizando loading...');
         setLoading(false);
       }
     };
 
+    console.log('🚀 React: useEffect executado, iniciando busca...');
     fetchCapturedText();
   }, []);
 

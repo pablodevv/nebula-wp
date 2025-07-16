@@ -40,14 +40,18 @@ app.get('/api/captured-text', (req, res) => {
 
 // Rota específica para a página customizada de trialChoice
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
-    console.log('=== INTERCEPTANDO TRIALCHOICE ===');
+    console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
+    console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
     
     // RESET do texto capturado para garantir captura fresca
+    const oldText = capturedBoldText;
     capturedBoldText = '';
+    console.log('Texto anterior:', oldText);
+    console.log('Texto resetado para captura fresca');
     
     try {
-        console.log('Fazendo requisição para capturar texto do <b>...');
+        console.log('\n--- FAZENDO REQUISIÇÃO PARA PÁGINA ORIGINAL ---');
         const response = await axios({
             method: 'GET',
             url: `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`,
@@ -55,7 +59,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1'
             },
@@ -63,51 +66,75 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
             responseType: 'text'
         });
 
-        console.log('Resposta recebida, status:', response.status);
+        console.log('✅ Resposta recebida, status:', response.status);
+        console.log('Content-Type:', response.headers['content-type']);
+        console.log('Tamanho da resposta:', response.data.length, 'caracteres');
+        
         const $ = cheerio.load(response.data);
         
-        // Procura especificamente pelo parágrafo com a classe mencionada
+        console.log('\n--- PROCURANDO TEXTO NO <b> ---');
+        
+        // Estratégia 1: Procura especificamente pelo parágrafo com a classe mencionada
         const targetParagraph = $('p.sc-edafe909-6.pLaXn');
-        console.log('Parágrafos encontrados com classe sc-edafe909-6 pLaXn:', targetParagraph.length);
+        console.log('1. Parágrafos encontrados com classe sc-edafe909-6 pLaXn:', targetParagraph.length);
         
         if (targetParagraph.length > 0) {
+            console.log('   Texto do parágrafo:', targetParagraph.text().trim());
             const boldElement = targetParagraph.find('b');
+            console.log('   Elementos <b> encontrados no parágrafo:', boldElement.length);
             if (boldElement.length > 0) {
                 capturedBoldText = boldElement.text().trim();
-                console.log('✅ Texto capturado do <b> específico:', capturedBoldText);
+                console.log('   ✅ Texto capturado do <b> específico:', `"${capturedBoldText}"`);
             } else {
-                console.log('❌ Elemento <b> não encontrado no parágrafo específico');
-                capturedBoldText = ''; // Reset para tentar fallback
+                console.log('   ❌ Elemento <b> não encontrado no parágrafo específico');
             }
         } else {
-            console.log('❌ Parágrafo com classe sc-edafe909-6 pLaXn não encontrado');
-            capturedBoldText = ''; // Reset para tentar fallback
+            console.log('1. ❌ Parágrafo com classe sc-edafe909-6 pLaXn não encontrado');
         }
 
-        // Fallback: procura por qualquer <b> que contenha texto relacionado
+        // Estratégia 2: Procura em parágrafos que contenham "Ajudamos milhões"
         if (!capturedBoldText) {
-            console.log('Tentando fallback - procurando por qualquer <b> relevante...');
-            $('b').each((i, el) => {
-                const text = $(el).text().trim();
-                console.log(`<b> encontrado [${i}]:`, text);
-                if (text.length > 5 && !text.includes('$') && !text.includes('€')) { // Qualquer texto relevante, exceto preços
-                    capturedBoldText = text;
-                    console.log('✅ Texto capturado via fallback:', capturedBoldText);
-                    return false; // break
+            console.log('2. Procurando em parágrafos com "Ajudamos milhões"...');
+            $('p').each((i, el) => {
+                const paragraphText = $(el).text();
+                if (paragraphText.includes('Ajudamos milhões')) {
+                    console.log(`   Parágrafo encontrado [${i}]:`, paragraphText.substring(0, 100) + '...');
+                    const boldInParagraph = $(el).find('b');
+                    if (boldInParagraph.length > 0) {
+                        capturedBoldText = boldInParagraph.text().trim();
+                        console.log('   ✅ Texto capturado do <b>:', `"${capturedBoldText}"`);
+                        return false; // break
+                    }
                 }
             });
         }
 
-        // Fallback final: procura em parágrafos que contenham "Ajudamos milhões"
+        // Estratégia 3: Procura por qualquer <b> que contenha texto relacionado
         if (!capturedBoldText) {
-            console.log('Tentando fallback final - procurando em parágrafos com "Ajudamos milhões"...');
-            $('p').each((i, el) => {
-                const paragraphText = $(el).text();
-                if (paragraphText.includes('Ajudamos milhões')) {
-                    const boldInParagraph = $(el).find('b');
-                    if (boldInParagraph.length > 0) {
-                        capturedBoldText = boldInParagraph.text().trim();
-                        console.log('✅ Texto capturado via fallback final:', capturedBoldText);
+            console.log('3. Procurando por qualquer <b> relevante...');
+            const allBolds = [];
+            $('b').each((i, el) => {
+                const text = $(el).text().trim();
+                allBolds.push(text);
+                if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
+                    capturedBoldText = text;
+                    console.log(`   ✅ Texto capturado do <b> [${i}]:`, `"${capturedBoldText}"`);
+                    return false; // break
+                }
+            });
+            console.log('   Todos os <b> encontrados:', allBolds);
+        }
+
+        // Estratégia 4: Procura por texto específico relacionado a bruxas
+        if (!capturedBoldText) {
+            console.log('4. Procurando por texto relacionado a bruxas...');
+            const keywords = ['bruxa', 'poder', 'magia', 'oculto', 'místico', 'espiritual', 'energia', 'vida'];
+            $('b').each((i, el) => {
+                const text = $(el).text().trim().toLowerCase();
+                for (const keyword of keywords) {
+                    if (text.includes(keyword)) {
+                        capturedBoldText = $(el).text().trim();
+                        console.log(`   ✅ Texto capturado por keyword "${keyword}":`, `"${capturedBoldText}"`);
                         return false; // break
                     }
                 }
@@ -116,32 +143,39 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
 
         // Fallback absoluto se nada foi encontrado
         if (!capturedBoldText) {
-            capturedBoldText = 'identificar seu arquétipo de bruxa';
-            console.log('⚠️ Usando fallback absoluto:', capturedBoldText);
+            capturedBoldText = 'descobrir seus poderes ocultos';
+            console.log('⚠️ Usando fallback absoluto:', `"${capturedBoldText}"`);
         }
 
-        console.log('=== RESULTADO FINAL ===');
-        console.log('Texto que será usado:', capturedBoldText);
+        console.log('\n=== RESULTADO FINAL ===');
+        console.log('Texto que será usado:', `"${capturedBoldText}"`);
+        console.log('Timestamp final:', new Date().toISOString());
         
         // Serve a página React customizada IMEDIATAMENTE
-        console.log('Servindo página React customizada...');
+        console.log('✅ Servindo página React customizada...\n');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
         
     } catch (error) {
-        console.error('❌ Erro ao capturar texto do <b>:', error.message);
+        console.error('\n❌ ERRO ao capturar texto do <b>:', error.message);
         if (error.code === 'ECONNABORTED') {
             console.error('Timeout na requisição');
+        } else if (error.code === 'ENOTFOUND') {
+            console.error('Domínio não encontrado');
+        } else {
+            console.error('Detalhes do erro:', error.code, error.response?.status);
         }
         // Mesmo com erro, serve a página React com fallback
-        capturedBoldText = 'identificar seu arquétipo de bruxa';
-        console.log('Usando texto fallback:', capturedBoldText);
+        capturedBoldText = 'descobrir seus poderes ocultos';
+        console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     }
 });
 
 // Middleware Principal do Proxy Reverso
 app.use(async (req, res) => {
-    let targetDomain = MAIN_TARGET_URL;
+    console.log('📡 API /api/captured-text chamada');
+    console.log('   Retornando texto:', `"${capturedBoldText}"`);
+    console.log('   Timestamp:', new Date().toISOString());
     let requestPath = req.url;
 
     // Remove headers que podem causar problemas em proxies ou loops

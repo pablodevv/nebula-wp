@@ -35,12 +35,12 @@ function App() {
           setError('');
         } else {
           console.log('⚠️ React: Nenhum texto capturado encontrado');
-          setCapturedText('descobrir seus poderes ocultos');
+          setCapturedText('desvendar seu destino e propósito');
           setError('Usando conteúdo padrão');
         }
       } catch (error) {
         console.error('❌ React: Erro ao buscar texto capturado:', error);
-        setCapturedText('descobrir seus poderes ocultos');
+        setCapturedText('desvendar seu destino e propósito');
         setError('Erro ao carregar conteúdo personalizado');
       } finally {
         setLoading(false);

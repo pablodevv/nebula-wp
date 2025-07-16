@@ -4,7 +4,7 @@ interface TrialChoiceProps {
   capturedText?: string;
 }
 
-const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar marcas e símbolos que as guiam" }) => {
+const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "desvendar seu destino e propósito" }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
   const [displayText, setDisplayText] = useState<string>(capturedText);
 
@@ -22,7 +22,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar mar
       setDisplayText(capturedText);
     } else {
       console.log('⚠️ TrialChoice: Texto vazio, mantendo padrão');
-      setDisplayText("encontrar marcas e símbolos que as guiam");
+      setDisplayText("desvendar seu destino e propósito");
     }
   }, [capturedText]);
 

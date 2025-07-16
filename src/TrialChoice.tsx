@@ -7,7 +7,6 @@ interface TrialChoiceProps {
 const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar marcas e símbolos que as guiam" }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
   const [displayText, setDisplayText] = useState<string>(capturedText);
-  const [displayText, setDisplayText] = useState<string>(capturedText);
 
   const prices = [
     { value: '$1', link: '/pt/witch-power/trial-1' },

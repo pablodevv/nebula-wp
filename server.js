@@ -70,6 +70,12 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         console.log('Content-Type:', response.headers['content-type']);
         console.log('Tamanho da resposta:', response.data.length, 'caracteres');
         
+        // DEBUG: Salvar uma amostra do HTML para análise
+        const htmlSample = response.data.substring(0, 2000);
+        console.log('\n--- AMOSTRA DO HTML RECEBIDO ---');
+        console.log(htmlSample);
+        console.log('--- FIM DA AMOSTRA ---\n');
+        
         const $ = cheerio.load(response.data);
         
         console.log('\n--- PROCURANDO TEXTO NO <b> ---');
@@ -95,8 +101,10 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         // Estratégia 2: Procura em parágrafos que contenham "Ajudamos milhões"
         if (!capturedBoldText) {
             console.log('2. Procurando em parágrafos com "Ajudamos milhões"...');
+            let foundParagraphs = 0;
             $('p').each((i, el) => {
                 const paragraphText = $(el).text();
+                foundParagraphs++;
                 if (paragraphText.includes('Ajudamos milhões')) {
                     console.log(`   Parágrafo encontrado [${i}]:`, paragraphText.substring(0, 100) + '...');
                     const boldInParagraph = $(el).find('b');
@@ -107,6 +115,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                     }
                 }
             });
+            console.log(`   Total de parágrafos verificados: ${foundParagraphs}`);
         }
 
         // Estratégia 3: Procura por qualquer <b> que contenha texto relacionado
@@ -123,6 +132,43 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                 }
             });
             console.log('   Todos os <b> encontrados:', allBolds);
+        }
+
+        // Estratégia 5: Procura por <strong> também (às vezes usado no lugar de <b>)
+        if (!capturedBoldText) {
+            console.log('5. Procurando por elementos <strong>...');
+            const allStrongs = [];
+            $('strong').each((i, el) => {
+                const text = $(el).text().trim();
+                allStrongs.push(text);
+                if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
+                    capturedBoldText = text;
+                    console.log(`   ✅ Texto capturado do <strong> [${i}]:`, `"${capturedBoldText}"`);
+                    return false; // break
+                }
+            });
+            console.log('   Todos os <strong> encontrados:', allStrongs);
+        }
+
+        // Estratégia 6: Procura por texto em qualquer elemento que contenha palavras-chave
+        if (!capturedBoldText) {
+            console.log('6. Procurando texto em qualquer elemento...');
+            const keywords = ['bruxa', 'arquétipo', 'poder', 'oculto', 'místico', 'espiritual'];
+            $('*').each((i, el) => {
+                const text = $(el).text().trim();
+                if (text.length > 10 && text.length < 100) {
+                    for (const keyword of keywords) {
+                        if (text.toLowerCase().includes(keyword)) {
+                            // Verifica se não é um parágrafo inteiro, mas sim uma frase específica
+                            if (!text.includes('Ajudamos milhões') && !text.includes('queremos ajudar')) {
+                                capturedBoldText = text;
+                                console.log(`   ✅ Texto capturado por keyword "${keyword}":`, `"${capturedBoldText}"`);
+                                return false; // break
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Estratégia 4: Procura por texto específico relacionado a bruxas
@@ -173,9 +219,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
 
 // Middleware Principal do Proxy Reverso
 app.use(async (req, res) => {
-    console.log('📡 API /api/captured-text chamada');
-    console.log('   Retornando texto:', `"${capturedBoldText}"`);
-    console.log('   Timestamp:', new Date().toISOString());
+    let targetDomain = MAIN_TARGET_URL;
     let requestPath = req.url;
 
     // Remove headers que podem causar problemas em proxies ou loops

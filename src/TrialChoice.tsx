@@ -7,6 +7,7 @@ interface TrialChoiceProps {
 const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar marcas e símbolos que as guiam" }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
   const [displayText, setDisplayText] = useState<string>(capturedText);
+  const [displayText, setDisplayText] = useState<string>(capturedText);
 
   const prices = [
     { value: '$1', link: '/pt/witch-power/trial-1' },
@@ -14,6 +15,14 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar mar
     { value: '$9', link: '/pt/witch-power/trial-9' },
     { value: '$13.67', link: '/pt/witch-power/trial-13' }
   ];
+
+  // Atualiza o texto exibido quando capturedText muda
+  useEffect(() => {
+    if (capturedText && capturedText.trim()) {
+      console.log('🔄 TrialChoice: Atualizando texto exibido:', `"${capturedText}"`);
+      setDisplayText(capturedText);
+    }
+  }, [capturedText]);
 
   // Atualiza o texto exibido quando capturedText muda
   useEffect(() => {
@@ -72,8 +81,14 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "encontrar mar
             <div className="economy-section">
               <h2 className="section-title">SUA ECONOMIA, NOSSA PRIORIDADE</h2>
               <p className="description">
-                Apesar do nosso custo real ser de $13.67*, por favor selecione um valor que você considere justo.
+                Ajudamos milhões de pessoas a <b>{displayText}</b>, e queremos ajudar você também.
               </p>
+              {/* Debug info - remover em produção */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-gray-400 mt-2">
+                  Debug: "{displayText}" (prop: "{capturedText}")
+                </div>
+              )}
             </div>
 
             <div className="price-selection">

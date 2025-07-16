@@ -3,6 +3,7 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 const path = require('path');
 const { URL } = require('url');
 const fileUpload = require('express-fileupload');
@@ -50,73 +51,185 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('Texto anterior:', oldText);
     console.log('Texto resetado para captura fresca');
     
+    let browser;
     try {
-        console.log('\n--- FAZENDO REQUISIÇÃO PARA PÁGINA ORIGINAL ---');
-        const response = await axios({
-            method: 'GET',
-            url: `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            },
-            timeout: 10000,
-            responseType: 'text'
+        console.log('\n--- INICIANDO PUPPETEER PARA PÁGINA JAVASCRIPT ---');
+        
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu'
+            ]
         });
 
-        console.log('✅ Resposta recebida, status:', response.status);
-        console.log('Content-Type:', response.headers['content-type']);
-        console.log('Tamanho da resposta:', response.data.length, 'caracteres');
+        const page = await browser.newPage();
+        
+        // Configurar User-Agent
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        
+        console.log('🌐 Navegando para:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
+        
+        // Navegar para a página e aguardar o carregamento completo
+        await page.goto(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
+            waitUntil: 'networkidle0', // Aguarda até não haver requisições por 500ms
+            timeout: 30000
+        });
+        
+        console.log('✅ Página carregada, aguardando renderização...');
+        
+        // Aguardar um pouco mais para garantir que o JavaScript renderizou
+        await page.waitForTimeout(3000);
+        
+        // Tentar aguardar pelo elemento específico aparecer
+        try {
+            await page.waitForSelector('p.sc-edafe909-6.pLaXn', { timeout: 5000 });
+            console.log('✅ Elemento com classe sc-edafe909-6 pLaXn encontrado!');
+        } catch (e) {
+            console.log('⚠️ Elemento específico não encontrado, continuando...');
+        }
+        
+        // Obter o HTML renderizado
+        const htmlContent = await page.content();
+        console.log('📄 HTML renderizado obtido, tamanho:', htmlContent.length, 'caracteres');
         
         // DEBUG: Salvar uma amostra do HTML para análise
-        const htmlSample = response.data.substring(0, 2000);
+        const htmlSample = htmlContent.substring(0, 2000);
         console.log('\n--- AMOSTRA DO HTML RECEBIDO ---');
         console.log(htmlSample);
         console.log('--- FIM DA AMOSTRA ---\n');
         
-        const $ = cheerio.load(response.data);
+        // Usar Puppeteer para extrair o texto diretamente
+        console.log('\n--- EXTRAINDO TEXTO COM PUPPETEER ---');
         
-        console.log('\n--- PROCURANDO TEXTO NO <b> ---');
-        
-        // Estratégia 1: Procura especificamente pelo parágrafo com a classe mencionada
-        const targetParagraph = $('p.sc-edafe909-6.pLaXn');
-        console.log('1. Parágrafos encontrados com classe sc-edafe909-6 pLaXn:', targetParagraph.length);
-        
-        if (targetParagraph.length > 0) {
-            console.log('   Texto do parágrafo:', targetParagraph.text().trim());
-            const boldElement = targetParagraph.find('b');
-            console.log('   Elementos <b> encontrados no parágrafo:', boldElement.length);
-            if (boldElement.length > 0) {
-                capturedBoldText = boldElement.text().trim();
-                console.log('   ✅ Texto capturado do <b> específico:', `"${capturedBoldText}"`);
-            } else {
-                console.log('   ❌ Elemento <b> não encontrado no parágrafo específico');
+        // Estratégia 1: Procurar pelo seletor específico
+        let boldText = await page.evaluate(() => {
+            const paragraph = document.querySelector('p.sc-edafe909-6.pLaXn');
+            if (paragraph) {
+                const boldElement = paragraph.querySelector('b');
+                if (boldElement) {
+                    return boldElement.textContent.trim();
+                }
             }
+            return null;
+        });
+        
+        if (boldText) {
+            capturedBoldText = boldText;
+            console.log('✅ Texto capturado com seletor específico:', `"${capturedBoldText}"`);
         } else {
-            console.log('1. ❌ Parágrafo com classe sc-edafe909-6 pLaXn não encontrado');
-        }
-
-        // Estratégia 2: Procura em parágrafos que contenham "Ajudamos milhões"
-        if (!capturedBoldText) {
-            console.log('2. Procurando em parágrafos com "Ajudamos milhões"...');
-            let foundParagraphs = 0;
-            $('p').each((i, el) => {
-                const paragraphText = $(el).text();
-                foundParagraphs++;
-                if (paragraphText.includes('Ajudamos milhões')) {
-                    console.log(`   Parágrafo encontrado [${i}]:`, paragraphText.substring(0, 100) + '...');
-                    const boldInParagraph = $(el).find('b');
-                    if (boldInParagraph.length > 0) {
-                        capturedBoldText = boldInParagraph.text().trim();
-                        console.log('   ✅ Texto capturado do <b>:', `"${capturedBoldText}"`);
-                        return false; // break
+            console.log('❌ Seletor específico não funcionou, tentando alternativas...');
+            
+            // Estratégia 2: Procurar em parágrafos que contenham "Ajudamos milhões"
+            boldText = await page.evaluate(() => {
+                const paragraphs = document.querySelectorAll('p');
+                for (const p of paragraphs) {
+                    if (p.textContent.includes('Ajudamos milhões')) {
+                        const boldElement = p.querySelector('b');
+                        if (boldElement) {
+                            return boldElement.textContent.trim();
+                        }
                     }
                 }
+                return null;
             });
-            console.log(`   Total de parágrafos verificados: ${foundParagraphs}`);
+            
+            if (boldText) {
+                capturedBoldText = boldText;
+                console.log('✅ Texto capturado em parágrafo "Ajudamos milhões":', `"${capturedBoldText}"`);
+            } else {
+                console.log('❌ Parágrafo "Ajudamos milhões" não encontrado, tentando busca geral...');
+                
+                // Estratégia 3: Buscar qualquer <b> relevante
+                const allBoldTexts = await page.evaluate(() => {
+                    const boldElements = document.querySelectorAll('b');
+                    const texts = [];
+                    boldElements.forEach(b => {
+                        const text = b.textContent.trim();
+                        if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
+                            texts.push(text);
+                        }
+                    });
+                    return texts;
+                });
+                
+                console.log('📝 Todos os <b> relevantes encontrados:', allBoldTexts);
+                
+                if (allBoldTexts.length > 0) {
+                    capturedBoldText = allBoldTexts[0]; // Pega o primeiro
+                    console.log('✅ Texto capturado do primeiro <b> relevante:', `"${capturedBoldText}"`);
+                } else {
+                    // Estratégia 4: Buscar <strong> também
+                    const allStrongTexts = await page.evaluate(() => {
+                        const strongElements = document.querySelectorAll('strong');
+                        const texts = [];
+                        strongElements.forEach(s => {
+                            const text = s.textContent.trim();
+                            if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
+                                texts.push(text);
+                            }
+                        });
+                        return texts;
+                    });
+                    
+                    console.log('📝 Todos os <strong> relevantes encontrados:', allStrongTexts);
+                    
+                    if (allStrongTexts.length > 0) {
+                        capturedBoldText = allStrongTexts[0];
+                        console.log('✅ Texto capturado do primeiro <strong> relevante:', `"${capturedBoldText}"`);
+                    }
+                }
+            }
         }
+        
+        // Fechar o browser
+        await browser.close();
+        browser = null;
+        
+        // Fallback se nada foi encontrado
+        if (!capturedBoldText) {
+            capturedBoldText = 'descobrir seus poderes ocultos';
+            console.log('⚠️ Usando fallback absoluto:', `"${capturedBoldText}"`);
+        }
+        
+        console.log('\n=== RESULTADO FINAL ===');
+        console.log('Texto que será usado:', `"${capturedBoldText}"`);
+        console.log('Timestamp final:', new Date().toISOString());
+        
+        // Serve a página React customizada IMEDIATAMENTE
+        console.log('✅ Servindo página React customizada...\n');
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        
+    } catch (error) {
+        console.error('\n❌ ERRO no Puppeteer:', error.message);
+        
+        // Fechar browser se ainda estiver aberto
+        if (browser) {
+            try {
+                await browser.close();
+            } catch (closeError) {
+                console.error('Erro ao fechar browser:', closeError.message);
+            }
+        }
+        
+        // Mesmo com erro, serve a página React com fallback
+        capturedBoldText = 'descobrir seus poderes ocultos';
+        console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    }
+});
+
+// Middleware Principal do Proxy Reverso
+app.use(async (req, res) => {
+    // Declarar targetDomain no início para evitar erro
+    let targetDomain = MAIN_TARGET_URL;
+    let requestPath = req.url;
 
         // Estratégia 3: Procura por qualquer <b> que contenha texto relacionado
         if (!capturedBoldText) {

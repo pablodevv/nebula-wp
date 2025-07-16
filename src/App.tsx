@@ -8,18 +8,11 @@ function App() {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    // Busca o texto capturado do servidor com retry mais agressivo
-    const fetchCapturedText = async (retries = 5) => {
+    const fetchCapturedText = async () => {
       try {
-        console.log(`🔄 React: Buscando texto capturado do servidor... (tentativa ${6-retries})`);
+        console.log('🚀 React: Iniciando busca por texto capturado...');
         
-        // Delay progressivo: primeira tentativa imediata, depois aumenta
-        const delay = (5 - retries) * 300;
-        if (delay > 0) {
-          console.log(`⏳ React: Aguardando ${delay}ms antes da próxima tentativa...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-        
+        // Buscar imediatamente
         const response = await fetch('/api/captured-text');
         
         if (!response.ok) {
@@ -27,52 +20,33 @@ function App() {
         }
         
         const data = await response.json();
-        
-        console.log('📨 React: Resposta recebida:', data);
+        console.log('📨 React: Resposta do servidor:', data);
         
         if (data.capturedText && data.capturedText.trim()) {
-          // Verifica se não é apenas o fallback padrão na primeira tentativa
-          if (data.capturedText === 'descobrir seus poderes ocultos' && retries > 2) {
-            console.log('⚠️ React: Recebido fallback padrão, tentando novamente...');
-            throw new Error('Fallback padrão recebido, tentando capturar texto real');
-          } else {
-            console.log('✅ React: Texto recebido do servidor:', `"${data.capturedText}"`);
-            setCapturedText(data.capturedText);
-            setError('');
+          // Se o servidor ainda está capturando, aguardar um pouco
+          if (data.isCapturing) {
+            console.log('⏳ React: Servidor ainda está capturando, aguardando...');
+            setTimeout(() => fetchCapturedText(), 2000);
+            return;
           }
-        } else {
-          console.log('⚠️ React: Nenhum texto capturado, tentando novamente...');
           
-          // Se não há texto capturado e ainda temos tentativas, tenta novamente
-          if (retries > 0) {
-            console.log(`🔄 React: Tentando novamente... (${retries} tentativas restantes)`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return fetchCapturedText(retries - 1);
-          } else {
-            console.log('⚠️ React: Esgotadas as tentativas, usando fallback');
-            setCapturedText('descobrir seus poderes ocultos');
-          }
+          console.log('✅ React: Texto capturado recebido:', `"${data.capturedText}"`);
+          setCapturedText(data.capturedText);
+          setError('');
+        } else {
+          console.log('⚠️ React: Nenhum texto capturado encontrado');
+          setCapturedText('descobrir seus poderes ocultos');
+          setError('Usando conteúdo padrão');
         }
       } catch (error) {
         console.error('❌ React: Erro ao buscar texto capturado:', error);
-        
-        // Se ainda temos tentativas, tenta novamente
-        if (retries > 0) {
-          console.log(`🔄 React: Erro, tentando novamente... (${retries} tentativas restantes)`);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          return fetchCapturedText(retries - 1);
-        } else {
-          console.log('❌ React: Esgotadas as tentativas, usando fallback');
-          setCapturedText('descobrir seus poderes ocultos');
-          setError('Erro ao carregar texto personalizado');
-        }
+        setCapturedText('descobrir seus poderes ocultos');
+        setError('Erro ao carregar conteúdo personalizado');
       } finally {
-        console.log('🏁 React: Finalizando loading...');
         setLoading(false);
       }
     };
 
-    console.log('🚀 React: useEffect executado, iniciando busca...');
     fetchCapturedText();
   }, []);
 
@@ -94,7 +68,7 @@ function App() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4 mx-4">
           <div className="flex">
             <div className="text-yellow-700 text-xs">
-              {error} - Usando conteúdo padrão
+              {error}
             </div>
           </div>
         </div>

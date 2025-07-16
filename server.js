@@ -19,7 +19,7 @@ const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
 // Variável para armazenar o texto capturado
-let capturedBoldText = '';
+let capturedBoldText = 'identificar seu arquétipo de bruxa'; // fallback padrão
 
 // Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
@@ -32,57 +32,100 @@ app.use(fileUpload({
 // Middleware para servir arquivos estáticos da build do React
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// API endpoint para obter o texto capturado
+app.get('/api/captured-text', (req, res) => {
+    console.log('API chamada - retornando texto capturado:', capturedBoldText);
+    res.json({ capturedText: capturedBoldText });
+});
+
 // Rota específica para a página customizada de trialChoice
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
-    console.log('Interceptando trialChoice para capturar texto do <b></b>');
+    console.log('=== INTERCEPTANDO TRIALCHOICE ===');
+    console.log('URL acessada:', req.url);
     
     try {
+        console.log('Fazendo requisição para capturar texto do <b>...');
         const response = await axios({
             method: 'GET',
             url: `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`,
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
             },
+            timeout: 10000,
             responseType: 'text'
         });
 
+        console.log('Resposta recebida, status:', response.status);
         const $ = cheerio.load(response.data);
         
-        // Procura pelo texto específico no <b></b>
-        const targetElement = $('.sc-edafe909-6.pLaXn').find('b');
-        if (targetElement.length > 0) {
-            capturedBoldText = targetElement.text();
-            console.log('Texto capturado do <b></b>:', capturedBoldText);
+        // Procura especificamente pelo parágrafo com a classe mencionada
+        const targetParagraph = $('p.sc-edafe909-6.pLaXn');
+        console.log('Parágrafos encontrados com classe sc-edafe909-6 pLaXn:', targetParagraph.length);
+        
+        if (targetParagraph.length > 0) {
+            const boldElement = targetParagraph.find('b');
+            if (boldElement.length > 0) {
+                capturedBoldText = boldElement.text().trim();
+                console.log('✅ Texto capturado do <b> específico:', capturedBoldText);
+            } else {
+                console.log('❌ Elemento <b> não encontrado no parágrafo específico');
+            }
         } else {
-            // Fallback: procura por qualquer <b> com texto relacionado
+            console.log('❌ Parágrafo com classe sc-edafe909-6 pLaXn não encontrado');
+        }
+
+        // Fallback: procura por qualquer <b> que contenha texto relacionado
+        if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa') {
+            console.log('Tentando fallback - procurando por qualquer <b> relevante...');
             $('b').each((i, el) => {
-                const text = $(el).text();
-                if (text.includes('encontrar') || text.includes('marcas') || text.includes('símbolos')) {
+                const text = $(el).text().trim();
+                console.log(`<b> encontrado [${i}]:`, text);
+                if (text.includes('arquétipo') || text.includes('bruxa') || text.includes('identificar') || text.length > 10) {
                     capturedBoldText = text;
-                    console.log('Texto capturado do <b></b> (fallback):', capturedBoldText);
+                    console.log('✅ Texto capturado via fallback:', capturedBoldText);
                     return false; // break
                 }
             });
         }
 
-        if (!capturedBoldText) {
-            capturedBoldText = 'encontrar marcas e símbolos que as guiam'; // fallback padrão
+        // Fallback final: procura em parágrafos que contenham "Ajudamos milhões"
+        if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa') {
+            console.log('Tentando fallback final - procurando em parágrafos com "Ajudamos milhões"...');
+            $('p').each((i, el) => {
+                const paragraphText = $(el).text();
+                if (paragraphText.includes('Ajudamos milhões')) {
+                    const boldInParagraph = $(el).find('b');
+                    if (boldInParagraph.length > 0) {
+                        capturedBoldText = boldInParagraph.text().trim();
+                        console.log('✅ Texto capturado via fallback final:', capturedBoldText);
+                        return false; // break
+                    }
+                }
+            });
         }
 
-        // Serve a página React customizada
-        console.log('Servindo página customizada de trialChoice com texto capturado:', capturedBoldText);
+        console.log('=== RESULTADO FINAL ===');
+        console.log('Texto que será usado:', capturedBoldText);
+        
+        // Serve a página React customizada IMEDIATAMENTE
+        console.log('Servindo página React customizada...');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
         
     } catch (error) {
-        console.error('Erro ao capturar texto do <b></b>:', error.message);
-        capturedBoldText = 'encontrar marcas e símbolos que as guiam'; // fallback
+        console.error('❌ Erro ao capturar texto do <b>:', error.message);
+        if (error.code === 'ECONNABORTED') {
+            console.error('Timeout na requisição');
+        }
+        // Mesmo com erro, serve a página React com fallback
+        capturedBoldText = 'identificar seu arquétipo de bruxa';
+        console.log('Usando texto fallback:', capturedBoldText);
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     }
-});
-
-// API endpoint para obter o texto capturado
-app.get('/api/captured-text', (req, res) => {
-    res.json({ capturedText: capturedBoldText });
 });
 
 // Middleware Principal do Proxy Reverso

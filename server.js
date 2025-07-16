@@ -46,7 +46,11 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
     
-    console.log('🔄 Texto atual antes da captura:', `"${capturedBoldText}"`);
+    // RESET do texto capturado para garantir captura fresca
+    const oldText = capturedBoldText;
+    capturedBoldText = '';
+    console.log('Texto anterior:', oldText);
+    console.log('Texto resetado para captura fresca');
     
     let browser;
     try {
@@ -81,16 +85,19 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         
         console.log('✅ Página carregada, aguardando renderização...');
         
-        // Aguardar um pouco mais para garantir que o JavaScript renderizou
-        await page.waitForTimeout(3000);
+        // Aguardar MUITO mais tempo para garantir que o JavaScript renderizou completamente
+        await page.waitForTimeout(8000);
         
-        // Tentar aguardar pelo elemento específico aparecer
+        // Tentar aguardar pelo elemento específico aparecer com timeout maior
         try {
-            await page.waitForSelector('p.sc-edafe909-6.pLaXn', { timeout: 5000 });
+            await page.waitForSelector('p.sc-edafe909-6.pLaXn', { timeout: 10000 });
             console.log('✅ Elemento com classe sc-edafe909-6 pLaXn encontrado!');
         } catch (e) {
             console.log('⚠️ Elemento específico não encontrado, continuando...');
         }
+        
+        // Aguardar mais um pouco após encontrar o elemento
+        await page.waitForTimeout(2000);
         
         // Usar Puppeteer para extrair o texto diretamente
         console.log('\n--- EXTRAINDO TEXTO COM PUPPETEER ---');
@@ -110,9 +117,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         if (boldText) {
             capturedBoldText = boldText;
             console.log('✅ Texto capturado com seletor específico:', `"${capturedBoldText}"`);
-            
-            // Aguarda um pouco para garantir que a variável foi atualizada
-            await new Promise(resolve => setTimeout(resolve, 100));
         } else {
             console.log('❌ Seletor específico não funcionou, tentando alternativas...');
             
@@ -133,7 +137,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
             if (boldText) {
                 capturedBoldText = boldText;
                 console.log('✅ Texto capturado em parágrafo "Ajudamos milhões":', `"${capturedBoldText}"`);
-                await new Promise(resolve => setTimeout(resolve, 100));
             } else {
                 console.log('❌ Parágrafo "Ajudamos milhões" não encontrado, tentando busca geral...');
                 
@@ -155,7 +158,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                 if (allBoldTexts.length > 0) {
                     capturedBoldText = allBoldTexts[0]; // Pega o primeiro
                     console.log('✅ Texto capturado do primeiro <b> relevante:', `"${capturedBoldText}"`);
-                    await new Promise(resolve => setTimeout(resolve, 100));
                 } else {
                     // Estratégia 4: Buscar <strong> também
                     const allStrongTexts = await page.evaluate(() => {
@@ -175,7 +177,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
                     if (allStrongTexts.length > 0) {
                         capturedBoldText = allStrongTexts[0];
                         console.log('✅ Texto capturado do primeiro <strong> relevante:', `"${capturedBoldText}"`);
-                        await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 }
             }
@@ -185,8 +186,8 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         await browser.close();
         browser = null;
         
-        // Fallback se nada foi encontrado OU se ainda está vazio
-        if (!capturedBoldText || capturedBoldText.trim() === '') {
+        // Fallback se nada foi encontrado
+        if (!capturedBoldText) {
             capturedBoldText = 'descobrir seus poderes ocultos';
             console.log('⚠️ Usando fallback absoluto:', `"${capturedBoldText}"`);
         }
@@ -196,8 +197,8 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         console.log('Comprimento do texto:', capturedBoldText.length);
         console.log('Timestamp final:', new Date().toISOString());
         
-        // Aguarda mais um pouco antes de servir a página para garantir sincronização
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Aguarda um pouco mais antes de servir a página para garantir que tudo está pronto
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Serve a página React customizada IMEDIATAMENTE
         console.log('✅ Servindo página React customizada...\n');
@@ -218,9 +219,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         // Mesmo com erro, serve a página React com fallback
         capturedBoldText = 'descobrir seus poderes ocultos';
         console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
-        
-        // Aguarda um pouco mesmo com erro
-        await new Promise(resolve => setTimeout(resolve, 200));
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     }
 });

@@ -368,6 +368,70 @@ app.use(async (req, res) => {
 
                 </script>
             `);
+
+            // ---
+            // REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice
+            // Este script força o redirecionamento quando o usuário navega via SPA
+            $('head').append(`
+                <script>
+                    console.log('CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.');
+
+                    // Variável para armazenar o ID do intervalo
+                    let trialChoiceRedirectInterval;
+
+                    function handleTrialChoiceRedirect() {
+                        const currentPath = window.location.pathname;
+                        if (currentPath === '/pt/witch-power/trialChoice') {
+                            console.log('CLIENT-SIDE REDIRECT: URL /pt/witch-power/trialChoice detectada. Forçando reload para interceptação do servidor.');
+                            // Limpa o intervalo imediatamente
+                            if (trialChoiceRedirectInterval) {
+                                clearInterval(trialChoiceRedirectInterval);
+                            }
+                            // Força um reload da página para que o servidor possa interceptar
+                            window.location.reload();
+                        }
+                    }
+
+                    // 1. Executa no carregamento inicial da página
+                    document.addEventListener('DOMContentLoaded', handleTrialChoiceRedirect);
+
+                    // 2. Monitora mudanças na história do navegador (navegação SPA)
+                    window.addEventListener('popstate', handleTrialChoiceRedirect);
+
+                    // 3. Verificador periódico para capturar navegações SPA que não disparam eventos
+                    trialChoiceRedirectInterval = setInterval(handleTrialChoiceRedirect, 200);
+
+                    // 4. Monitora mudanças no DOM que podem indicar navegação SPA
+                    if (window.MutationObserver) {
+                        const observer = new MutationObserver(function(mutations) {
+                            // Verifica se houve mudanças significativas no DOM que podem indicar nova página
+                            mutations.forEach(function(mutation) {
+                                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                                    // Pequeno delay para permitir que a URL seja atualizada
+                                    setTimeout(handleTrialChoiceRedirect, 50);
+                                }
+                            });
+                        });
+                        
+                        // Observa mudanças no body
+                        observer.observe(document.body, {
+                            childList: true,
+                            subtree: true
+                        });
+                    }
+
+                    // Limpa o intervalo se a página for descarregada
+                    window.addEventListener('beforeunload', () => {
+                        if (trialChoiceRedirectInterval) {
+                            clearInterval(trialChoiceRedirectInterval);
+                        }
+                    });
+
+                    // Executa imediatamente também
+                    handleTrialChoiceRedirect();
+
+                </script>
+            `);
             // ---
 
             // MODIFICAÇÕES ESPECÍFICAS PARA /pt/witch-power/trialPaymentancestral

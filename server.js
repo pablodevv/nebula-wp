@@ -95,16 +95,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
             console.log('⚠️ Elemento específico não encontrado, continuando...');
         }
         
-        // Obter o HTML renderizado
-        const htmlContent = await page.content();
-        console.log('📄 HTML renderizado obtido, tamanho:', htmlContent.length, 'caracteres');
-        
-        // DEBUG: Salvar uma amostra do HTML para análise
-        const htmlSample = htmlContent.substring(0, 2000);
-        console.log('\n--- AMOSTRA DO HTML RECEBIDO ---');
-        console.log(htmlSample);
-        console.log('--- FIM DA AMOSTRA ---\n');
-        
         // Usar Puppeteer para extrair o texto diretamente
         console.log('\n--- EXTRAINDO TEXTO COM PUPPETEER ---');
         
@@ -228,110 +218,6 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
 // Middleware Principal do Proxy Reverso
 app.use(async (req, res) => {
     // Declarar targetDomain no início para evitar erro
-    let targetDomain = MAIN_TARGET_URL;
-    let requestPath = req.url;
-
-        // Estratégia 3: Procura por qualquer <b> que contenha texto relacionado
-        if (!capturedBoldText) {
-            console.log('3. Procurando por qualquer <b> relevante...');
-            const allBolds = [];
-            $('b').each((i, el) => {
-                const text = $(el).text().trim();
-                allBolds.push(text);
-                if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
-                    capturedBoldText = text;
-                    console.log(`   ✅ Texto capturado do <b> [${i}]:`, `"${capturedBoldText}"`);
-                    return false; // break
-                }
-            });
-            console.log('   Todos os <b> encontrados:', allBolds);
-        }
-
-        // Estratégia 5: Procura por <strong> também (às vezes usado no lugar de <b>)
-        if (!capturedBoldText) {
-            console.log('5. Procurando por elementos <strong>...');
-            const allStrongs = [];
-            $('strong').each((i, el) => {
-                const text = $(el).text().trim();
-                allStrongs.push(text);
-                if (text.length > 5 && !text.includes('$') && !text.includes('€') && !text.includes('R$')) {
-                    capturedBoldText = text;
-                    console.log(`   ✅ Texto capturado do <strong> [${i}]:`, `"${capturedBoldText}"`);
-                    return false; // break
-                }
-            });
-            console.log('   Todos os <strong> encontrados:', allStrongs);
-        }
-
-        // Estratégia 6: Procura por texto em qualquer elemento que contenha palavras-chave
-        if (!capturedBoldText) {
-            console.log('6. Procurando texto em qualquer elemento...');
-            const keywords = ['bruxa', 'arquétipo', 'poder', 'oculto', 'místico', 'espiritual'];
-            $('*').each((i, el) => {
-                const text = $(el).text().trim();
-                if (text.length > 10 && text.length < 100) {
-                    for (const keyword of keywords) {
-                        if (text.toLowerCase().includes(keyword)) {
-                            // Verifica se não é um parágrafo inteiro, mas sim uma frase específica
-                            if (!text.includes('Ajudamos milhões') && !text.includes('queremos ajudar')) {
-                                capturedBoldText = text;
-                                console.log(`   ✅ Texto capturado por keyword "${keyword}":`, `"${capturedBoldText}"`);
-                                return false; // break
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Estratégia 4: Procura por texto específico relacionado a bruxas
-        if (!capturedBoldText) {
-            console.log('4. Procurando por texto relacionado a bruxas...');
-            const keywords = ['bruxa', 'poder', 'magia', 'oculto', 'místico', 'espiritual', 'energia', 'vida'];
-            $('b').each((i, el) => {
-                const text = $(el).text().trim().toLowerCase();
-                for (const keyword of keywords) {
-                    if (text.includes(keyword)) {
-                        capturedBoldText = $(el).text().trim();
-                        console.log(`   ✅ Texto capturado por keyword "${keyword}":`, `"${capturedBoldText}"`);
-                        return false; // break
-                    }
-                }
-            });
-        }
-
-        // Fallback absoluto se nada foi encontrado
-        if (!capturedBoldText) {
-            capturedBoldText = 'descobrir seus poderes ocultos';
-            console.log('⚠️ Usando fallback absoluto:', `"${capturedBoldText}"`);
-        }
-
-        console.log('\n=== RESULTADO FINAL ===');
-        console.log('Texto que será usado:', `"${capturedBoldText}"`);
-        console.log('Timestamp final:', new Date().toISOString());
-        
-        // Serve a página React customizada IMEDIATAMENTE
-        console.log('✅ Servindo página React customizada...\n');
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-        
-    } catch (error) {
-        console.error('\n❌ ERRO ao capturar texto do <b>:', error.message);
-        if (error.code === 'ECONNABORTED') {
-            console.error('Timeout na requisição');
-        } else if (error.code === 'ENOTFOUND') {
-            console.error('Domínio não encontrado');
-        } else {
-            console.error('Detalhes do erro:', error.code, error.response?.status);
-        }
-        // Mesmo com erro, serve a página React com fallback
-        capturedBoldText = 'descobrir seus poderes ocultos';
-        console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-    }
-});
-
-// Middleware Principal do Proxy Reverso
-app.use(async (req, res) => {
     let targetDomain = MAIN_TARGET_URL;
     let requestPath = req.url;
 
@@ -525,116 +411,84 @@ app.use(async (req, res) => {
                 </script>
             `);
 
-            // ---
             // REDIRECIONAMENTO CLIENT-SIDE MAIS AGRESSIVO PARA /pt/witch-power/email
-            // Este script será injetado em TODAS as páginas HTML para forçar o redirecionamento
             $('head').append(`
                 <script>
                     console.log('CLIENT-SIDE REDIRECT SCRIPT: Initializing.');
 
-                    // Variável para armazenar o ID do intervalo, permitindo limpá-lo
                     let redirectCheckInterval;
 
                     function handleEmailRedirect() {
                         const currentPath = window.location.pathname;
-                        // Use startsWith para pegar /email e /email?param=value
                         if (currentPath.startsWith('/pt/witch-power/email')) {
                             console.log('CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. Forçando redirecionamento para /pt/witch-power/onboarding');
-                            // Limpa o intervalo imediatamente para evitar múltiplos redirecionamentos
                             if (redirectCheckInterval) {
                                 clearInterval(redirectCheckInterval);
                             }
-                            window.location.replace('/pt/witch-power/onboarding'); // Usa replace para não deixar no histórico
+                            window.location.replace('/pt/witch-power/onboarding');
                         }
                     }
 
-                    // 1. Executa no carregamento inicial da página (para quando há uma requisição HTTP direta ou client-side inicial)
                     document.addEventListener('DOMContentLoaded', handleEmailRedirect);
-
-                    // 2. Monitora mudanças na história do navegador (para navegações via SPA - pushState/replaceState)
                     window.addEventListener('popstate', handleEmailRedirect);
+                    redirectCheckInterval = setInterval(handleEmailRedirect, 100);
 
-                    // 3. Adiciona um verificador periódico como uma camada extra de segurança
-                    // para capturar qualquer transição que os eventos não peguem
-                    redirectCheckInterval = setInterval(handleEmailRedirect, 100); // Verifica a cada 100ms
-
-                    // Limpa o intervalo se a página for descarregada para evitar vazamento de memória
                     window.addEventListener('beforeunload', () => {
                         if (redirectCheckInterval) {
                             clearInterval(redirectCheckInterval);
                         }
                     });
 
-                    // Tenta executar imediatamente também para casos onde o script é injetado muito cedo
                     handleEmailRedirect();
-
                 </script>
             `);
 
-            // ---
             // REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice
-            // Este script força o redirecionamento quando o usuário navega via SPA
             $('head').append(`
                 <script>
                     console.log('CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.');
 
-                    // Variável para armazenar o ID do intervalo
                     let trialChoiceRedirectInterval;
 
                     function handleTrialChoiceRedirect() {
                         const currentPath = window.location.pathname;
                         if (currentPath === '/pt/witch-power/trialChoice') {
                             console.log('CLIENT-SIDE REDIRECT: URL /pt/witch-power/trialChoice detectada. Forçando reload para interceptação do servidor.');
-                            // Limpa o intervalo imediatamente
                             if (trialChoiceRedirectInterval) {
                                 clearInterval(trialChoiceRedirectInterval);
                             }
-                            // Força um reload da página para que o servidor possa interceptar
                             window.location.reload();
                         }
                     }
 
-                    // 1. Executa no carregamento inicial da página
                     document.addEventListener('DOMContentLoaded', handleTrialChoiceRedirect);
-
-                    // 2. Monitora mudanças na história do navegador (navegação SPA)
                     window.addEventListener('popstate', handleTrialChoiceRedirect);
-
-                    // 3. Verificador periódico para capturar navegações SPA que não disparam eventos
                     trialChoiceRedirectInterval = setInterval(handleTrialChoiceRedirect, 200);
 
-                    // 4. Monitora mudanças no DOM que podem indicar navegação SPA
                     if (window.MutationObserver) {
                         const observer = new MutationObserver(function(mutations) {
-                            // Verifica se houve mudanças significativas no DOM que podem indicar nova página
                             mutations.forEach(function(mutation) {
                                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                                    // Pequeno delay para permitir que a URL seja atualizada
                                     setTimeout(handleTrialChoiceRedirect, 50);
                                 }
                             });
                         });
                         
-                        // Observa mudanças no body
                         observer.observe(document.body, {
                             childList: true,
                             subtree: true
                         });
                     }
 
-                    // Limpa o intervalo se a página for descarregada
                     window.addEventListener('beforeunload', () => {
                         if (trialChoiceRedirectInterval) {
                             clearInterval(trialChoiceRedirectInterval);
                         }
                     });
 
-                    // Executa imediatamente também
                     handleTrialChoiceRedirect();
-
                 </script>
             `);
-            // ---
 
             // MODIFICAÇÕES ESPECÍFICAS PARA /pt/witch-power/trialPaymentancestral
             if (req.url.includes('/pt/witch-power/trialPaymentancestral')) {

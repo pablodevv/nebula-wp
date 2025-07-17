@@ -5,58 +5,46 @@ import TrialChoice from './TrialChoice';
 import './TrialChoice.css';
 
 function App() {
-  const [capturedText, setCapturedText] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [attemptCount, setAttemptCount] = useState(0); // Para tentar algumas vezes
+  // Estado para armazenar o texto capturado do quiz
+  const [chosenQuizOption, setChosenQuizOption] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true); // Para exibir um loading enquanto busca no localStorage
 
   useEffect(() => {
-    const fetchCapturedText = async () => {
-      setAttemptCount(prev => prev + 1);
-      try {
-        console.log(`🚀 React: Iniciando busca por texto capturado (Tentativa ${attemptCount + 1})...`);
-        
-        const response = await fetch('/api/captured-text');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('📨 React: Resposta do servidor:', data);
-        
-        if (data.capturedText && data.capturedText.trim()) {
-          console.log('✅ React: Texto capturado recebido:', `"${data.capturedText}"`);
-          setCapturedText(data.capturedText);
-          setError('');
-          setLoading(false); // Carregamento completo com sucesso
-        } else if (data.isCapturing && attemptCount < 5) { // Tenta mais algumas vezes se estiver capturando
-          console.log('⏳ React: Servidor está capturando, tentando novamente em breve...');
-          setTimeout(fetchCapturedText, 1000); // Tenta novamente após 1 segundo
-        }
-        else {
-          console.log('⚠️ React: Nenhum texto capturado encontrado ou captura falhou após tentativas.');
-          setCapturedText('explorar origens de vidas passadas'); // Seu fallback preferencial
-          setError('Conteúdo personalizado não disponível no momento. Usando padrão.');
-          setLoading(false); // Carregamento completo com fallback
-        }
-      } catch (error) {
-        console.error('❌ React: Erro ao buscar texto capturado:', error);
-        setCapturedText('explorar origens de vidas passadas'); // Seu fallback preferencial
-        setError('Erro ao carregar conteúdo personalizado. Usando padrão.');
-        setLoading(false); // Carregamento completo com erro e fallback
+    // Função para ler a escolha do quiz do localStorage
+    const getQuizChoiceFromLocalStorage = () => {
+      console.log('🚀 React: Tentando ler a escolha do quiz do localStorage...');
+      const savedChoice = localStorage.getItem('nebulaQuizChoice');
+
+      if (savedChoice && savedChoice.trim()) {
+        console.log('✅ React: Escolha do quiz encontrada no localStorage:', `"${savedChoice}"`);
+        setChosenQuizOption(savedChoice);
+      } else {
+        console.warn('⚠️ React: Nenhuma escolha do quiz encontrada no localStorage ou vazia. Usando fallback.');
+        // Define um fallback padrão caso a escolha não seja encontrada
+        setChosenQuizOption('explorar origens de vidas passadas');
       }
+      setLoading(false); // Termina o estado de carregamento
     };
 
-    fetchCapturedText();
-  }, []); // [] para rodar apenas uma vez no mount
+    // Chamada inicial da função
+    getQuizChoiceFromLocalStorage();
+
+    // Adiciona um listener para o evento 'storage' caso a escolha seja alterada em outra aba/janela
+    // Embora para este caso não seja estritamente necessário, é uma boa prática para dados de localStorage
+    window.addEventListener('storage', getQuizChoiceFromLocalStorage);
+
+    // Limpeza: remove o listener ao desmontar o componente
+    return () => {
+      window.removeEventListener('storage', getQuizChoiceFromLocalStorage);
+    };
+  }, []); // O array vazio assegura que o efeito rode apenas uma vez ao montar o componente
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Capturando informações personalizadas...</p>
+          <p className="text-gray-600">Preparando sua experiência personalizada...</p>
           <p className="text-sm text-gray-500 mt-2">Isso pode demorar um pouco na primeira vez...</p>
         </div>
       </div>
@@ -65,16 +53,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {error && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4 mx-4">
-          <div className="flex">
-            <div className="text-yellow-700 text-xs">
-              {error}
-            </div>
-          </div>
-        </div>
-      )}
-      <TrialChoice capturedText={capturedText} />
+      {/* Não precisamos mais de um estado de `error` específico aqui para a API,
+          pois o fallback já lida com a ausência do texto. */}
+      {/* O componente TrialChoice receberá o texto capturado como prop */}
+      <TrialChoice capturedText={chosenQuizOption} />
     </div>
   );
 }

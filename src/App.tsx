@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React, { useState, useEffect } from 'react';
 import TrialChoice from './TrialChoice';
 import './TrialChoice.css';
@@ -6,13 +8,14 @@ function App() {
   const [capturedText, setCapturedText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [attemptCount, setAttemptCount] = useState(0); // Para tentar algumas vezes
 
   useEffect(() => {
     const fetchCapturedText = async () => {
+      setAttemptCount(prev => prev + 1);
       try {
-        console.log('🚀 React: Iniciando busca por texto capturado...');
+        console.log(`🚀 React: Iniciando busca por texto capturado (Tentativa ${attemptCount + 1})...`);
         
-        // Buscar imediatamente
         const response = await fetch('/api/captured-text');
         
         if (!response.ok) {
@@ -26,22 +29,27 @@ function App() {
           console.log('✅ React: Texto capturado recebido:', `"${data.capturedText}"`);
           setCapturedText(data.capturedText);
           setError('');
-        } else {
-          console.log('⚠️ React: Nenhum texto capturado encontrado');
-          setCapturedText('identificar seu arquétipo de bruxa');
-          setError('Usando conteúdo padrão');
+          setLoading(false); // Carregamento completo com sucesso
+        } else if (data.isCapturing && attemptCount < 5) { // Tenta mais algumas vezes se estiver capturando
+          console.log('⏳ React: Servidor está capturando, tentando novamente em breve...');
+          setTimeout(fetchCapturedText, 1000); // Tenta novamente após 1 segundo
+        }
+        else {
+          console.log('⚠️ React: Nenhum texto capturado encontrado ou captura falhou após tentativas.');
+          setCapturedText('explorar origens de vidas passadas'); // Seu fallback preferencial
+          setError('Conteúdo personalizado não disponível no momento. Usando padrão.');
+          setLoading(false); // Carregamento completo com fallback
         }
       } catch (error) {
         console.error('❌ React: Erro ao buscar texto capturado:', error);
-        setCapturedText('identificar seu arquétipo de bruxa');
-        setError('Erro ao carregar conteúdo personalizado');
-      } finally {
-        setLoading(false);
+        setCapturedText('explorar origens de vidas passadas'); // Seu fallback preferencial
+        setError('Erro ao carregar conteúdo personalizado. Usando padrão.');
+        setLoading(false); // Carregamento completo com erro e fallback
       }
     };
 
     fetchCapturedText();
-  }, []);
+  }, []); // [] para rodar apenas uma vez no mount
 
   if (loading) {
     return (
@@ -49,7 +57,7 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Capturando informações personalizadas...</p>
-          <p className="text-sm text-gray-500 mt-2">Fazendo requisição direta para o servidor...</p>
+          <p className="text-sm text-gray-500 mt-2">Isso pode demorar um pouco na primeira vez...</p>
         </div>
       </div>
     );

@@ -1,13 +1,14 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-import TrialChoice from './TrialChoice';
-import './TrialChoice.css';
+import TrialChoice from './TrialChoice'; // Seu componente TrialChoice
+import './TrialChoice.css'; // Seus estilos CSS
+// Importe outros componentes que seu App.tsx pode renderizar para outras rotas, se houver.
 
 function App() {
-  // Estado para armazenar o texto capturado do quiz
   const [chosenQuizOption, setChosenQuizOption] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true); // Para exibir um loading enquanto busca no localStorage
+  const [loading, setLoading] = useState<boolean>(true);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
     // Função para ler a escolha do quiz do localStorage
@@ -20,24 +21,30 @@ function App() {
         setChosenQuizOption(savedChoice);
       } else {
         console.warn('⚠️ React: Nenhuma escolha do quiz encontrada no localStorage ou vazia. Usando fallback.');
-        // Define um fallback padrão caso a escolha não seja encontrada
-        setChosenQuizOption('explorar origens de vidas passadas');
+        setChosenQuizOption('explorar origens de vidas passadas'); // Fallback consistente
       }
-      setLoading(false); // Termina o estado de carregamento
+      setLoading(false);
     };
 
-    // Chamada inicial da função
+    // Chamada inicial
     getQuizChoiceFromLocalStorage();
 
-    // Adiciona um listener para o evento 'storage' caso a escolha seja alterada em outra aba/janela
-    // Embora para este caso não seja estritamente necessário, é uma boa prática para dados de localStorage
+    // Listener para mudanças de URL (se o navegador mudar a rota sem recarregar a página)
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+      getQuizChoiceFromLocalStorage(); // Recarrega a escolha caso a rota mude e a escolha seja relevante
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // Listener para o evento 'storage' (se a escolha for alterada em outra aba/janela)
     window.addEventListener('storage', getQuizChoiceFromLocalStorage);
 
-    // Limpeza: remove o listener ao desmontar o componente
+    // Limpeza
     return () => {
+      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('storage', getQuizChoiceFromLocalStorage);
     };
-  }, []); // O array vazio assegura que o efeito rode apenas uma vez ao montar o componente
+  }, []); // Roda uma vez ao montar
 
   if (loading) {
     return (
@@ -45,18 +52,28 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Preparando sua experiência personalizada...</p>
-          <p className="text-sm text-gray-500 mt-2">Isso pode demorar um pouco na primeira vez...</p>
+          <p className="text-sm text-gray-500 mt-2">Carregando...</p>
         </div>
       </div>
     );
   }
 
+  // Lógica de roteamento simples para renderizar o componente correto
+  if (currentPath === '/meu-app/trial-choice') {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <TrialChoice capturedText={chosenQuizOption} />
+      </div>
+    );
+  }
+
+  // Se a rota não for '/meu-app/trial-choice', você pode renderizar
+  // outras partes do seu aplicativo ou uma página de erro/padrão.
+  // Por exemplo, se seu App.tsx também lida com /onboarding, etc.
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Não precisamos mais de um estado de `error` específico aqui para a API,
-          pois o fallback já lida com a ausência do texto. */}
-      {/* O componente TrialChoice receberá o texto capturado como prop */}
-      <TrialChoice capturedText={chosenQuizOption} />
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <p className="text-gray-600">Conteúdo da rota {currentPath} (não TrialChoice).</p>
+      {/* Você pode adicionar outros componentes aqui para outras rotas */}
     </div>
   );
 }

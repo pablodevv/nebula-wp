@@ -22,6 +22,7 @@ const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 let capturedBoldText = '';
 let lastCaptureTime = 0;
 let isCapturing = false;
+let monitoringActive = false;
 
 // Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
@@ -40,315 +41,126 @@ app.get('/api/captured-text', (req, res) => {
     console.log('📝 Texto atual na variável:', `"${capturedBoldText}"`);
     console.log('🕐 Último tempo de captura:', new Date(lastCaptureTime).toISOString());
     console.log('🔄 Está capturando:', isCapturing);
+    console.log('👁️ Monitoramento ativo:', monitoringActive);
     
     res.json({ 
         capturedText: capturedBoldText,
         lastCaptureTime: lastCaptureTime,
         isCapturing: isCapturing,
+        monitoringActive: monitoringActive,
         timestamp: Date.now()
     });
 });
 
-// Função para captura com Playwright otimizada para Next.js
-async function captureWithPlaywright() {
-    console.log('\n--- ESTRATÉGIA PLAYWRIGHT OTIMIZADA PARA NEXT.JS ---');
+// Função para monitoramento contínuo em tempo real (igual estratégia do email)
+async function startContinuousMonitoring() {
+    if (monitoringActive) {
+        console.log('⏳ Monitoramento já ativo, ignorando nova solicitação');
+        return;
+    }
     
-    try {
-        const { chromium } = require('playwright');
-        
-        const browser = await chromium.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor',
-                '--disable-background-timer-throttling',
-                '--disable-backgrounding-occluded-windows',
-                '--disable-renderer-backgrounding'
-            ]
-        });
-
-        const page = await browser.newPage();
-        
-        // Configurar viewport e user agent
-        await page.setViewportSize({ width: 1920, height: 1080 });
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        
-        console.log('🌐 Navegando para:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
-        
-        // Navegar e aguardar carregamento completo
-        await page.goto(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
-            waitUntil: 'networkidle',
-            timeout: 60000
-        });
-        
-        console.log('✅ Página carregada, aguardando renderização Next.js...');
-        
-        // Aguardar mais tempo para Next.js renderizar completamente
-        await page.waitForTimeout(15000);
-        
-        // Aguardar especificamente pelo elemento aparecer
+    monitoringActive = true;
+    console.log('\n🔄 INICIANDO MONITORAMENTO CONTÍNUO EM TEMPO REAL');
+    console.log('📡 Estratégia igual ao redirecionamento do email');
+    
+    const monitorInterval = setInterval(async () => {
         try {
-            await page.waitForSelector('p:has-text("Ajudamos milhões")', { timeout: 20000 });
-            console.log('✅ Elemento "Ajudamos milhões" encontrado!');
-        } catch (e) {
-            console.log('⚠️ Elemento específico não encontrado, continuando...');
-        }
-        
-        // Aguardar mais um pouco após encontrar o elemento
-        await page.waitForTimeout(5000);
-        
-        // Múltiplas estratégias de captura
-        let boldText = null;
-        
-        // Estratégia 1: Seletor específico conhecido
-        console.log('🔍 Tentando seletor específico...');
-        boldText = await page.evaluate(() => {
-            const paragraph = document.querySelector('p.sc-edafe909-6.pLaXn');
-            if (paragraph) {
-                const boldElement = paragraph.querySelector('b');
-                if (boldElement && boldElement.textContent.trim().length > 5) {
-                    return boldElement.textContent.trim();
-                }
-            }
-            return null;
-        });
-        
-        if (boldText) {
-            console.log('✅ PLAYWRIGHT: Texto encontrado com seletor específico:', `"${boldText}"`);
-            await browser.close();
-            return boldText;
-        }
-        
-        // Estratégia 2: Buscar em parágrafos que contenham "Ajudamos milhões"
-        console.log('🔍 Buscando em parágrafos "Ajudamos milhões"...');
-        boldText = await page.evaluate(() => {
-            const paragraphs = document.querySelectorAll('p');
-            for (const p of paragraphs) {
-                if (p.textContent && p.textContent.includes('Ajudamos milhões')) {
-                    const boldElement = p.querySelector('b');
-                    if (boldElement && boldElement.textContent.trim().length > 5) {
-                        return boldElement.textContent.trim();
-                    }
-                }
-            }
-            return null;
-        });
-        
-        if (boldText) {
-            console.log('✅ PLAYWRIGHT: Texto encontrado em parágrafo "Ajudamos milhões":', `"${boldText}"`);
-            await browser.close();
-            return boldText;
-        }
-        
-        // Estratégia 3: Buscar todos os <b> relevantes
-        console.log('🔍 Buscando todos os <b> relevantes...');
-        const allBoldTexts = await page.evaluate(() => {
-            const boldElements = document.querySelectorAll('b');
-            const texts = [];
-            boldElements.forEach(b => {
-                const text = b.textContent ? b.textContent.trim() : '';
-                if (text.length > 10 && 
-                    !text.includes('$') && 
-                    !text.includes('€') && 
-                    !text.includes('R$') &&
-                    !text.includes('SATISFAÇÃO') &&
-                    !text.includes('ECONOMIA') &&
-                    (text.includes('desvendar') || 
-                     text.includes('descobrir') || 
-                     text.includes('identificar') || 
-                     text.includes('explorar') || 
-                     text.includes('revelar') ||
-                     text.includes('encontrar'))) {
-                    texts.push(text);
-                }
+            console.log('👁️ Monitorando página... Timestamp:', new Date().toISOString());
+            
+            // Tentar capturar com Playwright primeiro
+            const { chromium } = require('playwright');
+            
+            const browser = await chromium.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-web-security'
+                ]
             });
-            return texts;
-        });
-        
-        console.log('📝 Todos os <b> relevantes encontrados:', allBoldTexts);
-        
-        if (allBoldTexts.length > 0) {
-            boldText = allBoldTexts[0];
-            console.log('✅ PLAYWRIGHT: Texto capturado do primeiro <b> relevante:', `"${boldText}"`);
-            await browser.close();
-            return boldText;
-        }
-        
-        // Estratégia 4: Capturar todo o HTML e fazer parse manual
-        console.log('🔍 Fazendo parse manual do HTML...');
-        const htmlContent = await page.content();
-        const $ = cheerio.load(htmlContent);
-        
-        // Procurar por padrões específicos no HTML renderizado
-        const patterns = [
-            'p:contains("Ajudamos milhões") b',
-            'b:contains("explorar")',
-            'b:contains("desvendar")',
-            'b:contains("descobrir")',
-            'b:contains("identificar")',
-            'b:contains("revelar")'
-        ];
-        
-        for (const pattern of patterns) {
-            const element = $(pattern).first();
-            if (element.length > 0) {
-                const text = element.text().trim();
-                if (text.length > 10) {
-                    console.log(`✅ PLAYWRIGHT: Texto encontrado com padrão "${pattern}":`, `"${text}"`);
-                    await browser.close();
-                    return text;
-                }
-            }
-        }
-        
-        await browser.close();
-        return null;
-        
-    } catch (error) {
-        console.log('❌ PLAYWRIGHT falhou:', error.message);
-        return null;
-    }
-}
 
-// Função para capturar texto com múltiplas estratégias
-async function captureTextAdvanced() {
-    if (isCapturing) {
-        console.log('⏳ Captura já em andamento, aguardando...');
-        return capturedBoldText;
-    }
-    
-    isCapturing = true;
-    
-    try {
-        console.log('\n=== INICIANDO CAPTURA AVANÇADA MULTI-ESTRATÉGIA ===');
-        console.log('Timestamp início:', new Date().toISOString());
-        
-        // ESTRATÉGIA 1: Playwright otimizado para Next.js
-        const playwrightResult = await captureWithPlaywright();
-        if (playwrightResult && playwrightResult.length > 5) {
-            capturedBoldText = playwrightResult;
-            lastCaptureTime = Date.now();
-            console.log('✅ ESTRATÉGIA 1 (PLAYWRIGHT) SUCESSO:', `"${capturedBoldText}"`);
-            return capturedBoldText;
-        }
-        
-        // ESTRATÉGIA 2: Axios + Cheerio com múltiplas tentativas
-        console.log('\n--- ESTRATÉGIA 2: AXIOS + CHEERIO ---');
-        
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                console.log(`Tentativa ${attempt}/3 com Axios...`);
+            const page = await browser.newPage();
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+            
+            await page.goto(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
+                waitUntil: 'networkidle',
+                timeout: 30000
+            });
+            
+            // Aguardar um pouco para renderização
+            await page.waitForTimeout(3000);
+            
+            // BUSCA ESPECÍFICA: "Ajudamos milhões de pessoas a" ... ", e queremos ajudar você também."
+            const extractedText = await page.evaluate(() => {
+                const allElements = document.querySelectorAll('*');
                 
-                const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-                        'Accept-Encoding': 'gzip, deflate, br',
-                        'Connection': 'keep-alive',
-                        'Upgrade-Insecure-Requests': '1'
-                    },
-                    timeout: 30000
-                });
-                
-                const $ = cheerio.load(response.data);
-                
-                // Procurar por diferentes padrões
-                const patterns = [
-                    'p:contains("Ajudamos milhões") b',
-                    'b:contains("explorar")',
-                    'b:contains("desvendar")',
-                    'b:contains("descobrir")',
-                    'b:contains("identificar")',
-                    'b:contains("revelar")'
-                ];
-                
-                let foundText = null;
-                for (const pattern of patterns) {
-                    const element = $(pattern).first();
-                    if (element.length > 0) {
-                        const text = element.text().trim();
-                        if (text.length > 5) {
-                            console.log(`✅ AXIOS: Texto encontrado com padrão "${pattern}":`, `"${text}"`);
-                            foundText = text;
-                            break;
+                for (const element of allElements) {
+                    const text = element.textContent || '';
+                    
+                    // Procurar pelo padrão específico
+                    const startPhrase = 'Ajudamos milhões de pessoas a ';
+                    const endPhrase = ', e queremos ajudar você também.';
+                    
+                    if (text.includes(startPhrase) && text.includes(endPhrase)) {
+                        const startIndex = text.indexOf(startPhrase) + startPhrase.length;
+                        const endIndex = text.indexOf(endPhrase);
+                        
+                        if (startIndex < endIndex) {
+                            const extractedContent = text.substring(startIndex, endIndex).trim();
+                            
+                            // Verificar se tem conteúdo relevante
+                            if (extractedContent.length > 5 && 
+                                (extractedContent.includes('explorar') || 
+                                 extractedContent.includes('desvendar') || 
+                                 extractedContent.includes('descobrir') || 
+                                 extractedContent.includes('identificar') || 
+                                 extractedContent.includes('revelar') || 
+                                 extractedContent.includes('encontrar'))) {
+                                return extractedContent;
+                            }
                         }
                     }
                 }
-                
-                if (foundText) {
-                    capturedBoldText = foundText;
-                    lastCaptureTime = Date.now();
-                    console.log('✅ ESTRATÉGIA 2 (AXIOS) SUCESSO:', `"${capturedBoldText}"`);
-                    return capturedBoldText;
-                }
-                
-                // Se não encontrou, aguardar antes da próxima tentativa
-                if (attempt < 3) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-                
-            } catch (axiosError) {
-                console.log(`❌ Tentativa ${attempt} com Axios falhou:`, axiosError.message);
-            }
-        }
-        
-        // ESTRATÉGIA 3: Busca por texto específico conhecido
-        console.log('\n--- ESTRATÉGIA 3: TEXTOS CONHECIDOS ---');
-        const knownTexts = [
-            'explorar origens de vidas passadas',
-            'desvendar seu destino e propósito',
-            'identificar seu arquétipo de bruxa',
-            'descobrir seus poderes ocultos',
-            'encontrar marcas e símbolos que as guiam',
-            'revelar seus dons espirituais'
-        ];
-        
-        // Tentar uma última requisição para pegar qualquer conteúdo
-        try {
-            const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
-                timeout: 15000,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (compatible; TextCapture/1.0)'
-                }
+                return null;
             });
             
-            const pageContent = response.data.toLowerCase();
+            await browser.close();
             
-            for (const text of knownTexts) {
-                if (pageContent.includes(text.toLowerCase())) {
-                    capturedBoldText = text;
-                    lastCaptureTime = Date.now();
-                    console.log('✅ ESTRATÉGIA 3 (TEXTO CONHECIDO) SUCESSO:', `"${capturedBoldText}"`);
-                    return capturedBoldText;
-                }
+            if (extractedText && extractedText !== capturedBoldText) {
+                console.log('🎯 TEXTO CAPTURADO EM TEMPO REAL:', `"${extractedText}"`);
+                capturedBoldText = extractedText;
+                lastCaptureTime = Date.now();
+                
+                // Parar o monitoramento após capturar com sucesso
+                clearInterval(monitorInterval);
+                monitoringActive = false;
+                console.log('✅ Monitoramento finalizado - texto capturado com sucesso!');
+                return;
+            } else if (extractedText) {
+                console.log('📝 Mesmo texto já capturado, continuando monitoramento...');
+            } else {
+                console.log('❌ Nenhum texto encontrado nesta verificação');
             }
-        } catch (e) {
-            console.log('❌ ESTRATÉGIA 3 falhou:', e.message);
+            
+        } catch (error) {
+            console.log('❌ Erro no monitoramento:', error.message);
         }
-        
-        // FALLBACK FINAL
-        console.log('\n--- USANDO FALLBACK INTELIGENTE ---');
-        capturedBoldText = 'explorar origens de vidas passadas';
-        lastCaptureTime = Date.now();
-        console.log('⚠️ Usando fallback inteligente:', `"${capturedBoldText}"`);
-        
-        return capturedBoldText;
-        
-    } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO na captura:', error.message);
-        capturedBoldText = 'explorar origens de vidas passadas';
-        lastCaptureTime = Date.now();
-        return capturedBoldText;
-    } finally {
-        isCapturing = false;
-        console.log('\n=== CAPTURA FINALIZADA ===');
-        console.log('Texto final:', `"${capturedBoldText}"`);
-        console.log('Timestamp final:', new Date().toISOString());
-    }
+    }, 1000); // Verifica a cada 1 segundo (igual estratégia do email)
+    
+    // Timeout de segurança - para o monitoramento após 30 segundos
+    setTimeout(() => {
+        if (monitoringActive) {
+            clearInterval(monitorInterval);
+            monitoringActive = false;
+            
+            if (!capturedBoldText) {
+                capturedBoldText = 'explorar origens de vidas passadas';
+                lastCaptureTime = Date.now();
+                console.log('⏰ Timeout do monitoramento - usando fallback:', `"${capturedBoldText}"`);
+            }
+        }
+    }, 30000);
 }
 
 // Rota específica para a página customizada de trialChoice
@@ -358,15 +170,18 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('URL acessada:', req.url);
     
     try {
-        // Capturar texto com a função melhorada
-        const capturedText = await captureTextAdvanced();
+        // Resetar texto para captura fresca
+        capturedBoldText = '';
+        lastCaptureTime = 0;
         
-        console.log('✅ Texto capturado com sucesso:', `"${capturedText}"`);
+        // Iniciar monitoramento contínuo em background (não bloqueia a resposta)
+        startContinuousMonitoring().catch(err => {
+            console.error('Erro ao iniciar monitoramento:', err.message);
+        });
         
-        // Aguardar um pouco antes de servir a página
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        console.log('✅ Servindo página React customizada...\n');
+        // Servir a página React IMEDIATAMENTE (não espera a captura)
+        console.log('✅ Servindo página React customizada INSTANTANEAMENTE...');
+        console.log('🔄 Monitoramento rodando em background...\n');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
         
     } catch (error) {

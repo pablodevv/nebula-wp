@@ -6,6 +6,7 @@ const cheerio = require('cheerio');
 const path = require('path');
 const { URL } = require('url');
 const fileUpload = require('express-fileupload');
+const FormData = require('form-data'); // Adiciona FormData para uploads de arquivos
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -18,8 +19,8 @@ const READING_SUBDOMAIN_TARGET = 'https://reading.nebulahoroscope.com';
 const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
-// Variável para armazenar o texto capturado (mantida por retrocompatibilidade, mas a nova abordagem usa localStorage)
-let capturedBoldText = ''; // Esta variável será menos relevante agora, mas a manterei.
+// Variável para armazenar o texto capturado (mantida, mas a nova abordagem usa localStorage)
+let capturedBoldText = '';
 let lastCaptureTime = 0;
 let isCapturing = false;
 
@@ -34,7 +35,7 @@ app.use(fileUpload({
 // Middleware para servir arquivos estáticos da build do React
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// API endpoint para obter o texto capturado (se ainda for usada pelo seu app.tsx)
+// API endpoint para obter o texto capturado (mantido, caso seu app.tsx ainda o use para fallback ou debug)
 app.get('/api/captured-text', (req, res) => {
     console.log('📡 API /api/captured-text chamada');
     console.log('📝 Texto atual na variável (via backend):', `"${capturedBoldText}"`);
@@ -49,22 +50,20 @@ app.get('/api/captured-text', (req, res) => {
     });
 });
 
-// Remover a função extractTextFromHTML, pois a captura será no cliente.
-// Remover a função captureTextDirectly, pois não precisamos mais tentar raspar o <b> estático.
+// Removidas as funções extractTextFromHTML e captureTextDirectly,
+// pois a captura do texto dinâmico será feita no front-end.
 
-// Rota específica para a página customizada de trialChoice - AGORA REDIRECIONA SEM CAPTURA DE BACKEND
+// Rota específica para a página customizada de trialChoice
+// AGORA REDIRECIONA PARA A ROTA DO SEU APP REACT
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
 
-    // Redireciona diretamente para o seu app.tsx (rota /onboarding ou outra que você controle)
-    // A escolha do quiz será recuperada no app.tsx via localStorage ou query param
-    console.log('✅ Redirecionando trialChoice para /pt/witch-power/onboarding para o seu app.tsx.');
-    // Se você quiser passar a escolha via URL, você precisaria ter capturado ela ANTES
-    // e ter passado essa informação para o backend de alguma forma (ex: de um cookie, ou uma rota intermediária)
-    // Por enquanto, a solução mais robusta é ler do localStorage no seu app.tsx
-    return res.redirect(302, '/pt/witch-power/onboarding'); // Assumindo que seu app.tsx lida com esta rota
+    // Redireciona para a rota do seu app React que renderiza TrialChoice.tsx
+    // A escolha do quiz será recuperada no app.tsx via localStorage.
+    console.log('✅ Redirecionando trialChoice para a rota do seu app React: /meu-app/trial-choice');
+    return res.redirect(302, '/meu-app/trial-choice');
 });
 
 // Middleware Principal do Proxy Reverso
@@ -107,7 +106,7 @@ app.use(async (req, res) => {
             const photoFile = req.files.photo;
 
             if (photoFile) {
-                const formData = new (require('form-data'))();
+                const formData = new FormData();
                 formData.append('photo', photoFile.data, {
                     filename: photoFile.name,
                     contentType: photoFile.mimetype,
@@ -144,8 +143,9 @@ app.use(async (req, res) => {
                 }
 
                 // Esta regra AINDA captura redirecionamentos do SERVIDOR DE DESTINO para /email
+                // E REDIRECIONA PARA A PÁGINA DE ONBOARDING PROXIEDA (não seu app React)
                 if (fullRedirectUrl.includes('/pt/witch-power/email')) {
-                    console.log('Interceptando redirecionamento do servidor de destino para /email. Redirecionando para /onboarding.');
+                    console.log('Interceptando redirecionamento do servidor de destino para /email. Redirecionando para /pt/witch-power/onboarding.');
                     return res.redirect(302, '/pt/witch-power/onboarding');
                 }
 
@@ -217,32 +217,35 @@ app.use(async (req, res) => {
             });
 
             // Script para reescrever URLs de API dinâmicas no JavaScript
+            // E também adiciona a manipulação do Content-Security-Policy (CSP)
+            const proxyHost = req.protocol + '://' + req.get('host');
             $('head').prepend(`
                 <script>
                     (function() {
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
+                        const mainTargetOrigin = '${MAIN_TARGET_URL}';
                         const proxyPrefix = '/reading';
+                        const currentProxyHost = '${proxyHost}';
 
                         const originalFetch = window.fetch;
                         window.fetch = function(input, init) {
                             let url = input;
-                            if (typeof input === 'string' && input.startsWith(readingSubdomainTarget)) {
-                                url = input.replace(readingSubdomainTarget, proxyPrefix);
-                                console.log('PROXY SHIM: REWRITE FETCH URL:', input, '->', url);
-                            } else if (input instanceof Request && input.url.startsWith(readingSubdomainTarget)) {
-                                url = new Request(input.url.replace(readingSubdomainTarget, proxyPrefix), {
-                                    method: input.method,
-                                    headers: input.headers,
-                                    body: input.body,
-                                    mode: input.mode,
-                                    credentials: input.credentials,
-                                    cache: input.cache,
-                                    redirect: input.redirect,
-                                    referrer: input.referrer,
-                                    integrity: input.integrity,
-                                    keepalive: input.keepalive
-                                });
-                                console.log('PROXY SHIM: REWRITE FETCH Request Object URL:', input.url, '->', url.url);
+                            if (typeof input === 'string') {
+                                if (input.startsWith(readingSubdomainTarget)) {
+                                    url = input.replace(readingSubdomainTarget, proxyPrefix);
+                                    // console.log('PROXY SHIM: REWRITE FETCH URL (reading):', input, '->', url);
+                                } else if (input.startsWith(mainTargetOrigin)) {
+                                    url = input.replace(mainTargetOrigin, currentProxyHost);
+                                    // console.log('PROXY SHIM: REWRITE FETCH URL (main):', input, '->', url);
+                                }
+                            } else if (input instanceof Request) {
+                                if (input.url.startsWith(readingSubdomainTarget)) {
+                                    url = new Request(input.url.replace(readingSubdomainTarget, proxyPrefix), input);
+                                    // console.log('PROXY SHIM: REWRITE FETCH Request Object URL (reading):', input.url, '->', url.url);
+                                } else if (input.url.startsWith(mainTargetOrigin)) {
+                                    url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);
+                                    // console.log('PROXY SHIM: REWRITE FETCH Request Object URL (main):', input.url, '->', url.url);
+                                }
                             }
                             return originalFetch.call(this, url, init);
                         };
@@ -250,9 +253,14 @@ app.use(async (req, res) => {
                         const originalXHRopen = XMLHttpRequest.prototype.open;
                         XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
                             let modifiedUrl = url;
-                            if (typeof url === 'string' && url.startsWith(readingSubdomainTarget)) {
-                                modifiedUrl = url.replace(readingSubdomainTarget, proxyPrefix);
-                                console.log('PROXY SHIM: REWRITE XHR URL:', url, '->', modifiedUrl);
+                            if (typeof url === 'string') {
+                                if (url.startsWith(readingSubdomainTarget)) {
+                                    modifiedUrl = url.replace(readingSubdomainTarget, proxyPrefix);
+                                    // console.log('PROXY SHIM: REWRITE XHR URL (reading):', url, '->', modifiedUrl);
+                                } else if (url.startsWith(mainTargetOrigin)) {
+                                    modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);
+                                    // console.log('PROXY SHIM: REWRITE XHR URL (main):', url, '->', modifiedUrl);
+                                }
                             }
                             originalXHRopen.call(this, method, modifiedUrl, async, user, password);
                         };
@@ -261,6 +269,7 @@ app.use(async (req, res) => {
             `);
 
             // REDIRECIONAMENTO CLIENT-SIDE MAIS AGRESSIVO PARA /pt/witch-power/email
+            // ESTE BLOCO ESTÁ CORRETO E SERÁ MANTIDO.
             $('head').append(`
                 <script>
                     console.log('CLIENT-SIDE REDIRECT SCRIPT: Initializing.');
@@ -292,11 +301,8 @@ app.use(async (req, res) => {
                 </script>
             `);
 
-            // REMOVEMOS AQUI O REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice
-            // POIS AGORA O SERVER.JS JÁ REDIRECIONA DIRETAMENTE.
-            // VOCÊ NÃO QUER UM RELOAD, QUER UM REDIRECIONAMENTO LIMPO.
-
             // 🎯 NOVO SCRIPT PARA CAPTURAR A ESCOLHA DO QUIZ NA PÁGINA wpGoal (FRONT-END)
+            // ESTE É O SCRIPT CRÍTICO PARA SALVAR NO LOCALSTORAGE.
             if (req.url.includes('/pt/witch-power/wpGoal')) {
                 console.log('Injetando script de captura de quiz na página wpGoal.');
                 $('body').append(`

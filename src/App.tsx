@@ -27,11 +27,9 @@ function App() {
           setCapturedText(data.capturedText);
           setError('');
         } else {
-          console.log('⚠️ React: Nenhum texto capturado encontrado, aguardando interceptação...');
-          
-          // Se não há texto ainda, aguardar um pouco e tentar novamente
-          setTimeout(() => fetchCapturedText(), 1000);
-          return;
+          console.log('⚠️ React: Nenhum texto capturado encontrado');
+          setCapturedText('identificar seu arquétipo de bruxa');
+          setError('Usando conteúdo padrão');
         }
       } catch (error) {
         console.error('❌ React: Erro ao buscar texto capturado:', error);
@@ -51,7 +49,7 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Capturando informações personalizadas...</p>
-          <p className="text-sm text-gray-500 mt-2">Interceptando HTML em tempo real...</p>
+          <p className="text-sm text-gray-500 mt-2">Fazendo requisição direta para o servidor...</p>
         </div>
       </div>
     );

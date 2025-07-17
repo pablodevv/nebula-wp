@@ -23,10 +23,10 @@ function App() {
         console.log('📨 React: Resposta do servidor:', data);
         
         if (data.capturedText && data.capturedText.trim()) {
-          // Se o servidor ainda está capturando, aguardar um pouco
-          if (data.isCapturing) {
-            console.log('⏳ React: Servidor ainda está capturando, aguardando...');
-            setTimeout(() => fetchCapturedText(), 2000);
+          // Se o servidor ainda está capturando ou monitorando, aguardar um pouco
+          if (data.isCapturing || data.monitoringActive) {
+            console.log('⏳ React: Servidor ainda está processando, aguardando...');
+            setTimeout(() => fetchCapturedText(), 1000); // Verifica a cada 1 segundo
             return;
           }
           
@@ -34,13 +34,20 @@ function App() {
           setCapturedText(data.capturedText);
           setError('');
         } else {
+          // Se não há texto e o monitoramento está ativo, continuar tentando
+          if (data.monitoringActive) {
+            console.log('🔄 React: Monitoramento ativo, aguardando captura...');
+            setTimeout(() => fetchCapturedText(), 1000);
+            return;
+          }
+          
           console.log('⚠️ React: Nenhum texto capturado encontrado');
-          setCapturedText('desvendar seu destino e propósito');
+          setCapturedText('explorar origens de vidas passadas');
           setError('Usando conteúdo padrão');
         }
       } catch (error) {
         console.error('❌ React: Erro ao buscar texto capturado:', error);
-        setCapturedText('desvendar seu destino e propósito');
+        setCapturedText('explorar origens de vidas passadas');
         setError('Erro ao carregar conteúdo personalizado');
       } finally {
         setLoading(false);
@@ -56,7 +63,7 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Capturando informações personalizadas...</p>
-          <p className="text-sm text-gray-500 mt-2">Analisando conteúdo da página original...</p>
+          <p className="text-sm text-gray-500 mt-2">Monitoramento em tempo real ativo...</p>
         </div>
       </div>
     );

@@ -22,7 +22,6 @@ const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 let capturedBoldText = '';
 let lastCaptureTime = 0;
 let isCapturing = false;
-let monitoringActive = false;
 
 // Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
@@ -41,30 +40,28 @@ app.get('/api/captured-text', (req, res) => {
     console.log('📝 Texto atual na variável:', `"${capturedBoldText}"`);
     console.log('🕐 Último tempo de captura:', new Date(lastCaptureTime).toISOString());
     console.log('🔄 Está capturando:', isCapturing);
-    console.log('👁️ Monitoramento ativo:', monitoringActive);
     
     res.json({ 
         capturedText: capturedBoldText,
         lastCaptureTime: lastCaptureTime,
         isCapturing: isCapturing,
-        monitoringActive: monitoringActive,
         timestamp: Date.now()
     });
 });
 
-// Função para extrair texto do HTML usando regex e cheerio
+// Função para extrair texto do HTML
 function extractTextFromHTML(html) {
-    console.log('\n🔍 EXTRAINDO TEXTO DO HTML INTERCEPTADO');
+    console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
     
     try {
         const $ = cheerio.load(html);
         
-        // ESTRATÉGIA 1: Procurar pelo padrão específico no texto
+        // ESTRATÉGIA 1: Procurar pelo padrão específico no texto completo
         const startPhrase = 'Ajudamos milhões de pessoas a ';
         const endPhrase = ', e queremos ajudar você também.';
         
-        // Buscar em todo o texto da página
         const fullText = $('body').text();
+        console.log('📄 Tamanho do texto completo:', fullText.length);
         
         if (fullText.includes(startPhrase) && fullText.includes(endPhrase)) {
             const startIndex = fullText.indexOf(startPhrase) + startPhrase.length;
@@ -158,6 +155,101 @@ function extractTextFromHTML(html) {
     }
 }
 
+// Função para fazer requisição direta e capturar o texto
+async function captureTextDirectly() {
+    if (isCapturing) {
+        console.log('⏳ Captura já em andamento...');
+        return capturedBoldText;
+    }
+    
+    isCapturing = true;
+    
+    try {
+        console.log('\n🎯 FAZENDO REQUISIÇÃO DIRETA PARA CAPTURAR TEXTO');
+        console.log('🌐 URL:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
+        
+        const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            timeout: 30000
+        });
+        
+        console.log('✅ Resposta recebida! Status:', response.status);
+        console.log('📊 Tamanho do HTML:', response.data.length);
+        
+        // Verificar se contém o padrão esperado
+        if (response.data.includes('Ajudamos milhões de pessoas a')) {
+            console.log('🎉 HTML contém o padrão "Ajudamos milhões de pessoas a"!');
+            
+            const extractedText = extractTextFromHTML(response.data);
+            
+            if (extractedText && extractedText.length > 5) {
+                capturedBoldText = extractedText;
+                lastCaptureTime = Date.now();
+                console.log('🎉 SUCESSO! Texto capturado:', `"${capturedBoldText}"`);
+                return capturedBoldText;
+            } else {
+                console.log('⚠️ Padrão encontrado mas não conseguiu extrair texto');
+            }
+        } else {
+            console.log('⚠️ HTML não contém o padrão esperado');
+            console.log('📝 Primeiros 500 caracteres do HTML:');
+            console.log(response.data.substring(0, 500));
+        }
+        
+        // Se chegou até aqui, não conseguiu capturar
+        console.log('❌ Não foi possível capturar o texto');
+        
+        // Tentar com diferentes textos conhecidos no HTML
+        const knownTexts = [
+            'identificar seu arquétipo de bruxa',
+            'explorar origens de vidas passadas',
+            'desvendar seu destino e propósito',
+            'descobrir seus poderes ocultos',
+            'encontrar marcas e símbolos que as guiam',
+            'revelar seus dons espirituais'
+        ];
+        
+        const htmlLower = response.data.toLowerCase();
+        for (const text of knownTexts) {
+            if (htmlLower.includes(text.toLowerCase())) {
+                capturedBoldText = text;
+                lastCaptureTime = Date.now();
+                console.log('✅ Texto encontrado no HTML:', `"${capturedBoldText}"`);
+                return capturedBoldText;
+            }
+        }
+        
+        // Fallback final
+        capturedBoldText = 'identificar seu arquétipo de bruxa';
+        lastCaptureTime = Date.now();
+        console.log('⚠️ Usando fallback:', `"${capturedBoldText}"`);
+        
+        return capturedBoldText;
+        
+    } catch (error) {
+        console.error('❌ ERRO na requisição direta:', error.message);
+        
+        // Fallback em caso de erro
+        capturedBoldText = 'identificar seu arquétipo de bruxa';
+        lastCaptureTime = Date.now();
+        console.log('⚠️ Usando fallback de erro:', `"${capturedBoldText}"`);
+        
+        return capturedBoldText;
+    } finally {
+        isCapturing = false;
+        console.log('🏁 Captura finalizada\n');
+    }
+}
+
 // Rota específica para a página customizada de trialChoice
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
@@ -165,12 +257,13 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('URL acessada:', req.url);
     
     try {
-        // Resetar texto para captura fresca
-        capturedBoldText = '';
-        lastCaptureTime = 0;
+        // Fazer requisição direta para capturar o texto ANTES de servir a página React
+        console.log('🚀 Iniciando captura direta...');
+        const capturedText = await captureTextDirectly();
         
-        console.log('✅ Servindo página React customizada INSTANTANEAMENTE...');
-        console.log('🔄 Captura será feita via interceptação do HTML...\n');
+        console.log('✅ Texto capturado com sucesso:', `"${capturedText}"`);
+        console.log('✅ Servindo página React customizada...\n');
+        
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
         
     } catch (error) {
@@ -308,25 +401,17 @@ app.use(async (req, res) => {
         if (contentType.includes('text/html')) {
             let html = response.data.toString('utf8');
             
-            // 🎯 INTERCEPTAÇÃO CRÍTICA: Capturar texto quando a página trialChoice passa pelo proxy
-            if (req.url.includes('/pt/witch-power/trialChoice') || 
-                req.url.includes('trialChoice') || 
-                html.includes('Ajudamos milhões de pessoas a')) {
-                
-                console.log('\n🎯 INTERCEPTANDO HTML DA PÁGINA TRIALCHOICE!');
+            // 🎯 INTERCEPTAÇÃO ADICIONAL: Se este HTML contém o padrão, capturar também
+            if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing) {
+                console.log('\n🎯 INTERCEPTANDO HTML NO MIDDLEWARE!');
                 console.log('URL:', req.url);
-                console.log('Timestamp:', new Date().toISOString());
                 
                 const extractedText = extractTextFromHTML(html);
                 
                 if (extractedText && extractedText.length > 5) {
                     capturedBoldText = extractedText;
                     lastCaptureTime = Date.now();
-                    console.log('🎉 SUCESSO! Texto capturado via interceptação HTML:', `"${capturedBoldText}"`);
-                } else {
-                    console.log('⚠️ Não foi possível extrair texto, usando fallback');
-                    capturedBoldText = 'identificar seu arquétipo de bruxa';
-                    lastCaptureTime = Date.now();
+                    console.log('🎉 SUCESSO! Texto capturado via middleware:', `"${capturedBoldText}"`);
                 }
             }
             

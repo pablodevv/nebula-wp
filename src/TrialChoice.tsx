@@ -3,13 +3,11 @@
 import React, { useState, useEffect } from 'react';
 
 interface TrialChoiceProps {
-  capturedText?: string; // Agora ele realmente virá com o texto capturado ou o fallback
+  capturedText?: string; // Já recebe o texto capturado ou o fallback
 }
 
 const TrialChoice: React.FC<TrialChoiceProps> = ({
-  // Define um valor padrão para 'capturedText' caso ele não seja fornecido
-  // ou seja uma string vazia/inválida.
-  capturedText = "explorar origens de vidas passadas"
+  capturedText = "explorar origens de vidas passadas" // Fallback consistente
 }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
 
@@ -22,7 +20,6 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({
 
   // Não precisamos mais de um useEffect para `setDisplayText` aqui,
   // pois a prop `capturedText` já será o valor final que queremos exibir.
-  // O fallback já é tratado no próprio desestruturação da prop `capturedText`.
   console.log('🔄 TrialChoice: Renderizando com texto:', `"${capturedText}"`);
 
   const handlePriceSelect = (price: string) => {

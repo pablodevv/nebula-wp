@@ -52,115 +52,110 @@ app.get('/api/captured-text', (req, res) => {
     });
 });
 
-// Função para monitoramento contínuo em tempo real (igual estratégia do email)
-async function startContinuousMonitoring() {
-    if (monitoringActive) {
-        console.log('⏳ Monitoramento já ativo, ignorando nova solicitação');
-        return;
-    }
+// Função para extrair texto do HTML usando regex e cheerio
+function extractTextFromHTML(html) {
+    console.log('\n🔍 EXTRAINDO TEXTO DO HTML INTERCEPTADO');
     
-    monitoringActive = true;
-    console.log('\n🔄 INICIANDO MONITORAMENTO CONTÍNUO EM TEMPO REAL');
-    console.log('📡 Estratégia igual ao redirecionamento do email');
-    
-    const monitorInterval = setInterval(async () => {
-        try {
-            console.log('👁️ Monitorando página... Timestamp:', new Date().toISOString());
+    try {
+        const $ = cheerio.load(html);
+        
+        // ESTRATÉGIA 1: Procurar pelo padrão específico no texto
+        const startPhrase = 'Ajudamos milhões de pessoas a ';
+        const endPhrase = ', e queremos ajudar você também.';
+        
+        // Buscar em todo o texto da página
+        const fullText = $('body').text();
+        
+        if (fullText.includes(startPhrase) && fullText.includes(endPhrase)) {
+            const startIndex = fullText.indexOf(startPhrase) + startPhrase.length;
+            const endIndex = fullText.indexOf(endPhrase);
             
-            // Tentar capturar com Playwright primeiro
-            const { chromium } = require('playwright');
-            
-            const browser = await chromium.launch({
-                headless: true,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-web-security'
-                ]
-            });
-
-            const page = await browser.newPage();
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-            
-            await page.goto(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
-                waitUntil: 'networkidle',
-                timeout: 30000
-            });
-            
-            // Aguardar um pouco para renderização
-            await page.waitForTimeout(3000);
-            
-            // BUSCA ESPECÍFICA: "Ajudamos milhões de pessoas a" ... ", e queremos ajudar você também."
-            const extractedText = await page.evaluate(() => {
-                const allElements = document.querySelectorAll('*');
+            if (startIndex < endIndex) {
+                const extractedContent = fullText.substring(startIndex, endIndex).trim();
                 
-                for (const element of allElements) {
-                    const text = element.textContent || '';
-                    
-                    // Procurar pelo padrão específico
-                    const startPhrase = 'Ajudamos milhões de pessoas a ';
-                    const endPhrase = ', e queremos ajudar você também.';
-                    
-                    if (text.includes(startPhrase) && text.includes(endPhrase)) {
-                        const startIndex = text.indexOf(startPhrase) + startPhrase.length;
-                        const endIndex = text.indexOf(endPhrase);
-                        
-                        if (startIndex < endIndex) {
-                            const extractedContent = text.substring(startIndex, endIndex).trim();
-                            
-                            // Verificar se tem conteúdo relevante
-                            if (extractedContent.length > 5 && 
-                                (extractedContent.includes('explorar') || 
-                                 extractedContent.includes('desvendar') || 
-                                 extractedContent.includes('descobrir') || 
-                                 extractedContent.includes('identificar') || 
-                                 extractedContent.includes('revelar') || 
-                                 extractedContent.includes('encontrar'))) {
-                                return extractedContent;
-                            }
-                        }
-                    }
+                if (extractedContent.length > 5) {
+                    console.log('✅ ESTRATÉGIA 1: Texto extraído do HTML completo:', `"${extractedContent}"`);
+                    return extractedContent;
                 }
-                return null;
-            });
-            
-            await browser.close();
-            
-            if (extractedText && extractedText !== capturedBoldText) {
-                console.log('🎯 TEXTO CAPTURADO EM TEMPO REAL:', `"${extractedText}"`);
-                capturedBoldText = extractedText;
-                lastCaptureTime = Date.now();
-                
-                // Parar o monitoramento após capturar com sucesso
-                clearInterval(monitorInterval);
-                monitoringActive = false;
-                console.log('✅ Monitoramento finalizado - texto capturado com sucesso!');
-                return;
-            } else if (extractedText) {
-                console.log('📝 Mesmo texto já capturado, continuando monitoramento...');
-            } else {
-                console.log('❌ Nenhum texto encontrado nesta verificação');
-            }
-            
-        } catch (error) {
-            console.log('❌ Erro no monitoramento:', error.message);
-        }
-    }, 1000); // Verifica a cada 1 segundo (igual estratégia do email)
-    
-    // Timeout de segurança - para o monitoramento após 30 segundos
-    setTimeout(() => {
-        if (monitoringActive) {
-            clearInterval(monitorInterval);
-            monitoringActive = false;
-            
-            if (!capturedBoldText) {
-                capturedBoldText = 'explorar origens de vidas passadas';
-                lastCaptureTime = Date.now();
-                console.log('⏰ Timeout do monitoramento - usando fallback:', `"${capturedBoldText}"`);
             }
         }
-    }, 30000);
+        
+        // ESTRATÉGIA 2: Procurar em elementos específicos
+        const patterns = [
+            'p:contains("Ajudamos milhões") b',
+            'b:contains("identificar")',
+            'b:contains("arquétipo")',
+            'b:contains("bruxa")',
+            'b:contains("explorar")',
+            'b:contains("desvendar")',
+            'b:contains("descobrir")',
+            'b:contains("revelar")'
+        ];
+        
+        for (const pattern of patterns) {
+            const element = $(pattern).first();
+            if (element.length > 0) {
+                const text = element.text().trim();
+                if (text.length > 10 && 
+                    !text.includes('$') && 
+                    !text.includes('SATISFAÇÃO') && 
+                    !text.includes('ECONOMIA')) {
+                    console.log(`✅ ESTRATÉGIA 2: Texto encontrado com padrão "${pattern}":`, `"${text}"`);
+                    return text;
+                }
+            }
+        }
+        
+        // ESTRATÉGIA 3: Buscar todos os <b> relevantes
+        const boldElements = $('b');
+        const relevantTexts = [];
+        
+        boldElements.each((i, el) => {
+            const text = $(el).text().trim();
+            if (text.length > 10 && 
+                !text.includes('$') && 
+                !text.includes('€') && 
+                !text.includes('R$') &&
+                !text.includes('SATISFAÇÃO') &&
+                !text.includes('ECONOMIA') &&
+                (text.includes('identificar') || 
+                 text.includes('arquétipo') || 
+                 text.includes('bruxa') || 
+                 text.includes('explorar') || 
+                 text.includes('desvendar') || 
+                 text.includes('descobrir') || 
+                 text.includes('revelar'))) {
+                relevantTexts.push(text);
+            }
+        });
+        
+        console.log('📝 Todos os <b> relevantes encontrados:', relevantTexts);
+        
+        if (relevantTexts.length > 0) {
+            console.log('✅ ESTRATÉGIA 3: Usando primeiro <b> relevante:', `"${relevantTexts[0]}"`);
+            return relevantTexts[0];
+        }
+        
+        // ESTRATÉGIA 4: Regex para encontrar o padrão no HTML bruto
+        const regexPattern = /Ajudamos milhões de pessoas a\s*<b[^>]*>([^<]+)<\/b>\s*,\s*e queremos ajudar você também/gi;
+        const match = html.match(regexPattern);
+        
+        if (match && match[0]) {
+            const boldMatch = match[0].match(/<b[^>]*>([^<]+)<\/b>/i);
+            if (boldMatch && boldMatch[1]) {
+                const text = boldMatch[1].trim();
+                console.log('✅ ESTRATÉGIA 4: Texto extraído via regex:', `"${text}"`);
+                return text;
+            }
+        }
+        
+        console.log('❌ Nenhuma estratégia funcionou');
+        return null;
+        
+    } catch (error) {
+        console.log('❌ Erro ao extrair texto do HTML:', error.message);
+        return null;
+    }
 }
 
 // Rota específica para a página customizada de trialChoice
@@ -174,21 +169,15 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         capturedBoldText = '';
         lastCaptureTime = 0;
         
-        // Iniciar monitoramento contínuo em background (não bloqueia a resposta)
-        startContinuousMonitoring().catch(err => {
-            console.error('Erro ao iniciar monitoramento:', err.message);
-        });
-        
-        // Servir a página React IMEDIATAMENTE (não espera a captura)
         console.log('✅ Servindo página React customizada INSTANTANEAMENTE...');
-        console.log('🔄 Monitoramento rodando em background...\n');
+        console.log('🔄 Captura será feita via interceptação do HTML...\n');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
         
     } catch (error) {
         console.error('\n❌ ERRO CRÍTICO:', error.message);
         
         // Mesmo com erro, serve a página React com fallback
-        capturedBoldText = 'explorar origens de vidas passadas';
+        capturedBoldText = 'identificar seu arquétipo de bruxa';
         lastCaptureTime = Date.now();
         
         console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
@@ -318,6 +307,29 @@ app.use(async (req, res) => {
         const contentType = response.headers['content-type'] || '';
         if (contentType.includes('text/html')) {
             let html = response.data.toString('utf8');
+            
+            // 🎯 INTERCEPTAÇÃO CRÍTICA: Capturar texto quando a página trialChoice passa pelo proxy
+            if (req.url.includes('/pt/witch-power/trialChoice') || 
+                req.url.includes('trialChoice') || 
+                html.includes('Ajudamos milhões de pessoas a')) {
+                
+                console.log('\n🎯 INTERCEPTANDO HTML DA PÁGINA TRIALCHOICE!');
+                console.log('URL:', req.url);
+                console.log('Timestamp:', new Date().toISOString());
+                
+                const extractedText = extractTextFromHTML(html);
+                
+                if (extractedText && extractedText.length > 5) {
+                    capturedBoldText = extractedText;
+                    lastCaptureTime = Date.now();
+                    console.log('🎉 SUCESSO! Texto capturado via interceptação HTML:', `"${capturedBoldText}"`);
+                } else {
+                    console.log('⚠️ Não foi possível extrair texto, usando fallback');
+                    capturedBoldText = 'identificar seu arquétipo de bruxa';
+                    lastCaptureTime = Date.now();
+                }
+            }
+            
             const $ = cheerio.load(html);
 
             // Reescrever todas as URLs relativas e absolutas
@@ -446,7 +458,7 @@ app.use(async (req, res) => {
                     window.addEventListener('popstate', handleTrialChoiceRedirect);
                     trialChoiceRedirectInterval = setInterval(handleTrialChoiceRedirect, 200);
 
-                    if (window.MutationObserver) {
+                    if (window.MutationObserver && document.body) {
                         const observer = new MutationObserver(function(mutations) {
                             mutations.forEach(function(mutation) {
                                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {

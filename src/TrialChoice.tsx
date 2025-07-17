@@ -3,12 +3,15 @@
 import React, { useState, useEffect } from 'react';
 
 interface TrialChoiceProps {
-  capturedText?: string;
+  capturedText?: string; // Agora ele realmente virá com o texto capturado ou o fallback
 }
 
-const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar origens de vidas passadas" }) => { // Fallback consistente
+const TrialChoice: React.FC<TrialChoiceProps> = ({
+  // Define um valor padrão para 'capturedText' caso ele não seja fornecido
+  // ou seja uma string vazia/inválida.
+  capturedText = "explorar origens de vidas passadas"
+}) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
-  const [displayText, setDisplayText] = useState<string>(capturedText);
 
   const prices = [
     { value: '$1', link: '/pt/witch-power/trial-1' },
@@ -17,16 +20,10 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
     { value: '$13.67', link: '/pt/witch-power/trial-13' }
   ];
 
-  // Atualiza o texto exibido quando capturedText muda
-  useEffect(() => {
-    if (capturedText && capturedText.trim()) {
-      console.log('🔄 TrialChoice: Atualizando texto exibido:', `"${capturedText}"`);
-      setDisplayText(capturedText);
-    } else {
-      console.log('⚠️ TrialChoice: Texto vazio, mantendo padrão (ou fallback).');
-      setDisplayText("explorar origens de vidas passadas"); // Garante o fallback
-    }
-  }, [capturedText]);
+  // Não precisamos mais de um useEffect para `setDisplayText` aqui,
+  // pois a prop `capturedText` já será o valor final que queremos exibir.
+  // O fallback já é tratado no próprio desestruturação da prop `capturedText`.
+  console.log('🔄 TrialChoice: Renderizando com texto:', `"${capturedText}"`);
 
   const handlePriceSelect = (price: string) => {
     setSelectedPrice(price);
@@ -60,16 +57,16 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
 
           <div className="content">
             <h1 className="title">Escolha um Preço de Teste</h1>
-            
+
             <div className="satisfaction-section">
               <h2 className="section-title">SUA SATISFAÇÃO É IMPORTANTE PARA NÓS</h2>
               <p className="description">
-                Ajudamos milhões de pessoas a <b>{displayText}</b>, e queremos ajudar você também.
+                Ajudamos milhões de pessoas a <b>{capturedText}</b>, e queremos ajudar você também.
               </p>
               {/* Debug info - remover em produção */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mt-2">
-                  Debug: "{displayText}" (prop: "{capturedText}")
+                  Debug: "{capturedText}"
                 </div>
               )}
             </div>
@@ -77,12 +74,12 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
             <div className="economy-section">
               <h2 className="section-title">SUA ECONOMIA, NOSSA PRIORIDADE</h2>
               <p className="description">
-                Ajudamos milhões de pessoas a <b>{displayText}</b>, e queremos ajudar você também.
+                Ajudamos milhões de pessoas a <b>{capturedText}</b>, e queremos ajudar você também.
               </p>
               {/* Debug info - remover em produção */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mt-2">
-                  Debug: "{displayText}" (prop: "{capturedText}")
+                  Debug: "{capturedText}"
                 </div>
               )}
             </div>
@@ -99,14 +96,14 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
                   </button>
                 ))}
               </div>
-              
+
               <div className="help-text">
                 <p>Esta opção nos ajudará a financiar aqueles que precisam escolher os menores preços de teste!</p>
                 <div className="arrow-pointer">→</div>
               </div>
             </div>
 
-            <button 
+            <button
               className={`view-reading-button ${selectedPrice ? 'active' : 'inactive'}`}
               onClick={handleViewReading}
               disabled={!selectedPrice}

@@ -6,6 +6,7 @@ const cheerio = require('cheerio');
 const path = require('path');
 const { URL } = require('url');
 const fileUpload = require('express-fileupload');
+const FormData = require('form-data'); // Importar form-data
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -21,7 +22,7 @@ const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 // Variável para armazenar o texto capturado
 let capturedBoldText = '';
 let lastCaptureTime = 0;
-let isCapturing = false;
+let isCapturing = false; // Indica se uma captura está em andamento
 
 // Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
@@ -50,6 +51,7 @@ app.get('/api/captured-text', (req, res) => {
 });
 
 // Função para extrair texto do HTML
+// Esta função precisa ser robusta para HTML não renderizado por browser
 function extractTextFromHTML(html) {
     console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
     
@@ -57,11 +59,26 @@ function extractTextFromHTML(html) {
         const $ = cheerio.load(html);
         
         // ESTRATÉGIA 1: Procurar pelo padrão específico no texto completo
+        // Se a classe "sc-edafe909-6 pLaXn" é estável, é uma boa aposta.
+        const targetParagraph = $('p.sc-edafe909-6.pLaXn');
+        if (targetParagraph.length > 0) {
+            const boldText = targetParagraph.find('b').text().trim();
+            if (boldText.length > 5 && 
+                !boldText.includes('$') && 
+                !boldText.includes('€') && 
+                !boldText.includes('R$') &&
+                !boldText.includes('SATISFAÇÃO') &&
+                !boldText.includes('ECONOMIA')) {
+                console.log('✅ ESTRATÉGIA 1.1: Texto extraído da classe específica:', `"${boldText}"`);
+                return boldText;
+            }
+        }
+
         const startPhrase = 'Ajudamos milhões de pessoas a ';
         const endPhrase = ', e queremos ajudar você também.';
         
         const fullText = $('body').text();
-        console.log('📄 Tamanho do texto completo:', fullText.length);
+        console.log('📄 Tamanho do texto completo do body:', fullText.length);
         
         if (fullText.includes(startPhrase) && fullText.includes(endPhrase)) {
             const startIndex = fullText.indexOf(startPhrase) + startPhrase.length;
@@ -70,8 +87,13 @@ function extractTextFromHTML(html) {
             if (startIndex < endIndex) {
                 const extractedContent = fullText.substring(startIndex, endIndex).trim();
                 
-                if (extractedContent.length > 5) {
-                    console.log('✅ ESTRATÉGIA 1: Texto extraído do HTML completo:', `"${extractedContent}"`);
+                if (extractedContent.length > 5 && 
+                    !extractedContent.includes('$') && 
+                    !extractedContent.includes('€') && 
+                    !extractedContent.includes('R$') &&
+                    !extractedContent.includes('SATISFAÇÃO') &&
+                    !extractedContent.includes('ECONOMIA')) {
+                    console.log('✅ ESTRATÉGIA 1.2: Texto extraído do HTML completo por frase:', `"${extractedContent}"`);
                     return extractedContent;
                 }
             }
@@ -86,7 +108,8 @@ function extractTextFromHTML(html) {
             'b:contains("explorar")',
             'b:contains("desvendar")',
             'b:contains("descobrir")',
-            'b:contains("revelar")'
+            'b:contains("revelar")',
+            'b:contains("poderes ocultos")' // Adicionado
         ];
         
         for (const pattern of patterns) {
@@ -121,7 +144,8 @@ function extractTextFromHTML(html) {
                  text.includes('explorar') || 
                  text.includes('desvendar') || 
                  text.includes('descobrir') || 
-                 text.includes('revelar'))) {
+                 text.includes('revelar') ||
+                 text.includes('poderes ocultos'))) { // Adicionado
                 relevantTexts.push(text);
             }
         });
@@ -129,21 +153,29 @@ function extractTextFromHTML(html) {
         console.log('📝 Todos os <b> relevantes encontrados:', relevantTexts);
         
         if (relevantTexts.length > 0) {
-            console.log('✅ ESTRATÉGIA 3: Usando primeiro <b> relevante:', `"${relevantTexts[0]}"`);
+            // Priorizar o que parece mais com o que buscamos
+            const preferredTexts = relevantTexts.filter(t => 
+                t.includes('explorar origens de vidas passadas') || 
+                t.includes('descobrir seus poderes ocultos') || 
+                t.includes('desvendar seu destino e propósito')
+            );
+            if (preferredTexts.length > 0) {
+                console.log('✅ ESTRATÉGIA 3: Usando primeiro <b> relevante preferencial:', `"${preferredTexts[0]}"`);
+                return preferredTexts[0];
+            }
+            console.log('✅ ESTRATÉGIA 3: Usando primeiro <b> relevante geral:', `"${relevantTexts[0]}"`);
             return relevantTexts[0];
         }
         
         // ESTRATÉGIA 4: Regex para encontrar o padrão no HTML bruto
-        const regexPattern = /Ajudamos milhões de pessoas a\s*<b[^>]*>([^<]+)<\/b>\s*,\s*e queremos ajudar você também/gi;
+        // Esta regex tenta ser mais flexível com tags internas e espaços
+        const regexPattern = /Ajudamos milhões de pessoas a\s*(?:<[^>]*>)*\s*<b>([^<]+)<\/b>\s*(?:<[^>]*>)*\s*,\s*e queremos ajudar você também/i;
         const match = html.match(regexPattern);
         
-        if (match && match[0]) {
-            const boldMatch = match[0].match(/<b[^>]*>([^<]+)<\/b>/i);
-            if (boldMatch && boldMatch[1]) {
-                const text = boldMatch[1].trim();
-                console.log('✅ ESTRATÉGIA 4: Texto extraído via regex:', `"${text}"`);
-                return text;
-            }
+        if (match && match[1]) {
+            const text = match[1].trim();
+            console.log('✅ ESTRATÉGIA 4: Texto extraído via regex:', `"${text}"`);
+            return text;
         }
         
         console.log('❌ Nenhuma estratégia funcionou');
@@ -155,141 +187,27 @@ function extractTextFromHTML(html) {
     }
 }
 
-// Função para fazer requisição direta e capturar o texto
-async function captureTextDirectly() {
-    if (isCapturing) {
-        console.log('⏳ Captura já em andamento...');
-        return capturedBoldText;
-    }
-    
-    isCapturing = true;
-    
-    try {
-        console.log('\n🎯 FAZENDO REQUISIÇÃO DIRETA PARA CAPTURAR TEXTO');
-        console.log('🌐 URL:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
-        
-        const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            },
-            timeout: 30000
-        });
-        
-        console.log('✅ Resposta recebida! Status:', response.status);
-        console.log('📊 Tamanho do HTML:', response.data.length);
-        
-        // Verificar se contém o padrão esperado
-        if (response.data.includes('Ajudamos milhões de pessoas a')) {
-            console.log('🎉 HTML contém o padrão "Ajudamos milhões de pessoas a"!');
-            
-            const extractedText = extractTextFromHTML(response.data);
-            
-            if (extractedText && extractedText.length > 5) {
-                capturedBoldText = extractedText;
-                lastCaptureTime = Date.now();
-                console.log('🎉 SUCESSO! Texto capturado:', `"${capturedBoldText}"`);
-                return capturedBoldText;
-            } else {
-                console.log('⚠️ Padrão encontrado mas não conseguiu extrair texto');
-            }
-        } else {
-            console.log('⚠️ HTML não contém o padrão esperado');
-            console.log('📝 Primeiros 500 caracteres do HTML:');
-            console.log(response.data.substring(0, 500));
-        }
-        
-        // Se chegou até aqui, não conseguiu capturar
-        console.log('❌ Não foi possível capturar o texto');
-        
-        // Tentar com diferentes textos conhecidos no HTML
-        const knownTexts = [
-            'identificar seu arquétipo de bruxa',
-            'explorar origens de vidas passadas',
-            'desvendar seu destino e propósito',
-            'descobrir seus poderes ocultos',
-            'encontrar marcas e símbolos que as guiam',
-            'revelar seus dons espirituais'
-        ];
-        
-        const htmlLower = response.data.toLowerCase();
-        for (const text of knownTexts) {
-            if (htmlLower.includes(text.toLowerCase())) {
-                capturedBoldText = text;
-                lastCaptureTime = Date.now();
-                console.log('✅ Texto encontrado no HTML:', `"${capturedBoldText}"`);
-                return capturedBoldText;
-            }
-        }
-        
-        // Fallback final
-        capturedBoldText = 'identificar seu arquétipo de bruxa';
-        lastCaptureTime = Date.now();
-        console.log('⚠️ Usando fallback:', `"${capturedBoldText}"`);
-        
-        return capturedBoldText;
-        
-    } catch (error) {
-        console.error('❌ ERRO na requisição direta:', error.message);
-        
-        // Fallback em caso de erro
-        capturedBoldText = 'identificar seu arquétipo de bruxa';
-        lastCaptureTime = Date.now();
-        console.log('⚠️ Usando fallback de erro:', `"${capturedBoldText}"`);
-        
-        return capturedBoldText;
-    } finally {
-        isCapturing = false;
-        console.log('🏁 Captura finalizada\n');
-    }
-}
-
 // Rota específica para a página customizada de trialChoice
+// Esta rota APENAS serve o React. A captura de texto ocorre no middleware principal.
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
-    console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
+    console.log('\n=== SERVINDO TRIALCHOICE REACT ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
-    
-    try {
-        // Fazer requisição direta para capturar o texto ANTES de servir a página React
-        console.log('🚀 Iniciando captura direta...');
-        const capturedText = await captureTextDirectly();
-        
-        console.log('✅ Texto capturado com sucesso:', `"${capturedText}"`);
-        console.log('✅ Servindo página React customizada...\n');
-        
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-        
-    } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO:', error.message);
-        
-        // Mesmo com erro, serve a página React com fallback
-        capturedBoldText = 'identificar seu arquétipo de bruxa';
-        lastCaptureTime = Date.now();
-        
-        console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-    }
+    console.log('✅ Servindo página React customizada...\n');
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
 
 // Middleware Principal do Proxy Reverso
 app.use(async (req, res) => {
-    // Declarar targetDomain no início para evitar erro
     let targetDomain = MAIN_TARGET_URL;
     let requestPath = req.url;
 
-    // Remove headers que podem causar problemas em proxies ou loops
     const requestHeaders = { ...req.headers };
     delete requestHeaders['host'];
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
-    delete requestHeaders['accept-encoding'];
+    delete requestHeaders['accept-encoding']; // Important for uncompressed data
 
     // Lógica para Proxeamento do Subdomínio de Leitura (Mão)
     if (req.url.startsWith('/reading/')) {
@@ -297,17 +215,6 @@ app.use(async (req, res) => {
         requestPath = req.url.substring('/reading'.length);
         if (requestPath === '') requestPath = '/';
         console.log(`[READING PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
-        console.log(`[READING PROXY] Método: ${req.method}`);
-
-        if (req.files && Object.keys(req.files).length > 0) {
-            console.log(`[READING PROXY] Arquivos recebidos: ${JSON.stringify(Object.keys(req.files))}`);
-            const photoFile = req.files.photo;
-            if (photoFile) {
-                console.log(`[READING PROXY] Arquivo 'photo': name=${photoFile.name}, size=${photoFile.size}, mimetype=${photoFile.mimetype}`);
-            }
-        } else {
-            console.log(`[READING PROXY] Corpo recebido (tipo): ${typeof req.body}`);
-        }
     } else {
         console.log(`[MAIN PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
     }
@@ -316,29 +223,32 @@ app.use(async (req, res) => {
 
     try {
         let requestData = req.body;
+        let headersToSend = { ...requestHeaders };
 
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
 
             if (photoFile) {
-                const formData = new (require('form-data'))();
+                const formData = new FormData();
                 formData.append('photo', photoFile.data, {
                     filename: photoFile.name,
                     contentType: photoFile.mimetype,
                 });
                 requestData = formData;
-                delete requestHeaders['content-type'];
-                delete requestHeaders['content-length'];
-                Object.assign(requestHeaders, formData.getHeaders());
+                // Merge FormData headers, which includes content-type with boundary
+                Object.assign(headersToSend, formData.getHeaders());
+                // Ensure content-length is correctly set by form-data
+                delete headersToSend['content-type']; // Let form-data set it
+                delete headersToSend['content-length']; // Let form-data set it
             }
         }
 
         const response = await axios({
             method: req.method,
             url: targetUrl,
-            headers: requestHeaders,
+            headers: headersToSend,
             data: requestData,
-            responseType: 'arraybuffer',
+            responseType: 'arraybuffer', // Crucial to handle all content types
             maxRedirects: 0,
             validateStatus: function (status) {
                 return status >= 200 && status < 400;
@@ -357,7 +267,6 @@ app.use(async (req, res) => {
                     fullRedirectUrl = redirectLocation;
                 }
 
-                // Esta regra AINDA captura redirecionamentos do SERVIDOR DE DESTINO para /email
                 if (fullRedirectUrl.includes('/pt/witch-power/email')) {
                     console.log('Interceptando redirecionamento do servidor de destino para /email. Redirecionando para /onboarding.');
                     return res.redirect(302, '/pt/witch-power/onboarding');
@@ -401,17 +310,29 @@ app.use(async (req, res) => {
         if (contentType.includes('text/html')) {
             let html = response.data.toString('utf8');
             
-            // 🎯 INTERCEPTAÇÃO ADICIONAL: Se este HTML contém o padrão, capturar também
-            if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing) {
-                console.log('\n🎯 INTERCEPTANDO HTML NO MIDDLEWARE!');
-                console.log('URL:', req.url);
-                
-                const extractedText = extractTextFromHTML(html);
-                
-                if (extractedText && extractedText.length > 5) {
-                    capturedBoldText = extractedText;
-                    lastCaptureTime = Date.now();
-                    console.log('🎉 SUCESSO! Texto capturado via middleware:', `"${capturedBoldText}"`);
+            // 🎯 INTERCEPTAÇÃO E CAPTURA NO MIDDLEWARE:
+            // Só tenta capturar se a URL de origem for a de interesse para o texto
+            // E se ainda não estiver capturando ou se a captura anterior for muito antiga
+            if (req.url.includes('/pt/witch-power/trialChoice') || req.url.includes('/pt/witch-power/prelanding')) {
+                const now = Date.now();
+                const MIN_CAPTURE_INTERVAL = 5 * 1000; // 5 segundos
+                if (!isCapturing && (now - lastCaptureTime > MIN_CAPTURE_INTERVAL)) {
+                    isCapturing = true; // Sinaliza que a captura está em andamento
+                    console.log('\n🎯 INTERCEPTANDO HTML NO MIDDLEWARE PARA CAPTURA!');
+                    console.log('URL da Requisição:', req.url);
+                    
+                    const extractedText = extractTextFromHTML(html);
+                    
+                    if (extractedText && extractedText.length > 5) {
+                        capturedBoldText = extractedText;
+                        lastCaptureTime = Date.now();
+                        console.log('🎉 SUCESSO! Texto capturado via middleware:', `"${capturedBoldText}"`);
+                    } else {
+                        console.log('⚠️ Middleware: Não foi possível extrair o texto específico.');
+                    }
+                    isCapturing = false; // Libera a captura
+                } else {
+                    console.log('⏳ Middleware: Captura ignorada (já em andamento ou muito recente).');
                 }
             }
             
@@ -432,8 +353,9 @@ app.use(async (req, res) => {
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
                     if (originalUrl) {
+                        // URLs relativas para o domínio principal (mantém como estão)
                         if (originalUrl.startsWith('/') && !originalUrl.startsWith('/reading/')) {
-                            // URLs relativas para o domínio principal
+                            // No change needed for root-relative paths like /_next/static/...
                         } else if (originalUrl.startsWith('/reading/')) {
                             // URLs para o subdomínio de leitura, já estão corretas
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
@@ -472,6 +394,9 @@ app.use(async (req, res) => {
                                     keepalive: input.keepalive
                                 });
                                 console.log('PROXY SHIM: REWRITE FETCH Request Object URL:', input.url, '->', url.url);
+                            } else if (typeof input === 'string' && input.startsWith('${MAIN_TARGET_URL}')) {
+                                url = input.replace('${MAIN_TARGET_URL}', '');
+                                console.log('PROXY SHIM: REWRITE MAIN URL:', input, '->', url);
                             }
                             return originalFetch.call(this, url, init);
                         };
@@ -482,6 +407,9 @@ app.use(async (req, res) => {
                             if (typeof url === 'string' && url.startsWith(readingSubdomainTarget)) {
                                 modifiedUrl = url.replace(readingSubdomainTarget, proxyPrefix);
                                 console.log('PROXY SHIM: REWRITE XHR URL:', url, '->', modifiedUrl);
+                            } else if (typeof url === 'string' && url.startsWith('${MAIN_TARGET_URL}')) {
+                                modifiedUrl = url.replace('${MAIN_TARGET_URL}', '');
+                                console.log('PROXY SHIM: REWRITE XHR MAIN URL:', url, '->', modifiedUrl);
                             }
                             originalXHRopen.call(this, method, modifiedUrl, async, user, password);
                         };
@@ -522,49 +450,15 @@ app.use(async (req, res) => {
             `);
 
             // REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice
+            // Removido o window.location.reload() pois queremos que a página React seja servida
+            // e o texto seja atualizado via API.
+            // A MutationObserver estava causando erro em alguns ambientes, vamos simplificar.
             $('head').append(`
                 <script>
                     console.log('CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.');
 
-                    let trialChoiceRedirectInterval;
-
-                    function handleTrialChoiceRedirect() {
-                        const currentPath = window.location.pathname;
-                        if (currentPath === '/pt/witch-power/trialChoice') {
-                            console.log('CLIENT-SIDE REDIRECT: URL /pt/witch-power/trialChoice detectada. Forçando reload para interceptação do servidor.');
-                            if (trialChoiceRedirectInterval) {
-                                clearInterval(trialChoiceRedirectInterval);
-                            }
-                            window.location.reload();
-                        }
-                    }
-
-                    document.addEventListener('DOMContentLoaded', handleTrialChoiceRedirect);
-                    window.addEventListener('popstate', handleTrialChoiceRedirect);
-                    trialChoiceRedirectInterval = setInterval(handleTrialChoiceRedirect, 200);
-
-                    if (window.MutationObserver && document.body) {
-                        const observer = new MutationObserver(function(mutations) {
-                            mutations.forEach(function(mutation) {
-                                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                                    setTimeout(handleTrialChoiceRedirect, 50);
-                                }
-                            });
-                        });
-                        
-                        observer.observe(document.body, {
-                            childList: true,
-                            subtree: true
-                        });
-                    }
-
-                    window.addEventListener('beforeunload', () => {
-                        if (trialChoiceRedirectInterval) {
-                            clearInterval(trialChoiceRedirectInterval);
-                        }
-                    });
-
-                    handleTrialChoiceRedirect();
+                    // Não precisamos forçar reload aqui, a página React já foi servida.
+                    // O React se encarrega de buscar o texto via API.
                 </script>
             `);
 
@@ -586,6 +480,7 @@ app.use(async (req, res) => {
 
             res.status(response.status).send($.html());
         } else {
+            // Para outros tipos de conteúdo (CSS, JS, imagens, JSON, etc.), apenas repassa.
             res.status(response.status).send(response.data);
         }
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface TrialChoiceProps {
-  capturedText?: string; // Já recebe o texto capturado ou o fallback
+  capturedText?: string;
 }
 
 const TrialChoice: React.FC<TrialChoiceProps> = ({
@@ -18,8 +18,6 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({
     { value: '$13.67', link: '/pt/witch-power/trial-13' }
   ];
 
-  // Não precisamos mais de um useEffect para `setDisplayText` aqui,
-  // pois a prop `capturedText` já será o valor final que queremos exibir.
   console.log('🔄 TrialChoice: Renderizando com texto:', `"${capturedText}"`);
 
   const handlePriceSelect = (price: string) => {
@@ -30,6 +28,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({
     if (selectedPrice) {
       const selectedPriceData = prices.find(p => p.value === selectedPrice);
       if (selectedPriceData) {
+        // Redireciona para as rotas de trial originais (via proxy)
         window.location.href = selectedPriceData.link;
       }
     }

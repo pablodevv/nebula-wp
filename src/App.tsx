@@ -23,31 +23,19 @@ function App() {
         console.log('📨 React: Resposta do servidor:', data);
         
         if (data.capturedText && data.capturedText.trim()) {
-          // Se o servidor ainda está capturando ou monitorando, aguardar um pouco
-          if (data.isCapturing || data.monitoringActive) {
-            console.log('⏳ React: Servidor ainda está processando, aguardando...');
-            setTimeout(() => fetchCapturedText(), 1000); // Verifica a cada 1 segundo
-            return;
-          }
-          
           console.log('✅ React: Texto capturado recebido:', `"${data.capturedText}"`);
           setCapturedText(data.capturedText);
           setError('');
         } else {
-          // Se não há texto e o monitoramento está ativo, continuar tentando
-          if (data.monitoringActive) {
-            console.log('🔄 React: Monitoramento ativo, aguardando captura...');
-            setTimeout(() => fetchCapturedText(), 1000);
-            return;
-          }
+          console.log('⚠️ React: Nenhum texto capturado encontrado, aguardando interceptação...');
           
-          console.log('⚠️ React: Nenhum texto capturado encontrado');
-          setCapturedText('explorar origens de vidas passadas');
-          setError('Usando conteúdo padrão');
+          // Se não há texto ainda, aguardar um pouco e tentar novamente
+          setTimeout(() => fetchCapturedText(), 1000);
+          return;
         }
       } catch (error) {
         console.error('❌ React: Erro ao buscar texto capturado:', error);
-        setCapturedText('explorar origens de vidas passadas');
+        setCapturedText('identificar seu arquétipo de bruxa');
         setError('Erro ao carregar conteúdo personalizado');
       } finally {
         setLoading(false);
@@ -63,7 +51,7 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Capturando informações personalizadas...</p>
-          <p className="text-sm text-gray-500 mt-2">Monitoramento em tempo real ativo...</p>
+          <p className="text-sm text-gray-500 mt-2">Interceptando HTML em tempo real...</p>
         </div>
       </div>
     );

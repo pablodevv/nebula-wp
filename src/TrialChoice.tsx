@@ -1,10 +1,12 @@
+// src/TrialChoice.tsx
+
 import React, { useState, useEffect } from 'react';
 
 interface TrialChoiceProps {
   capturedText?: string;
 }
 
-const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar origens de vidas passadas" }) => {
+const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar origens de vidas passadas" }) => { // Fallback consistente
   const [selectedPrice, setSelectedPrice] = useState<string>('');
   const [displayText, setDisplayText] = useState<string>(capturedText);
 
@@ -21,8 +23,8 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
       console.log('🔄 TrialChoice: Atualizando texto exibido:', `"${capturedText}"`);
       setDisplayText(capturedText);
     } else {
-      console.log('⚠️ TrialChoice: Texto vazio, mantendo padrão');
-      setDisplayText("explorar origens de vidas passadas");
+      console.log('⚠️ TrialChoice: Texto vazio, mantendo padrão (ou fallback).');
+      setDisplayText("explorar origens de vidas passadas"); // Garante o fallback
     }
   }, [capturedText]);
 

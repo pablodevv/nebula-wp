@@ -422,7 +422,7 @@ app.use(async (req, res) => {
             responseType: 'arraybuffer',
             maxRedirects: 0, // Importante para interceptar redirecionamentos
             validateStatus: function (status) {
-                return status >= 200 && status < 400; // Valida 2xx e 3xx
+                return status >= 200 && status < 400;
             },
             httpsAgent: agent, // Usar o agente para ignorar SSL se necessário
         });
@@ -542,6 +542,7 @@ app.use(async (req, res) => {
             $('head').prepend(
                 '<script>' +
                 '(function() {' +
+                'console.log(\'INJECTED SCRIPT: Script started execution.\');' + // <-- LOG DE INÍCIO DO SCRIPT
                 'const readingSubdomainTarget = \'' + READING_SUBDOMAIN_TARGET + '\';' +
                 'const mainTargetOrigin = \'' + MAIN_TARGET_URL + '\';' +
                 'const proxyReadingPrefix = \'/reading\';' +
@@ -622,7 +623,7 @@ app.use(async (req, res) => {
 
                 'function injectInvisibleButtons() {' +
                 'if (buttonsInjected) return;' +
-                'console.log(\'Página wpGoal detectada! Injetando botões invisíveis...\');' +
+                'console.log(\'INJECTED SCRIPT: Página wpGoal detectada! Tentando injetar botões invisíveis...\');' + // <-- LOG ANTES DA INJEÇÃO
                 'invisibleButtonsConfig.forEach(config => {' +
                 'const button = document.createElement(\'button\');' +
                 'button.id = config.id;' +
@@ -638,7 +639,7 @@ app.use(async (req, res) => {
                 'z-index: 9999;' +
                 '`;' +
                 'button.addEventListener(\'click\', async (event) => {' + // Usar async para o fetch
-                'console.log(`✅ Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
+                'console.log(`INJECTED SCRIPT: Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
 
                 '// 1. Enviar a escolha do usuário para o servidor proxy' +
                 'try {' +
@@ -649,9 +650,9 @@ app.use(async (req, res) => {
                 '},' +
                 'body: JSON.stringify({ selectedText: config.text })' +
                 '});' +
-                'console.log(`✅ Escolha \'${config.text}\' enviada para o servidor.`);' +
+                'console.log(`INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
                 '} catch (error) {' +
-                'console.error(\'❌ Erro ao enviar escolha para o servidor:\', error);' +
+                'console.error(\'INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error);' +
                 '}' +
 
                 '// 2. Notificar o React App (se estiver no mesmo domínio)' +
@@ -663,38 +664,38 @@ app.use(async (req, res) => {
                 'const centerY = rect.top + rect.height / 2;' +
                 'const originalElement = document.elementFromPoint(centerX, centerY);' +
                 'if (originalElement) {' +
-                'console.log(`Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
-                '// Previne o comportamento padrão do seu botão invisível para não haver duplicidade de clique' +
+                'console.log(`INJECTED SCRIPT: Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
                 'event.stopPropagation();' +
                 'event.preventDefault();' +
                 'originalElement.click();' +
                 '} else {' +
-                'console.log(`Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`);' +
+                'console.log(`INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`);' +
                 '}' +
                 '});' +
                 'document.body.appendChild(button);' +
-                'console.log(`✅ Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
+                'console.log(`INJECTED SCRIPT: Botão invisível \'${config.id}\' injetado na página wpGoal!`);' + // <-- LOG DE BOTÃO INJETADO
                 '});' +
                 'buttonsInjected = true;' +
                 '}' +
 
                 'function removeInvisibleButtons() {' +
                 'if (!buttonsInjected) return;' +
-                'console.log(\'Saindo da página wpGoal. Removendo botões invisíveis...\');' +
+                'console.log(\'INJECTED SCRIPT: Saindo da página wpGoal. Removendo botões invisíveis...\');' + // <-- LOG DE REMOÇÃO
                 'invisibleButtonsConfig.forEach(config => {' +
                 'const button = document.getElementById(config.id);' +
                 'if (button) {' +
                 'button.remove();' +
-                'console.log(`🗑️ Botão invisível \'${config.id}\' removido.`);' +
+                'console.log(`INJECTED SCRIPT: Botão invisível \'${config.id}\' removido.`);' +
                 '}' +
                 '});' +
                 'buttonsInjected = false;' +
                 '}' +
 
                 'function monitorUrlChanges() {' +
+                'console.log(\'INJECTED SCRIPT: monitorUrlChanges called.\');' + // <-- LOG DE CHAMADA DA FUNÇÃO
                 'const currentUrl = window.location.pathname;' +
                 'const isTargetPage = currentUrl === targetPagePath;' +
-                'console.log(`[Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
+                'console.log(`INJECTED SCRIPT: [Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
 
                 'if (isTargetPage) {' +
                 'injectInvisibleButtons();' +
@@ -703,16 +704,22 @@ app.use(async (req, res) => {
                 '}' +
                 '}' +
 
-                'document.addEventListener(\'DOMContentLoaded\', monitorUrlChanges);' +
+                'console.log(\'INJECTED SCRIPT: Adding DOMContentLoaded listener.\');' + // <-- LOG ADICIONAL
+                'document.addEventListener(\'DOMContentLoaded\', () => {' +
+                'console.log(\'INJECTED SCRIPT: DOMContentLoaded fired.\');' + // <-- LOG ADICIONAL
+                'monitorUrlChanges();' +
+                '});' +
                 'window.addEventListener(\'popstate\', monitorUrlChanges);' +
                 'const originalPushState = history.pushState;' +
                 'history.pushState = function() {' +
                 'originalPushState.apply(this, arguments);' +
+                'console.log(\'INJECTED SCRIPT: history.pushState detected.\');' + // <-- LOG ADICIONAL
                 'monitorUrlChanges();' +
                 '};' +
                 'const originalReplaceState = history.replaceState;' +
                 'history.replaceState = function() {' +
                 'originalReplaceState.apply(this, arguments);' +
+                'console.log(\'INJECTED SCRIPT: history.replaceState detected.\');' + // <-- LOG ADICIONAL
                 'monitorUrlChanges();' +
                 '};' +
                 '})();' +

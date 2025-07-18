@@ -310,8 +310,7 @@ app.use(async (req, res) => {
                             const currentPagePath = window.location.pathname;
                             const isTargetPage = currentPagePath === targetPagePath;
 
-                            // AQUI ESTÁ A CORREÇÃO: Removido "URL" do texto do log para evitar conflito.
-                            console.log(\`[Monitor] Caminho atual: ${currentPagePath}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}\`);
+                            console.log(`[Monitor] Caminho atual: ${currentPagePath}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);
 
                             if (isTargetPage && !buttonsInjected) {
                                 console.log('Página wpGoal detectada! Injetando botões invisíveis...');
@@ -331,10 +330,10 @@ app.use(async (req, res) => {
                                     button.style.pointerEvents = 'auto'; 
 
                                     document.body.appendChild(button);
-                                    console.log(\`✅ Botão invisível '${config.id}' injetado na página wpGoal!\`);
+                                    console.log(`✅ Botão invisível '${config.id}' injetado na página wpGoal!`);
 
                                     button.addEventListener('click', (event) => {
-                                        console.log(\`🎉 Botão invisível '${config.id}' clicado na wpGoal!\`);
+                                        console.log(`🎉 Botão invisível '${config.id}' clicado na wpGoal!`);
                                         
                                         button.style.pointerEvents = 'none'; 
                                         
@@ -345,7 +344,8 @@ app.use(async (req, res) => {
                                         const targetElement = document.elementFromPoint(x, y);
 
                                         if (targetElement) {
-                                            console.log(`Simulando clique no elemento original:`, targetElement);
+                                            // AQUI ESTÃO AS CORREÇÕES:
+                                            console.log('Simulando clique no elemento original:', targetElement);
                                             const clickEvent = new MouseEvent('click', {
                                                 view: window,
                                                 bubbles: true,
@@ -354,7 +354,7 @@ app.use(async (req, res) => {
                                                 clientY: y
                                             });
                                             targetElement.dispatchEvent(clickEvent);
-                                            console.log(`Cliques simulados em:`, targetElement);
+                                            console.log('Cliques simulados em:', targetElement); // Outra linha de log ajustada
 
                                             window.postMessage({
                                                 type: 'QUIZ_CHOICE_SELECTED',

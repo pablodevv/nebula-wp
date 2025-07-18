@@ -1,80 +1,298 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const cors = require('cors');
-const https = require('https');
+const path = require('path');
+const { URL } = require('url');
+const fileUpload = require('express-fileupload'); // Para upload de arquivos (ex: foto da palma)
+const cors = require('cors'); // Re-adicionado para garantir flexibilidade nas requisições
+const https = require('https'); // Para lidar com problemas de certificado SSL (development)
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// URLs de destino
 const MAIN_TARGET_URL = 'https://appnebula.co';
-const READING_SUBDOMAIN_TARGET = 'https://reading.appnebula.co';
+// ATENÇÃO: Seu código antigo usava 'https://reading.nebulahoroscope.com'
+// Meus códigos recentes usaram 'https://reading.appnebula.co'
+// Vou usar a que você me forneceu agora: 'https://reading.nebulahoroscope.com'
+const READING_SUBDOMAIN_TARGET = 'https://reading.nebulahoroscope.com'; 
 
+// Configurações para Modificação de Conteúdo
+const USD_TO_BRL_RATE = 5.00;
+const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
+
+// Variável para armazenar o texto capturado (para o TrialChoice)
+let capturedBoldText = '';
+let lastCaptureTime = 0;
+let isCapturing = false;
+
+// Configuração para Axios ignorar SSL para domínios específicos (apenas para desenvolvimento/ambientes problemáticos)
 const agent = new https.Agent({
-    rejectUnauthorized: false, // APENAS PARA DESENVOLVIMENTO. Em produção, use um certificado SSL válido.
+    rejectUnauthorized: false, 
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+// Middleware para servir arquivos estáticos da build do React (se existirem na raiz do projeto)
+// Isso é crucial para que seu React app seja servido quando o Render inicia.
+app.use(express.static(path.join(__dirname, 'dist')));
 
-// --- ROTAS DO PROXY ---
+// Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
+app.use(fileUpload({
+    limits: { fileSize: 50 * 1024 * 1024 }, // Limite de 50MB
+    createParentPath: true, // Cria diretórios pais se não existirem
+    uriDecodeFileNames: true, // Decodifica nomes de arquivo URI
+    preserveExtension: true // Mantém a extensão original do arquivo
+}));
 
-// Proxy para o subdomínio 'reading.appnebula.co'
-app.use('/reading', async (req, res) => {
-    const targetUrl = `${READING_SUBDOMAIN_TARGET}${req.url.replace('/reading', '')}`;
-    console.log(`[READING PROXY] Requisição: ${req.url} -> Proxy para: ${targetUrl}`);
+app.use(express.json()); // Para parsing de JSON no corpo da requisição
+app.use(express.urlencoded({ extended: true })); // Para parsing de URL-encoded no corpo da requisição
+app.use(cors()); // Permite CORS, útil para desenvolvimento
 
-    const requestHeaders = { ...req.headers };
-    delete requestHeaders['host'];
-    delete requestHeaders['connection'];
-    delete requestHeaders['x-forwarded-for'];
+// --- API endpoint para obter o texto capturado (para o React App) ---
+app.get('/api/captured-text', (req, res) => {
+    console.log('📡 API /api/captured-text chamada');
+    console.log('📝 Texto atual na variável:', `"${capturedBoldText}"`);
+    console.log('🕐 Último tempo de captura:', new Date(lastCaptureTime).toISOString());
+    console.log('🔄 Está capturando:', isCapturing);
+    
+    res.json({ 
+        capturedText: capturedBoldText,
+        lastCaptureTime: lastCaptureTime,
+        isCapturing: isCapturing,
+        timestamp: Date.now()
+    });
+});
 
+// --- Funções para Extração e Captura de Texto (do seu código antigo) ---
+function extractTextFromHTML(html) {
+    console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
+    
     try {
-        const response = await axios({
-            method: req.method,
-            url: targetUrl,
-            headers: requestHeaders,
-            data: req.method === 'POST' || req.method === 'PUT' ? req.body : undefined,
-            responseType: 'arraybuffer',
-            maxRedirects: 0,
-            validateStatus: function (status) {
-                return status >= 200 && status < 400;
-            },
-            httpsAgent: agent,
-        });
-
-        Object.keys(response.headers).forEach(header => {
-            if (!['transfer-encoding', 'content-encoding', 'content-length', 'set-cookie', 'host', 'connection'].includes(header.toLowerCase())) {
-                res.setHeader(header, response.headers[header]);
+        const $ = cheerio.load(html);
+        
+        // ESTRATÉGIA 1: Procurar pelo padrão específico no texto completo
+        const startPhrase = 'Ajudamos milhões de pessoas a ';
+        const endPhrase = ', e queremos ajudar você também.';
+        
+        const fullText = $('body').text();
+        console.log('📄 Tamanho do texto completo:', fullText.length);
+        
+        if (fullText.includes(startPhrase) && fullText.includes(endPhrase)) {
+            const startIndex = fullText.indexOf(startPhrase) + startPhrase.length;
+            const endIndex = fullText.indexOf(endPhrase);
+            
+            if (startIndex < endIndex) {
+                const extractedContent = fullText.substring(startIndex, endIndex).trim();
+                
+                if (extractedContent.length > 5) {
+                    console.log('✅ ESTRATÉGIA 1: Texto extraído do HTML completo:', `"${extractedContent}"`);
+                    return extractedContent;
+                }
+            }
+        }
+        
+        // ESTRATÉGIA 2: Procurar em elementos específicos
+        const patterns = [
+            'p:contains("Ajudamos milhões") b',
+            'b:contains("identificar")',
+            'b:contains("arquétipo")',
+            'b:contains("bruxa")',
+            'b:contains("explorar")',
+            'b:contains("desvendar")',
+            'b:contains("descobrir")',
+            'b:contains("revelar")'
+        ];
+        
+        for (const pattern of patterns) {
+            const element = $(pattern).first();
+            if (element.length > 0) {
+                const text = element.text().trim();
+                if (text.length > 10 && 
+                    !text.includes('$') && 
+                    !text.includes('SATISFAÇÃO') && 
+                    !text.includes('ECONOMIA')) {
+                    console.log(`✅ ESTRATÉGIA 2: Texto encontrado com padrão "${pattern}":`, `"${text}"`);
+                    return text;
+                }
+            }
+        }
+        
+        // ESTRATÉGIA 3: Buscar todos os <b> relevantes
+        const boldElements = $('b');
+        const relevantTexts = [];
+        
+        boldElements.each((i, el) => {
+            const text = $(el).text().trim();
+            if (text.length > 10 && 
+                !text.includes('$') && 
+                !text.includes('€') && 
+                !text.includes('R$') &&
+                !text.includes('SATISFAÇÃO') &&
+                !text.includes('ECONOMIA') &&
+                (text.includes('identificar') || 
+                 text.includes('arquétipo') || 
+                 text.includes('bruxa') || 
+                 text.includes('explorar') || 
+                 text.includes('desvendar') || 
+                 text.includes('descobrir') || 
+                 text.includes('revelar'))) {
+                relevantTexts.push(text);
             }
         });
-
-        const setCookieHeader = response.headers['set-cookie'];
-        if (setCookieHeader) {
-            const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
-            const modifiedCookies = cookies.map(cookie => {
-                return cookie
-                    .replace(/Domain=[^;]+/, '')
-                    .replace(/; Secure/, '');
-            });
-            res.setHeader('Set-Cookie', modifiedCookies);
+        
+        console.log('📝 Todos os <b> relevantes encontrados:', relevantTexts);
+        
+        if (relevantTexts.length > 0) {
+            console.log('✅ ESTRATÉGIA 3: Usando primeiro <b> relevante:', `"${relevantTexts[0]}"`);
+            return relevantTexts[0];
         }
-
-        res.status(response.status).send(response.data);
-
+        
+        // ESTRATÉGIA 4: Regex para encontrar o padrão no HTML bruto
+        const regexPattern = /Ajudamos milhões de pessoas a\s*<b[^>]*>([^<]+)<\/b>\s*,\s*e queremos ajudar você também/gi;
+        const match = html.match(regexPattern);
+        
+        if (match && match[0]) {
+            const boldMatch = match[0].match(/<b[^>]*>([^<]+)<\/b>/i);
+            if (boldMatch && boldMatch[1]) {
+                const text = boldMatch[1].trim();
+                console.log('✅ ESTRATÉGIA 4: Texto extraído via regex:', `"${text}"`);
+                return text;
+            }
+        }
+        
+        console.log('❌ Nenhuma estratégia funcionou');
+        return null;
+        
     } catch (error) {
-        console.error(`[READING PROXY] Erro na requisição para ${targetUrl}:`, error.message);
-        if (error.response) {
-            console.error('[READING PROXY] Status do erro:', error.response.status);
-            res.status(error.response.status).send(error.response.data);
+        console.log('❌ Erro ao extrair texto do HTML:', error.message);
+        return null;
+    }
+}
+
+async function captureTextDirectly() {
+    if (isCapturing) {
+        console.log('⏳ Captura já em andamento...');
+        return capturedBoldText;
+    }
+    
+    isCapturing = true;
+    
+    try {
+        console.log('\n🎯 FAZENDO REQUISIÇÃO DIRETA PARA CAPTURAR TEXTO');
+        console.log('🌐 URL:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
+        
+        const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br', // Remover se causar problemas com arraybuffer
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            timeout: 30000,
+            httpsAgent: agent, // Usar o agente para ignorar SSL se necessário
+        });
+        
+        console.log('✅ Resposta recebida! Status:', response.status);
+        console.log('📊 Tamanho do HTML:', response.data.length);
+        
+        // Verificar se contém o padrão esperado
+        if (response.data.includes('Ajudamos milhões de pessoas a')) {
+            console.log('🎉 HTML contém o padrão "Ajudamos milhões de pessoas a"!');
+            
+            const extractedText = extractTextFromHTML(response.data);
+            
+            if (extractedText && extractedText.length > 5) {
+                capturedBoldText = extractedText;
+                lastCaptureTime = Date.now();
+                console.log('🎉 SUCESSO! Texto capturado:', `"${capturedBoldText}"`);
+                return capturedBoldText;
+            } else {
+                console.log('⚠️ Padrão encontrado mas não conseguiu extrair texto');
+            }
         } else {
-            res.status(500).send('Erro ao proxy a requisição do subdomínio de leitura.');
+            console.log('⚠️ HTML não contém o padrão esperado');
+            console.log('📝 Primeiros 500 caracteres do HTML:');
+            console.log(response.data.substring(0, 500));
         }
+        
+        // Se chegou até aqui, não conseguiu capturar
+        console.log('❌ Não foi possível capturar o texto');
+        
+        // Tentar com diferentes textos conhecidos no HTML
+        const knownTexts = [
+            'identificar seu arquétipo de bruxa',
+            'explorar origens de vidas passadas',
+            'desvendar seu destino e propósito',
+            'descobrir seus poderes ocultos',
+            'encontrar marcas e símbolos que as guiam',
+            'revelar seus dons espirituais'
+        ];
+        
+        const htmlLower = response.data.toLowerCase();
+        for (const text of knownTexts) {
+            if (htmlLower.includes(text.toLowerCase())) {
+                capturedBoldText = text;
+                lastCaptureTime = Date.now();
+                console.log('✅ Texto encontrado no HTML:', `"${capturedBoldText}"`);
+                return capturedBoldText;
+            }
+        }
+        
+        // Fallback final
+        capturedBoldText = 'identificar seu arquétipo de bruxa';
+        lastCaptureTime = Date.now();
+        console.log('⚠️ Usando fallback:', `"${capturedBoldText}"`);
+        
+        return capturedBoldText;
+        
+    } catch (error) {
+        console.error('❌ ERRO na requisição direta:', error.message);
+        
+        // Fallback em caso de erro
+        capturedBoldText = 'identificar seu arquétipo de bruxa';
+        lastCaptureTime = Date.now();
+        console.log('⚠️ Usando fallback de erro:', `"${capturedBoldText}"`);
+        
+        return capturedBoldText;
+    } finally {
+        isCapturing = false;
+        console.log('🏁 Captura finalizada\n');
+    }
+}
+
+// --- Rota específica para a página customizada de trialChoice (Seu React App) ---
+app.get('/pt/witch-power/trialChoice', async (req, res) => {
+    console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('URL acessada:', req.url);
+    
+    try {
+        // Fazer requisição direta para capturar o texto ANTES de servir a página React
+        console.log('🚀 Iniciando captura direta...');
+        const capturedText = await captureTextDirectly();
+        
+        console.log('✅ Texto capturado com sucesso:', `"${capturedText}"`);
+        console.log('✅ Servindo página React customizada...\n');
+        
+        // Envia o index.html do seu build React
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        
+    } catch (error) {
+        console.error('\n❌ ERRO CRÍTICO ao servir trialChoice:', error.message);
+        
+        // Mesmo com erro, serve a página React com fallback
+        capturedBoldText = 'identificar seu arquétipo de bruxa';
+        lastCaptureTime = Date.now();
+        
+        console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     }
 });
 
-// Proxy para a API principal
+// --- Proxy para a API principal (Mantido da versão anterior, se for usado) ---
 app.use('/api-proxy', async (req, res) => {
     const apiTargetUrl = `https://api.appnebula.co${req.url.replace('/api-proxy', '')}`;
     console.log(`[API PROXY] Requisição: ${req.url} -> Proxy para: ${apiTargetUrl}`);
@@ -83,6 +301,7 @@ app.use('/api-proxy', async (req, res) => {
     delete requestHeaders['host'];
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
+    delete requestHeaders['accept-encoding']; // Evitar problemas de encoding
 
     try {
         const response = await axios({
@@ -95,7 +314,7 @@ app.use('/api-proxy', async (req, res) => {
             validateStatus: function (status) {
                 return status >= 200 && status < 400;
             },
-            httpsAgent: agent,
+            httpsAgent: agent, // Usar o agente para ignorar SSL se necessário
         });
 
         Object.keys(response.headers).forEach(header => {
@@ -129,136 +348,263 @@ app.use('/api-proxy', async (req, res) => {
     }
 });
 
-// Proxy principal para o site da Nebula
-app.use(async (req, res) => {
-    const targetUrl = `${MAIN_TARGET_URL}${req.url}`;
-    const proxyHost = req.protocol + '://' + req.get('host');
 
-    console.log(`[MAIN PROXY] Requisição: ${req.url} -> Proxy para: ${targetUrl}`);
+// --- Middleware Principal do Proxy Reverso ---
+app.use(async (req, res) => {
+    let targetDomain = MAIN_TARGET_URL;
+    let requestPath = req.url;
+    const currentProxyHost = req.protocol + '://' + req.get('host'); // Seu domínio no Render
+
+    // Remove headers que podem causar problemas em proxies ou loops
+    const requestHeaders = { ...req.headers };
+    delete requestHeaders['host'];
+    delete requestHeaders['connection'];
+    delete requestHeaders['x-forwarded-for'];
+    delete requestHeaders['accept-encoding']; // Re-adicionado para evitar problemas de encoding
+
+    // Lógica para Proxeamento do Subdomínio de Leitura (Mão)
+    if (req.url.startsWith('/reading/')) {
+        targetDomain = READING_SUBDOMAIN_TARGET;
+        requestPath = req.url.substring('/reading'.length);
+        if (requestPath === '') requestPath = '/';
+        console.log(`[READING PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
+        console.log(`[READING PROXY] Método: ${req.method}`);
+
+        if (req.files && Object.keys(req.files).length > 0) {
+            console.log(`[READING PROXY] Arquivos recebidos: ${JSON.stringify(Object.keys(req.files))}`);
+            const photoFile = req.files.photo; // Assuming 'photo' is the field name for the file
+            if (photoFile) {
+                console.log(`[READING PROXY] Arquivo 'photo': name=${photoFile.name}, size=${photoFile.size}, mimetype=${photoFile.mimetype}`);
+            }
+        } else {
+            console.log(`[READING PROXY] Corpo recebido (tipo): ${typeof req.body}`);
+        }
+    } else {
+        console.log(`[MAIN PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
+    }
+
+    const targetUrl = `${targetDomain}${requestPath}`;
 
     try {
+        let requestData = req.body;
+
+        if (req.files && Object.keys(req.files).length > 0) {
+            const photoFile = req.files.photo;
+
+            if (photoFile) {
+                const formData = new (require('form-data'))();
+                formData.append('photo', photoFile.data, {
+                    filename: photoFile.name,
+                    contentType: photoFile.mimetype,
+                });
+                requestData = formData;
+                // Remove content-type/content-length para que o form-data defina o boundary
+                delete requestHeaders['content-type']; 
+                delete requestHeaders['content-length'];
+                // Adiciona os headers corretos do form-data
+                Object.assign(requestHeaders, formData.getHeaders());
+            }
+        }
+
         const response = await axios({
             method: req.method,
             url: targetUrl,
-            headers: { ...req.headers, host: new URL(MAIN_TARGET_URL).hostname },
-            data: req.method === 'POST' || req.method === 'PUT' ? req.body : undefined,
+            headers: requestHeaders,
+            data: requestData,
             responseType: 'arraybuffer',
+            maxRedirects: 0, // Importante para interceptar redirecionamentos
             validateStatus: function (status) {
-                return status >= 200 && status < 400;
+                return status >= 200 && status < 400; // Valida 2xx e 3xx
             },
-            httpsAgent: agent,
+            httpsAgent: agent, // Usar o agente para ignorar SSL se necessário
         });
 
-        const contentType = response.headers['content-type'];
+        // Lógica de Interceptação de Redirecionamento (Status 3xx)
+        if (response.status >= 300 && response.status < 400) {
+            const redirectLocation = response.headers.location;
+            if (redirectLocation) {
+                let fullRedirectUrl;
+                try {
+                    fullRedirectUrl = new URL(redirectLocation, targetDomain).href;
+                } catch (e) {
+                    console.error("Erro ao parsear URL de redirecionamento:", redirectLocation, e.message);
+                    fullRedirectUrl = redirectLocation;
+                }
 
+                // Esta regra AINDA captura redirecionamentos do SERVIDOR DE DESTINO para /email
+                if (fullRedirectUrl.includes('/pt/witch-power/email')) {
+                    console.log('Interceptando redirecionamento do servidor de destino para /email. Redirecionando para /onboarding.');
+                    return res.redirect(302, '/pt/witch-power/onboarding');
+                }
+                // Se o redirecionamento é para a URL do quiz (que é a home do seu React app)
+                if (fullRedirectUrl.includes('/pt/witch-power/wpGoal')) {
+                    console.log('Interceptando redirecionamento para /wpGoal. Redirecionando para /pt/witch-power/trialChoice.');
+                    return res.redirect(302, '/pt/witch-power/trialChoice');
+                }
+
+                let proxiedRedirectPath = fullRedirectUrl;
+                if (proxiedRedirectPath.startsWith(MAIN_TARGET_URL)) {
+                    proxiedRedirectPath = proxiedRedirectPath.replace(MAIN_TARGET_URL, '');
+                } else if (proxiedRedirectPath.startsWith(READING_SUBDOMAIN_TARGET)) {
+                    proxiedRedirectPath = proxiedRedirectPath.replace(READING_SUBDOMAIN_TARGET, '/reading');
+                }
+                if (proxiedRedirectPath === '') proxiedRedirectPath = '/';
+
+                console.log(`Redirecionamento do destino: ${fullRedirectUrl} -> Reescrevendo para: ${proxiedRedirectPath}`);
+                return res.redirect(response.status, proxiedRedirectPath);
+            }
+        }
+
+        // Repassa Cabeçalhos da Resposta do Destino para o Cliente
         Object.keys(response.headers).forEach(header => {
             if (!['transfer-encoding', 'content-encoding', 'content-length', 'set-cookie', 'host', 'connection'].includes(header.toLowerCase())) {
                 res.setHeader(header, response.headers[header]);
             }
         });
 
+        // Lida com o cabeçalho 'Set-Cookie': reescreve o domínio do cookie para o seu domínio
         const setCookieHeader = response.headers['set-cookie'];
         if (setCookieHeader) {
             const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
             const modifiedCookies = cookies.map(cookie => {
-                return cookie.replace(/Domain=[^;]+/, '').replace(/; Secure/, '');
+                return cookie
+                    .replace(/Domain=[^;]+/, '') // Remove o domínio original do cookie
+                    .replace(/; Secure/, '') // Remove a flag Secure (se você não usar HTTPS no Render localmente)
+                    // Reescreve o Path do cookie para corresponder à sua rota de proxy
+                    .replace(/; Path=\//, `; Path=${req.baseUrl || '/'}`); 
             });
             res.setHeader('Set-Cookie', modifiedCookies);
         }
 
-        if (contentType && contentType.includes('text/html')) {
-            const html = response.data.toString('utf8');
+        // Lógica de Modificação de Conteúdo (Apenas para HTML)
+        const contentType = response.headers['content-type'] || '';
+        if (contentType.includes('text/html')) {
+            let html = response.data.toString('utf8');
+            
+            // 🎯 INTERCEPTAÇÃO ADICIONAL: Se este HTML contém o padrão, capturar também
+            if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing) {
+                console.log('\n🎯 INTERCEPTANDO HTML NO MIDDLEWARE!');
+                console.log('URL:', req.url);
+                
+                const extractedText = extractTextFromHTML(html);
+                
+                if (extractedText && extractedText.length > 5) {
+                    capturedBoldText = extractedText;
+                    lastCaptureTime = Date.now();
+                    console.log('🎉 SUCESSO! Texto capturado via middleware:', `"${capturedBoldText}"`);
+                }
+            }
+            
             const $ = cheerio.load(html);
 
-            // Reescrever URLs de assets, links e formulários
-            $('link[href], script[src], img[src], a[href], form[action]').each((i, elem) => {
-                let attr = '';
-                if ($(elem).is('link, script, img')) {
-                    attr = 'src';
-                } else if ($(elem).is('a')) {
-                    attr = 'href';
-                } else if ($(elem).is('form')) {
-                    attr = 'action';
+            // Reescrever todas as URLs relativas e absolutas
+            $('[href], [src], [action]').each((i, el) => {
+                const element = $(el);
+                let attrName = '';
+                if (element.is('link') || element.is('a') || element.is('area')) {
+                    attrName = 'href';
+                } else if (element.is('script') || element.is('img') || element.is('source') || element.is('iframe')) {
+                    attrName = 'src';
+                } else if (element.is('form')) {
+                    attrName = 'action';
                 }
 
-                let url = $(elem).attr(attr);
-                if (url) {
-                    if (url.startsWith('/')) {
-                        // URLs relativas ao root já serão tratadas pelo proxy sem modificação aqui.
-                    } else if (url.startsWith(MAIN_TARGET_URL)) {
-                        $(elem).attr(attr, url.replace(MAIN_TARGET_URL, proxyHost));
-                    } else if (url.startsWith(READING_SUBDOMAIN_TARGET)) {
-                        $(elem).attr(attr, url.replace(READING_TARGET_URL, `/reading`));
+                if (attrName) {
+                    let originalUrl = element.attr(attrName);
+                    if (originalUrl) {
+                        if (originalUrl.startsWith('/') && !originalUrl.startsWith('/reading/')) {
+                            // URLs relativas ao root já serão tratadas pelo proxy sem modificação aqui.
+                            // Deixe como está, elas serão resolvidas pelo navegador contra o seu proxy.
+                        } else if (originalUrl.startsWith('/reading/')) {
+                            // URLs para o subdomínio de leitura, já estão corretas
+                        } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
+                            // Reescreve URLs absolutas para o MAIN_TARGET_URL para relativas
+                            element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
+                        } else if (originalUrl.startsWith(READING_SUBDOMAIN_TARGET)) {
+                            // Reescreve URLs absolutas para o READING_SUBDOMAIN_TARGET para o prefixo /reading
+                            element.attr(attrName, originalUrl.replace(READING_SUBDOMAIN_TARGET, '/reading'));
+                        }
                     }
                 }
             });
 
-            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE E MANIPULAÇÃO DE DOM ---
-            // TODO O clientScript AGORA USA APENAS ASPAS SIMPLES/DUPLAS E CONCATENAÇÃO
-            const clientScript = 
+            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE (CUIDADO REDOBRADO COM ASPAS/CRASES) ---
+            // Script para reescrever URLs de API dinâmicas (fetch, XHR)
+            $('head').prepend(
                 '<script>' +
                     '(function() {' +
                         'const readingSubdomainTarget = \'' + READING_SUBDOMAIN_TARGET + '\';' +
                         'const mainTargetOrigin = \'' + MAIN_TARGET_URL + '\';' +
-                        'const proxyPrefix = \'/reading\';' +
-                        'const currentProxyHost = \'' + proxyHost + '\';' + 
+                        'const proxyReadingPrefix = \'/reading\';' +
+                        'const proxyApiPrefix = \'' + currentProxyHost + '/api-proxy\';' + // Garante que a API do Nebula usa seu proxy
+                        'const currentProxyHost = \'' + currentProxyHost + '\';' + 
                         'const targetPagePath = \'/pt/witch-power/wpGoal\';' + 
 
-                        // Funções de interceptação de Fetch, XHR e PostMessage
+                        // Interceptação de Fetch
                         'const originalFetch = window.fetch;' +
                         'window.fetch = function(input, init) {' +
                             'let url = input;' +
                             'if (typeof input === \'string\') {' +
                                 'if (input.startsWith(readingSubdomainTarget)) {' +
-                                    'url = input.replace(readingSubdomainTarget, proxyPrefix);' +
-                                '} else if (input.startsWith(mainTargetOrigin)) {' +
+                                    'url = input.replace(readingSubdomainTarget, proxyReadingPrefix);' +
+                                    'console.log(\'PROXY SHIM: REWRITE FETCH URL (Reading): \', input, \'->\', url);' +
+                                '} else if (input.startsWith(\'https://api.appnebula.co\')) {' + // Adicionado para API principal
+                                    'url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
+                                    'console.log(\'PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url);' +
+                                '} else if (input.startsWith(mainTargetOrigin)) {' + // URLs do mainTarget
                                     'url = input.replace(mainTargetOrigin, currentProxyHost);' +
-                                '} else if (input.startsWith(\'https://api.appnebula.co\')) {' +
-                                    'url = input.replace(\'https://api.appnebula.co\', currentProxyHost + \'/api-proxy\');' +
+                                    'console.log(\'PROXY SHIM: REWRITE FETCH URL (Main): \', input, \'->\', url);' +
                                 '}' +
                             '} else if (input instanceof Request) {' +
                                 'if (input.url.startsWith(readingSubdomainTarget)) {' +
-                                    'url = new Request(input.url.replace(readingSubdomainTarget, proxyPrefix), input);' +
-                                '} else if (input.url.startsWith(mainTargetOrigin)) {' +
+                                    'url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input);' +
+                                    'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url);' +
+                                '} else if (input.url.startsWith(\'https://api.appnebula.co\')) {' + // Adicionado para API principal
+                                    'url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input);' +
+                                    'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url);' +
+                                '} else if (input.url.startsWith(mainTargetOrigin)) {' + // URLs do mainTarget
                                     'url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);' +
-                                '} else if (input.url.startsWith(\'https://api.appnebula.co\')) {' +
-                                    'url = new Request(input.url.replace(\'https://api.appnebula.co\', currentProxyHost + \'/api-proxy\'), input);' +
+                                    'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url);' +
                                 '}' +
                             '}' +
                             'return originalFetch.call(this, url, init);' +
                         '};' +
 
+                        // Interceptação de XHR
                         'const originalXHRopen = XMLHttpRequest.prototype.open;' +
                         'XMLHttpRequest.prototype.open = function(method, url, async, user, password) {' +
                             'let modifiedUrl = url;' +
                             'if (typeof url === \'string\') {' +
                                 'if (url.startsWith(readingSubdomainTarget)) {' +
-                                    'modifiedUrl = url.replace(readingSubdomainTarget, proxyPrefix);' +
-                                '} else if (url.startsWith(mainTargetOrigin)) {' +
+                                    'modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix);' +
+                                    'console.log(\'PROXY SHIM: REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl);' +
+                                '} else if (url.startsWith(\'https://api.appnebula.co\')) {' + // Adicionado para API principal
+                                    'modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
+                                    'console.log(\'PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl);' +
+                                '} else if (url.startsWith(mainTargetOrigin)) {' + // URLs do mainTarget
                                     'modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);' +
-                                '} else if (url.startsWith(\'https://api.appnebula.co\')) {' +
-                                    'modifiedUrl = url.replace(\'https://api.appnebula.co\', currentProxyHost + \'/api-proxy\');' +
+                                    'console.log(\'PROXY SHIM: REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl);' +
                                 '}' +
                             '}' +
                             'originalXHRopen.call(this, method, modifiedUrl, async, user, password);' +
                         '};' +
 
+                        // Interceptação de PostMessage
                         'const originalPostMessage = window.postMessage;' +
                         'window.postMessage = function(message, targetOrigin, transfer) {' +
                             'let modifiedTargetOrigin = targetOrigin;' +
                             'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) {' +
                                 'modifiedTargetOrigin = currentProxyHost;' +
+                                'console.log(\'PROXY SHIM: REWRITE PostMessage TargetOrigin: \', targetOrigin, \'->\', modifiedTargetOrigin);' +
                             '}' +
                             'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
                         '};' +
 
-                        // --- FUNÇÃO PARA GERENCIAR BOTÕES INVISÍVEIS ---
-                        'let buttonsInjected = false;' + // Flag para controlar injeção
-
-                        // Definição dos botões com suas coordenadas e dimensões PRECISAS
+                        // --- Lógica de Botões Invisíveis (Mantido o código que resolveu o SyntaxError) ---
+                        'let buttonsInjected = false;' + 
                         'const invisibleButtonsConfig = [' +
                             '{ ' +
-                                'id: \'btn-choice-1\',' + // "Entender meu mapa astral"
+                                'id: \'btn-choice-1\',' + 
                                 'top: \'206px\',' + 
                                 'left: \'40px\',' + 
                                 'width: \'330px\',' + 
@@ -266,7 +612,7 @@ app.use(async (req, res) => {
                                 'text: \'Entender meu mapa astral\'' + 
                             '},' +
                             '{ ' +
-                                'id: \'btn-choice-2\',' + // "Identificar meu arquétipo de bruxa"
+                                'id: \'btn-choice-2\',' + 
                                 'top: \'292px\',' + 
                                 'left: \'40px\',' + 
                                 'width: \'330px\',' + 
@@ -274,7 +620,7 @@ app.use(async (req, res) => {
                                 'text: \'Identificar meu arquétipo de bruxa\'' + 
                             '},' +
                             '{ ' +
-                                'id: \'btn-choice-3\',' + // "Explorar minhas vidas passadas"
+                                'id: \'btn-choice-3\',' + 
                                 'top: \'377px\',' + 
                                 'left: \'40px\',' + 
                                 'width: \'330px\',' + 
@@ -282,7 +628,7 @@ app.use(async (req, res) => {
                                 'text: \'Explorar minhas vidas passadas\'' + 
                             '},' +
                             '{ ' +
-                                'id: \'btn-choice-4\',' + // "Revelar minha aura de bruxa"
+                                'id: \'btn-choice-4\',' + 
                                 'top: \'460px\',' + 
                                 'left: \'40px\',' + 
                                 'width: \'330px\',' + 
@@ -290,7 +636,7 @@ app.use(async (req, res) => {
                                 'text: \'Revelar minha aura de bruxa\'' + 
                             '},' +
                             '{ ' +
-                                'id: \'btn-choice-5\',' + // "Desvendar meu destino e propósito"
+                                'id: \'btn-choice-5\',' + 
                                 'top: \'543px\',' + 
                                 'left: \'40px\',' + 
                                 'width: \'330px\',' + 
@@ -298,7 +644,7 @@ app.use(async (req, res) => {
                                 'text: \'Desvendar meu destino e propósito\'' + 
                             '},' +
                             '{ ' +
-                                'id: \'btn-choice-6\',' + // "Encontrar marcas, símbolos que me guiem"
+                                'id: \'btn-choice-6\',' + 
                                 'top: \'629px\',' + 
                                 'left: \'40px\',' + 
                                 'width: \'330px\',' + 
@@ -310,8 +656,6 @@ app.use(async (req, res) => {
                         'function manageInvisibleButtons() {' +
                             'const currentPagePath = window.location.pathname;' +
                             'const isTargetPage = currentPagePath === targetPagePath;' +
-
-                            // Logs agora usando concatenação, sem crases
                             'console.log(\'[Monitor] URL atual: \' + currentPagePath + \'. Página alvo: \' + targetPagePath + \'. É a página alvo? \' + isTargetPage);' +
 
                             'if (isTargetPage && !buttonsInjected) {' +
@@ -321,37 +665,27 @@ app.use(async (req, res) => {
                                     'const button = document.createElement(\'div\');' +
                                     'button.id = config.id;' +
                                     'button.style.position = \'absolute\';' +
-                                    'button.style.top = config.top;' +
-                                    'button.style.left = config.left;' +
-                                    'button.style.width = config.width;' +
-                                    'button.style.height = config.height;' +
+                                    'button.style.top = config.top;' + 
+                                    'button.style.left = config.left;' + 
+                                    'button.style.width = config.width;' + 
+                                    'button.style.height = config.height;' + 
                                     'button.style.zIndex = \'9999999\';' + 
                                     'button.style.cursor = \'pointer\';' + 
-                                    
                                     'button.style.opacity = \'0\';' + 
-                                    'button.style.pointerEvents = \'auto\';' + // Deve ser auto para nosso clique inicial
-
+                                    'button.style.pointerEvents = \'auto\';' + 
                                     'document.body.appendChild(button);' +
                                     'console.log(\'✅ Botão invisível \\\'\' + config.id + \'\\\' injetado na página wpGoal!\');' +
 
                                     'button.addEventListener(\'click\', (event) => {' +
                                         'console.log(\'🎉 Botão invisível \\\'\' + config.id + \'\\\' clicado na wpGoal!\');' +
-                                        
-                                        // 1. Antes de simular o clique, remova temporariamente o botão invisível
-                                        // ou torne-o não-interagível para que o clique "caia" no elemento de baixo.
                                         'button.style.pointerEvents = \'none\';' + 
-                                        
                                         'const rect = button.getBoundingClientRect();' +
                                         'const x = rect.left + rect.width / 2;' +
                                         'const y = rect.top + rect.height / 2;' +
-                                        
-                                        // Tenta disparar o evento no elemento que está na posição
-                                        // É CRUCIAL que o botão invisível esteja invisível ao pointer para isso funcionar.
                                         'const targetElement = document.elementFromPoint(x, y);' +
 
                                         'if (targetElement) {' +
                                             'console.log(\'Simulando clique no elemento original:\', targetElement);' +
-                                            // Cria um novo evento de clique para o elemento original
                                             'const clickEvent = new MouseEvent(\'click\', {' +
                                                 'view: window,' +
                                                 'bubbles: true,' +
@@ -362,32 +696,21 @@ app.use(async (req, res) => {
                                             'targetElement.dispatchEvent(clickEvent);' +
                                             'console.log(\'Cliques simulados em:\', targetElement);' +
 
-                                            // 2. Enviar dados para o front-end React (trialChoice.tsx)
+                                            // 2. Enviar dados para o front-end React (TrialChoice.tsx)
                                             'window.postMessage({' +
                                                 'type: \'QUIZ_CHOICE_SELECTED\',' +
                                                 'text: config.text' +
                                             '}, window.location.origin);' + 
                                             'console.log(\'Dados enviados para o React: \\\'\' + config.text + \'\\\'\');' +
-
                                         '} else {' +
                                             'console.warn(\'Nenhum elemento encontrado para simular clique nas coordenadas. O botão original não foi detectado.\');' +
                                         '}' +
-
-                                        // Após o clique ser simulado, podemos remover o botão invisível
-                                        // já que a página provavelmente vai mudar ou o quiz avançar.
-                                        // Se a página não recarregar ou mudar o DOM significativamente,
-                                        // e se houver a possibilidade de outro clique no mesmo local,
-                                        // o monitoramento de URL se encarregará de reinjetar os botões se necessário.
-                                        'button.remove();' + // Remove o botão invisível depois de usá-lo
+                                        'button.remove();' + 
                                         'console.log(\'🗑️ Botão invisível \\\'\' + config.id + \'\\\' removido após simulação de clique.\');' +
-
-                                        // Resetar a flag `buttonsInjected` (o comentário também foi removido)
                                         'buttonsInjected = false;' + 
                                     '});' +
                                 '});' +
-
                                 'buttonsInjected = true;' + 
-                                
                             '} else if (!isTargetPage && buttonsInjected) {' +
                                 'console.log(\'Saindo da página wpGoal. Removendo botões invisíveis...\');' +
                                 'invisibleButtonsConfig.forEach(config => {' +
@@ -401,37 +724,121 @@ app.use(async (req, res) => {
                             '}' +
                         '}' +
 
-                        // --- Lógica de Inicialização e Monitoramento ---
+                        // Lógica de Inicialização e Monitoramento
                         'document.addEventListener(\'DOMContentLoaded\', function() {' +
                             'console.log(\'Script de injeção de proxy carregado no cliente.\');' +
-
                             'manageInvisibleButtons();' +
-
                             'setInterval(manageInvisibleButtons, 500);' + 
                         '});' +
-
                     '})();' +
-                '</script>';
-            
-            $('head').prepend(clientScript);
+                '</script>'
+            );
 
-            res.setHeader('Content-Type', 'text/html');
+            // --- REDIRECIONAMENTO CLIENT-SIDE MAIS AGRESSIVO PARA /pt/witch-power/email (Seu código antigo) ---
+            $('head').append(
+                '<script>' +
+                    'console.log(\'CLIENT-SIDE REDIRECT SCRIPT: Initializing.\');' +
+                    'let redirectCheckInterval;' +
+                    'function handleEmailRedirect() {' +
+                        'const currentPath = window.location.pathname;' +
+                        'if (currentPath.startsWith(\'/pt/witch-power/email\')) {' +
+                            'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. Forçando redirecionamento para /pt/witch-power/onboarding\');' +
+                            'if (redirectCheckInterval) {' +
+                                'clearInterval(redirectCheckInterval);' +
+                            '}' +
+                            'window.location.replace(\'/pt/witch-power/onboarding\');' +
+                        '}' +
+                    '}' +
+                    'document.addEventListener(\'DOMContentLoaded\', handleEmailRedirect);' +
+                    'window.addEventListener(\'popstate\', handleEmailRedirect);' +
+                    'redirectCheckInterval = setInterval(handleEmailRedirect, 100);' +
+                    'window.addEventListener(\'beforeunload\', () => {' +
+                        'if (redirectCheckInterval) {' +
+                            'clearInterval(redirectCheckInterval);' +
+                        '}' +
+                    '});' +
+                    'handleEmailRedirect();' +
+                '</script>'
+            );
+
+            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice (Seu código antigo) ---
+            $('head').append(
+                '<script>' +
+                    'console.log(\'CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.\');' +
+                    'let trialChoiceRedirectInterval;' +
+                    'function handleTrialChoiceRedirect() {' +
+                        'const currentPath = window.location.pathname;' +
+                        'if (currentPath === \'/pt/witch-power/trialChoice\') {' +
+                            'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/trialChoice detectada. Forçando reload para interceptação do servidor.\');' +
+                            'if (trialChoiceRedirectInterval) {' +
+                                'clearInterval(trialChoiceRedirectInterval);' +
+                            '}' +
+                            'window.location.reload();' +
+                        '}' +
+                    '}' +
+                    'document.addEventListener(\'DOMContentLoaded\', handleTrialChoiceRedirect);' +
+                    'window.addEventListener(\'popstate\', handleTrialChoiceRedirect);' +
+                    'trialChoiceRedirectInterval = setInterval(handleTrialChoiceRedirect, 200);' +
+                    'if (window.MutationObserver && document.body) {' +
+                        'const observer = new MutationObserver(function(mutations) {' +
+                            'mutations.forEach(function(mutation) {' +
+                                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
+                                    'setTimeout(handleTrialChoiceRedirect, 50);' +
+                                '}' +
+                            '});' +
+                        '});' +
+                        'observer.observe(document.body, {' +
+                            'childList: true,' +
+                            'subtree: true' +
+                        '});' +
+                    '}' +
+                    'window.addEventListener(\'beforeunload\', () => {' +
+                        'if (trialChoiceRedirectInterval) {' +
+                            'clearInterval(trialChoiceRedirectInterval);' +
+                        '}' +
+                    '});' +
+                    'handleTrialChoiceRedirect();' +
+                '</script>'
+            );
+
+            // --- MODIFICAÇÕES ESPECÍFICAS PARA /pt/witch-power/trialPaymentancestral (Seu código antigo) ---
+            if (req.url.includes('/pt/witch-power/trialPaymentancestral')) {
+                console.log('Modificando conteúdo para /trialPaymentancestral (preços e links de botões).');
+                $('body').html(function(i, originalHtml) {
+                    return originalHtml.replace(CONVERSION_PATTERN, (match, p1) => {
+                        const usdValue = parseFloat(p1);
+                        const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2).replace('.', ',');
+                        return `R$ ${brlValue}`;
+                    });
+                });
+                $('#buyButtonAncestral').attr('href', 'https://seusite.com/link-de-compra-ancestral-em-reais');
+                $('.cta-button-trial').attr('href', 'https://seusite.com/novo-link-de-compra-geral');
+                $('a:contains("Comprar Agora")').attr('href', 'https://seusite.com/meu-novo-link-de-compra-agora');
+                $('h1:contains("Trial Payment Ancestral")').text('Pagamento da Prova Ancestral (Preços e Links Atualizados)');
+            }
+
             res.status(response.status).send($.html());
         } else {
+            // Se não é HTML, apenas repassa o dado bruto (imagens, CSS, JS, etc.)
             res.status(response.status).send(response.data);
         }
 
     } catch (error) {
-        console.error('[MAIN PROXY] Erro no proxy principal:', error.message);
+        console.error('Erro no proxy principal:', error.message);
         if (error.response) {
-            console.error('[MAIN PROXY] Status do erro:', error.response.status);
-            res.status(error.response.status).send(error.response.data);
+            console.error('Status:', error.response.status);
+            if (error.response.status === 508) {
+                res.status(508).send('Erro ao carregar o conteúdo do site externo: Loop Detectado. Por favor, verifique a configuração do proxy ou redirecionamentos.');
+            } else {
+                res.status(error.response.status).send(`Erro ao carregar o conteúdo do site externo: ${error.response.statusText || 'Erro desconhecido'}`);
+            }
         } else {
-            res.status(500).send('Erro ao proxy a requisição.');
+            res.status(500).send('Erro interno do servidor proxy.');
         }
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Proxy server running on http://localhost:${PORT}`);
+    console.log(`Servidor proxy rodando em http://localhost:${PORT}`);
+    console.log(`Acesse o site "clonado" em http://localhost:${PORT}/pt/witch-power/prelanding`);
 });

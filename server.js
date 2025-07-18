@@ -16,7 +16,7 @@ const READING_SUBDOMAIN_TARGET = 'https://reading.nebulahoroscope.com';
 
 // Configurações para Modificação de Conteúdo
 const USD_TO_BRL_RATE = 5.00;
-const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
+const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)?/g; // Regex ajustada para capturar centavos opcionais
 
 // Variável para armazenar o texto capturado (mantida, embora o localStorage seja a fonte principal agora)
 let capturedBoldText = '';
@@ -195,7 +195,7 @@ async function captureTextDirectly() {
         } else {
             console.log('⚠️ HTML não contém o padrão esperado');
             console.log('📝 Primeiros 500 caracteres do HTML:');
-            console.log(response.data.substring(0, 500));
+            console.data(response.data.substring(0, 500));
         }
 
         // Tentar com diferentes textos conhecidos no HTML (fallback)
@@ -231,7 +231,7 @@ async function captureTextDirectly() {
 
         // Fallback em caso de erro
         capturedBoldText = 'identificar seu arquétipo de bruxa';
-        lastCaptureTime = Date.now();
+        lastCaptureTime = Date.Now();
         console.log('⚠️ Usando fallback de erro:', `"${capturedBoldText}"`);
 
         return capturedBoldText;
@@ -506,7 +506,12 @@ app.use(async (req, res) => {
                 console.log('Modificando conteúdo para /trialPaymentancestral (preços e links de botões).');
                 $('body').html(function(i, originalHtml) {
                     return originalHtml.replace(CONVERSION_PATTERN, (match, p1) => {
+                        // p1 já é o valor numérico (ex: "9.99" ou "9")
                         const usdValue = parseFloat(p1);
+                        // Se p1 não é um número válido, retorna o match original para não quebrar.
+                        if (isNaN(usdValue)) {
+                            return match;
+                        }
                         const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2).replace('.', ',');
                         return `R$ ${brlValue}`;
                     });
@@ -517,11 +522,7 @@ app.use(async (req, res) => {
                 $('h1:contains("Trial Payment Ancestral")').text('Pagamento da Prova Ancestral (Preços e Links Atualizados)');
             }
 
-            ---
-            ### Injetando Botões Invisíveis via Coordenadas (wpGoal)
-            ---
-            ```javascript
-            // --- NOVO SCRIPT PARA CAPTURAR O QUIZ E INSERIR BOTÕES INVISÍVEIS ---
+            // Injetando Botões Invisíveis via Coordenadas (wpGoal)
             // APENAS NA PÁGINA ESPECÍFICA DO QUIZ: /pt/witch-power/wpGoal
             if (req.url.includes('/pt/witch-power/wpGoal')) {
                 console.log('Injetando script de botões invisíveis (coordenadas fixas) na página wpGoal.');
@@ -569,36 +570,20 @@ app.use(async (req, res) => {
                                 { text: "Encontrar marcas, símbolos que me guiem", top: 629, left: 40, width: 330, height: 66 }
                             ];
 
-                            // Funções para simular clique no botão original
-                            // Esta é a parte mais crítica, pois depende de como o site original manipula seus botões.
-                            // Vamos tentar simular um clique no elemento LI que contém o texto da opção.
-                            const simulateOriginalClick = (choiceText) => {
-                                console.log('Tentando simular clique no botão original para: ' + choiceText);
-                                const originalButtons = document.querySelectorAll('li[data-testid="answer-button"]');
-                                let clicked = false;
-                                for (const btn of originalButtons) {
-                                    const spanText = btn.querySelector('span.sc-5303d838-10.gdosuv'); // Seletor do span com o texto
-                                    if (spanText && spanText.textContent.trim() === choiceText) {
-                                        console.log('Original button found for "' + choiceText + '", attempting click...');
-                                        btn.click(); // Tenta o método click() nativo
-                                        clicked = true;
-                                        break;
-                                    }
-                                }
-                                if (!clicked) {
-                                    console.warn('Original button for "' + choiceText + '" not found via span text. Falling back to general LI click attempt.');
-                                    // Fallback: se o seletor do span não funcionar, tente achar o LI pelo texto completo.
-                                    for (const btn of originalButtons) {
-                                        if (btn.textContent.includes(choiceText)) {
-                                            btn.click();
-                                            clicked = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (!clicked) {
-                                    console.error('Failed to simulate click on original button for: ' + choiceText);
-                                }
+                            // Função para simular um clique do mouse nas coordenadas do botão invisível
+                            // Isso vai disparar o evento no elemento que estiver "por baixo" do botão invisível
+                            const simulateClickAtCoords = (x, y) => {
+                                console.log('Simulando clique do mouse em X: ' + x + ', Y: ' + y);
+                                const event = new MouseEvent('click', {
+                                    view: window,
+                                    bubbles: true,
+                                    cancelable: true,
+                                    clientX: x,
+                                    clientY: y
+                                });
+                                // Dispara o evento no elemento raiz do documento, ele vai propagar
+                                // para o elemento que estiver nas coordenadas.
+                                document.elementFromPoint(x, y).dispatchEvent(event);
                             };
 
                             const createButtons = () => {
@@ -616,18 +601,16 @@ app.use(async (req, res) => {
                                     activeCoords = mobileCoords;
                                     console.log('Usando coordenadas MOBILE.');
                                 } else { // Para larguras entre 769px e 1023px (tablets e notebooks menores)
-                                    // Aqui você pode adicionar lógica de interpolação se as posições variarem muito
-                                    // ou definir um terceiro conjunto de coordenadas para tablets.
-                                    // Por simplicidade, vamos usar as coordenadas de desktop, mas centralizadas proporcionalmente.
+                                    // Para esses casos, vamos adaptar as coordenadas de desktop para centralizar.
                                     activeCoords = desktopCoords.map(coord => {
-                                        const newWidth = currentWidth * (330 / 1920); // Largura proporcional
-                                        const newLeft = (currentWidth - newWidth) / 2; // Centraliza
+                                        // A largura do botão se manterá a mesma que você forneceu para desktop (330px)
+                                        // Vamos centralizar o botão na tela.
+                                        const newLeft = (currentWidth / 2) - (coord.width / 2);
                                         return {
                                             ...coord,
                                             left: newLeft,
-                                            width: newWidth,
-                                            // As tops e heights provavelmente escalam linearmente ou são fixas no layout responsivo
-                                            // Se o layout for muito diferente, você precisará de coordenadas específicas para este breakpoint
+                                            // A altura e o top tendem a se manter consistentes ou escalam pouco nessa transição
+                                            // Se isso não funcionar perfeitamente, precisaremos de coordenadas específicas para tablets.
                                         };
                                     });
                                     console.log('Usando coordenadas ADAPTADAS para tela intermediária.');
@@ -639,37 +622,28 @@ app.use(async (req, res) => {
                                     overlayButton.className = 'invisible-overlay-button';
                                     
                                     overlayButton.style.top = coord.top + 'px';
-                                    
-                                    // Ajuste para centralizar se a largura da tela mudar para desktop
-                                    if (currentWidth >= 1024) {
-                                        // A sua coordenada de left (795px) está baseada numa tela de 1920px de largura
-                                        // O centro da tela de 1920px é 960px.
-                                        // O botão começa em 795px, então ele está a 960 - 795 = 165px à esquerda do centro.
-                                        // Ou seja, ele está centralizado com base na fórmula (largura_tela / 2) - (largura_botao / 2)
-                                        // Para 1920x1080: (1920/2) - (330/2) = 960 - 165 = 795.
-                                        overlayButton.style.left = (currentWidth / 2 - coord.width / 2) + 'px';
-                                    } else if (currentWidth <= 768) {
-                                         // Para mobile, você deu um left fixo. Usamos esse.
-                                        overlayButton.style.left = coord.left + 'px';
-                                    } else {
-                                        // Para telas intermediárias (tablets, notebooks menores), tenta centralizar também
-                                        overlayButton.style.left = (currentWidth / 2 - coord.width / 2) + 'px';
-                                    }
-
+                                    overlayButton.style.left = coord.left + 'px'; // Já ajustado na lógica de activeCoords
                                     overlayButton.style.width = coord.width + 'px';
                                     overlayButton.style.height = coord.height + 'px';
                                     overlayButton.dataset.quizChoice = coord.text; // Armazena a escolha no dataset
 
                                     overlayButton.addEventListener('click', function(event) {
-                                        event.preventDefault(); // Impede qualquer comportamento padrão (navegação, etc.)
-                                        event.stopPropagation(); // Impede que o clique se propague imediatamente para elementos abaixo
+                                        event.preventDefault(); // Impede qualquer comportamento padrão do botão
+                                        event.stopPropagation(); // Impede que o clique se propague para o HTML subjacente (temporariamente)
 
+                                        const rect = this.getBoundingClientRect();
+                                        const clickX = rect.left + (rect.width / 2); // Centro horizontal do botão
+                                        const clickY = rect.top + (rect.height / 2); // Centro vertical do botão
+                                        
                                         const capturedChoice = this.dataset.quizChoice;
                                         console.log('✅ Botão invisível clicado! Escolha capturada: ' + capturedChoice);
                                         localStorage.setItem('nebulaQuizChoice', capturedChoice); // Salva no localStorage
 
-                                        // Agora, tenta simular o clique no botão original real
-                                        simulateOriginalClick(capturedChoice);
+                                        // Simula o clique do mouse nas coordenadas do centro do botão invisível
+                                        simulateClickAtCoords(clickX, clickY);
+
+                                        // Atraso para garantir que o clique foi processado antes de reativar a propagação se necessário
+                                        // Não precisamos reativar a propagação aqui, pois o evento MouseEvent é novo.
                                     });
 
                                     document.body.appendChild(overlayButton);
@@ -681,20 +655,39 @@ app.use(async (req, res) => {
                             createButtons();
 
                             // Adiciona listeners para recriar os botões em caso de redimensionamento da janela
-                            // Isso é crucial para a responsividade das coordenadas fixas
                             window.addEventListener('resize', createButtons);
 
-                            // Opcional: Se a página puder rolar e os botões originais não forem fixed/sticky
-                            // window.addEventListener('scroll', createButtons);
+                            // Adiciona um MutatioObserver para recriar os botões se o DOM mudar significativamente
+                            // (Por exemplo, se a página for um SPA e o conteúdo do quiz for carregado dinamicamente).
+                            // Isso é um fallback, pode não ser necessário dependendo de como o quiz carrega.
+                            const observer = new MutationObserver((mutations) => {
+                                for (const mutation of mutations) {
+                                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                                        // Verifica se um novo conteúdo de quiz pode ter sido carregado
+                                        // Pode ser mais específico aqui se soubermos um seletor para a área do quiz
+                                        if (document.querySelector('li[data-testid="answer-button"]') || document.querySelector('#quiz-container')) {
+                                            console.log('DOM modificado, recriando botões invisíveis.');
+                                            createButtons();
+                                            // Desconecta o observador após a primeira detecção para evitar loop infinito
+                                            // ou re-conecta apenas quando necessário.
+                                            // Por enquanto, vamos manter para debug, mas pode ser otimizado.
+                                            // observer.disconnect();
+                                            break; // Sai do loop para evitar recriações múltiplas em um único evento
+                                        }
+                                    }
+                                }
+                            });
+                            // Observa o body para grandes mudanças no DOM
+                            observer.observe(document.body, { childList: true, subtree: true });
+
                         })();
                     </script>
                 `);
             }
-            ```
 
-            `res.status(response.status).send($.html());`
+            res.status(response.status).send($.html()); // Corrigido: `res.status().send()` no lugar
         } else {
-            `res.status(response.status).send(response.data);`
+            res.status(response.status).send(response.data);
         }
 
     } catch (error) {
@@ -704,7 +697,7 @@ app.use(async (req, res) => {
             if (error.response.status === 508) {
                 res.status(508).send('Erro ao carregar o conteúdo do site externo: Loop Detectado. Por favor, verifique a configuração do proxy ou redirecionamentos.');
             } else {
-                res.status(error.response.status).send(`Erro ao carregar o conteúdo do site externo: ${error.response.statusText || 'Erro desconhecido'}`);
+                res.status(error.response.status).send(`Erro ao carregar o conteúdo do site externo: ${error.response.status} - ${error.response.statusText || 'Erro desconhecido'}`);
             }
         } else {
             res.status(500).send('Erro interno do servidor proxy.');

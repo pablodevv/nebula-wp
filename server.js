@@ -19,9 +19,9 @@ const READING_SUBDOMAIN_TARGET = 'https://reading.nebulahoroscope.com';
 const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
-// Variável para armazenar o texto capturado (para o TrialChoice)
-let capturedBoldText = '';
-let lastCaptureTime = 0;
+// Variável para armazenar o texto capturado E A ESCOLHA DO USUÁRIO
+let capturedBoldText = 'identificar seu arquétipo de bruxa'; // Valor padrão
+let lastCaptureTime = Date.now();
 let isCapturing = false;
 
 // Configuração para Axios ignorar SSL para domínios específicos (apenas para desenvolvimento/ambientes problemáticos)
@@ -45,8 +45,15 @@ app.use(express.urlencoded({ extended: true })); // Para parsing de URL-encoded 
 app.use(cors()); // Permite CORS, útil para desenvolvimento
 
 // --- API endpoint para obter o texto capturado (para o React App) ---
-app.get('/api/captured-text', (req, res) => {
+app.get('/api/captured-text', async (req, res) => {
     console.log('📡 API /api/captured-text chamada');
+
+    // Se capturedBoldText está vazio ou é o valor padrão e já faz muito tempo, tenta recapturar
+    if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa' || (Date.now() - lastCaptureTime > 3600000 && !isCapturing)) { // 1 hora de validade
+        console.log('🔄 Texto capturado ausente/antigo. Tentando recapturar do site original...');
+        await captureTextDirectly(); // Tenta obter um valor padrão
+    }
+
     console.log('📝 Texto atual na variável:', `"${capturedBoldText}"`);
     console.log('🕐 Último tempo de captura:', new Date(lastCaptureTime).toISOString());
     console.log('🔄 Está capturando:', isCapturing);
@@ -58,6 +65,20 @@ app.get('/api/captured-text', (req, res) => {
         timestamp: Date.now()
     });
 });
+
+// --- NOVO endpoint para receber a escolha do usuário ---
+app.post('/api/set-selected-choice', (req, res) => {
+    const { selectedText } = req.body;
+    if (selectedText) {
+        capturedBoldText = selectedText;
+        lastCaptureTime = Date.now();
+        console.log(`✅ Texto selecionado pelo usuário recebido e atualizado: "${capturedBoldText}"`);
+        res.status(200).json({ message: 'Texto atualizado com sucesso.', capturedText: capturedBoldText });
+    } else {
+        res.status(400).json({ message: 'Nenhum texto fornecido.' });
+    }
+});
+
 
 // --- Funções para Extração e Captura de Texto (do seu código antigo) ---
 function extractTextFromHTML(html) {
@@ -267,11 +288,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('URL acessada:', req.url);
 
     try {
-        // Fazer requisição direta para capturar o texto ANTES de servir a página React
-        console.log('🚀 Iniciando captura direta...');
-        const capturedText = await captureTextDirectly();
-
-        console.log('✅ Texto capturado com sucesso:', `"${capturedText}"`);
+        // NÃO CHAMA captureTextDirectly() aqui. O texto virá da API /api/captured-text
         console.log('✅ Servindo página React customizada...\n');
 
         // Envia o index.html do seu build React
@@ -279,13 +296,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
 
     } catch (error) {
         console.error('\n❌ ERRO CRÍTICO ao servir trialChoice:', error.message);
-
-        // Mesmo com erro, serve a página React com fallback
-        capturedBoldText = 'identificar seu arquétipo de bruxa';
-        lastCaptureTime = Date.now();
-
-        console.log('Usando texto fallback de erro:', `"${capturedBoldText}"`);
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        res.status(500).send('Erro ao carregar a página customizada.');
     }
 });
 
@@ -479,8 +490,10 @@ app.use(async (req, res) => {
             let html = response.data.toString('utf8');
 
             // 🎯 INTERCEPTAÇÃO ADICIONAL: Se este HTML contém o padrão, capturar também
-            if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing) {
-                console.log('\n🎯 INTERCEPTANDO HTML NO MIDDLEWARE!');
+            // Mantenho essa lógica para popular capturedBoldText caso o usuário caia diretamente em trialChoice
+            // ou se o servidor reiniciar e não houver seleção anterior.
+            if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing && !capturedBoldText) {
+                console.log('\n🎯 INTERCEPTANDO HTML NO MIDDLEWARE para pré-popular capturedBoldText!');
                 console.log('URL:', req.url);
 
                 const extractedText = extractTextFromHTML(html);
@@ -624,9 +637,40 @@ app.use(async (req, res) => {
                 'cursor: pointer;' +
                 'z-index: 9999;' +
                 '`;' +
-                'button.addEventListener(\'click\', () => {' +
+                'button.addEventListener(\'click\', async (event) => {' + // Usar async para o fetch
                 'console.log(`✅ Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
-                'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' + // ENVIA VIA POSTMESSAGE
+
+                '// 1. Enviar a escolha do usuário para o servidor proxy' +
+                'try {' +
+                'await fetch(\'/api/set-selected-choice\', {' + // Novo endpoint
+                'method: \'POST\',' +
+                'headers: {' +
+                '\'Content-Type\': \'application/json\'' +
+                '},' +
+                'body: JSON.stringify({ selectedText: config.text })' +
+                '});' +
+                'console.log(`✅ Escolha \'${config.text}\' enviada para o servidor.`);' +
+                '} catch (error) {' +
+                'console.error(\'❌ Erro ao enviar escolha para o servidor:\', error);' +
+                '}' +
+
+                '// 2. Notificar o React App (se estiver no mesmo domínio)' +
+                'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' +
+
+                '// 3. Simular clique no botão original para avançar o quiz' +
+                'const rect = button.getBoundingClientRect();' +
+                'const centerX = rect.left + rect.width / 2;' +
+                'const centerY = rect.top + rect.height / 2;' +
+                'const originalElement = document.elementFromPoint(centerX, centerY);' +
+                'if (originalElement) {' +
+                'console.log(`Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
+                '// Previne o comportamento padrão do seu botão invisível para não haver duplicidade de clique' +
+                'event.stopPropagation();' +
+                'event.preventDefault();' +
+                'originalElement.click();' +
+                '} else {' +
+                'console.log(`Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`);' +
+                '}' +
                 '});' +
                 'document.body.appendChild(button);' +
                 'console.log(`✅ Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
@@ -703,6 +747,6 @@ app.use(async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor proxy rodando na porta ${PORT}`);
     console.log(`Acessível em: http://localhost:${PORT}`);
-    // Inicializa a captura de texto na inicialização do servidor, se necessário
-    // captureTextDirectly(); // Pode ser chamado aqui se precisar pré-carregar antes da primeira requisição
+    // Opcional: Chama captureTextDirectly na inicialização para popular o valor padrão
+    // captureTextDirectly();
 });

@@ -159,7 +159,7 @@ app.use(async (req, res) => {
 
         const setCookieHeader = response.headers['set-cookie'];
         if (setCookieHeader) {
-            const cookies = Array.isArray(setCookieHeader) ? cookies : [setCookieHeader];
+            const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
             const modifiedCookies = cookies.map(cookie => {
                 return cookie.replace(/Domain=[^;]+/, '').replace(/; Secure/, '');
             });
@@ -194,13 +194,19 @@ app.use(async (req, res) => {
             });
 
             // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE E MANIPULAÇÃO DE DOM ---
+            // A string abaixo é um template literal JavaScript (usa crases `)
+            // Para incluir variáveis JS (como ${proxyHost}) dentro dessa string,
+            // e para que as crases internas (no JS injetado) não causem SyntaxError,
+            // precisamos escapá-las com uma barra invertida (\`)
+            // O mesmo para o cifrão ($) se ele for usado literalmente.
             $('head').prepend(`
                 <script>
                     (function() {
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
                         const proxyPrefix = '/reading';
-                        const currentProxyHost = \`${proxyHost}\`;
+                        // Escapando a crase para que o template literal do cliente funcione
+                        const currentProxyHost = \`\${'${proxyHost}'}\`; 
                         const targetPagePath = '/pt/witch-power/wpGoal'; // A página onde você quer os botões invisíveis
 
                         // Funções de interceptação de Fetch, XHR e PostMessage
@@ -294,6 +300,11 @@ app.use(async (req, res) => {
                         function manageInvisibleButtons() {
                             const currentPagePath = window.location.pathname;
                             const isTargetPage = currentPagePath === targetPagePath;
+                            // Não precisamos mais do testButtonElement pois removemos o banner de teste
+                            // const testButtonElement = document.getElementById('gemini-test-button'); 
+
+                            // Mensagem de log para cada verificação
+                            console.log(\`[Monitor] URL atual: \${currentPagePath}. Página alvo: \${targetPagePath}. É a página alvo? \${isTargetPage}\`);
 
                             if (isTargetPage && !buttonsInjected) {
                                 // INJETAR BOTÕES
@@ -315,10 +326,10 @@ app.use(async (req, res) => {
                                     button.style.pointerEvents = 'auto'; // Garante que seja clicável mesmo invisível
 
                                     document.body.appendChild(button);
-                                    console.log(`✅ Botão invisível '${config.id}' injetado na página wpGoal!`);
+                                    console.log(`✅ Botão invisível '\${config.id}' injetado na página wpGoal!`);
 
                                     button.addEventListener('click', (event) => {
-                                        console.log(`🎉 Botão invisível '${config.id}' clicado na wpGoal!`);
+                                        console.log(`🎉 Botão invisível '\${config.id}' clicado na wpGoal!`);
                                         
                                         // 1. Simular clique na posição do botão invisível
                                         // Isso vai avançar o quiz na página original
@@ -337,7 +348,7 @@ app.use(async (req, res) => {
                                         const targetElement = document.elementFromPoint(x, y);
                                         if (targetElement) {
                                             targetElement.dispatchEvent(clickEvent);
-                                            console.log(`Simulou clique em:`, targetElement);
+                                            console.log(\`Simulou clique em:\`, targetElement);
                                         } else {
                                             console.warn('Nenhum elemento encontrado para simular clique nas coordenadas.');
                                         }
@@ -348,7 +359,7 @@ app.use(async (req, res) => {
                                             type: 'QUIZ_CHOICE_SELECTED',
                                             text: config.text
                                         }, window.location.origin); // O targetOrigin deve ser o seu próprio host (Render URL)
-                                        console.log(`Dados enviados para o React: '${config.text}'`);
+                                        console.log(\`Dados enviados para o React: '\${config.text}'\`);
                                     });
                                 });
 
@@ -361,7 +372,7 @@ app.use(async (req, res) => {
                                     const buttonElement = document.getElementById(config.id);
                                     if (buttonElement) {
                                         buttonElement.remove();
-                                        console.log(`🗑️ Botão invisível '${config.id}' removido.`);
+                                        console.log(`🗑️ Botão invisível '\${config.id}' removido.`);
                                     }
                                 });
                                 buttonsInjected = false; // Reseta a flag
@@ -370,8 +381,6 @@ app.use(async (req, res) => {
 
                         // --- Lógica de Inicialização e Monitoramento ---
                         document.addEventListener('DOMContentLoaded', function() {
-                            // O banner vermelho/amarelo de teste foi removido para focar na funcionalidade real.
-                            // Se quiser um log simples de injeção do script, pode adicionar aqui:
                             console.log('Script de injeção de proxy carregado no cliente.');
 
                             // Chama a função de gerenciamento de botões na carga inicial

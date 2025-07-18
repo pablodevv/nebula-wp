@@ -1,40 +1,30 @@
 import React, { useState, useEffect } from 'react';
 
 interface TrialChoiceProps {
-  // A prop capturedText ainda pode ser usada como um valor inicial/fallback
-  capturedText?: string; 
+  capturedText?: string;
 }
 
-// Interface para o tipo de mensagem que esperamos receber via postMessage
 interface QuizChoiceMessage {
   type: 'QUIZ_CHOICE_SELECTED';
   text: string;
 }
 
-const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar origens de vidas passadas" }) => {
+const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
-  // O displayText será inicializado com capturedText, mas poderá ser atualizado via postMessage
-  const [displayText, setDisplayText] = useState<string>(capturedText);
+  // Inicializa displayText com capturedText ou um valor padrão
+  const [displayText, setDisplayText] = useState<string>(capturedText && capturedText.trim() ? capturedText : "explorar origens de vidas passadas");
 
-  // Atualiza o texto exibido quando capturedText (prop) muda
-  useEffect(() => {
-    if (capturedText && capturedText.trim()) {
-      console.log('🔄 TrialChoice: Atualizando texto exibido (via prop):', `"${capturedText}"`);
-      setDisplayText(capturedText);
-    } else {
-      console.log('⚠️ TrialChoice: Texto vazio na prop, mantendo padrão');
-      setDisplayText("explorar origens de vidas passadas");
-    }
-  }, [capturedText]);
-
-  // NOVO useEffect para escutar mensagens do window.postMessage
+  // Este useEffect agora só lida com a escuta de mensagens via postMessage
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // É CRUCIAL verificar a origem da mensagem para segurança!
-      // O event.origin deve ser o URL do seu proxy (Render URL)
-      // Em produção, seria 'https://appnebula-wp-3kdx.onrender.com'
-      // Em desenvolvimento local, pode ser 'http://localhost:XXXX'
-      if (event.origin !== window.location.origin) {
+      // Em produção, substitua 'window.location.origin' pelo URL completo do seu proxy/servidor,
+      // por exemplo: 'https://appnebula-wp-3kdx.onrender.com'
+      // Se a mensagem vem da mesma origem do React app, window.location.origin está ok.
+      // Se vem de um IFRAME ou janela diferente, verifique o ORIGIN do remetente.
+      // Exemplo para produção, se o proxy estiver em um domínio diferente:
+      // if (event.origin !== 'https://appnebula-wp-3kdx.onrender.com') {
+      if (event.origin !== window.location.origin) { // Mantido para cenário de mesma origem ou localhost
         console.warn('❌ TrialChoice: Mensagem recebida de origem desconhecida:', event.origin);
         return;
       }
@@ -43,20 +33,29 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
 
       if (data.type === 'QUIZ_CHOICE_SELECTED' && data.text) {
         console.log('✅ TrialChoice: Mensagem de escolha do quiz recebida (via postMessage):', `"${data.text}"`);
-        setDisplayText(data.text); // Atualiza o estado com o texto do botão invisível
-        // Você pode adicionar aqui qualquer outra lógica necessária,
-        // como salvar em um estado global, enviar para uma API, etc.
+        setDisplayText(data.text);
       }
     };
 
-    // Adiciona o event listener
     window.addEventListener('message', handleMessage);
 
-    // Função de limpeza: remove o event listener quando o componente é desmontado
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, []); // O array de dependências vazio significa que este efeito roda uma vez no mount e uma vez no unmount
+  }, []); // Dependências vazias para rodar apenas uma vez no mount/unmount
+
+  // Este useEffect é para quando a prop capturedText muda *após* a montagem inicial.
+  // No seu caso de uso (buscado uma vez no App.tsx), ele pode ser redundante se o App
+  // já passa o valor correto na montagem inicial. Mas mantê-lo não prejudica.
+  useEffect(() => {
+    if (capturedText && capturedText.trim()) {
+      console.log('🔄 TrialChoice: Atualizando texto exibido (via prop):', `"${capturedText}"`);
+      setDisplayText(capturedText);
+    } else if (!displayText) { // Só atualiza para o padrão se displayText ainda não tiver sido definido por prop ou postMessage
+      console.log('⚠️ TrialChoice: Texto vazio na prop, mantendo padrão');
+      setDisplayText("explorar origens de vidas passadas");
+    }
+  }, [capturedText, displayText]); // Adicionado displayText às dependências para evitar loop infinito se a condição acima for satisfeita
 
   const handlePriceSelect = (price: string) => {
     setSelectedPrice(price);
@@ -97,13 +96,12 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
 
           <div className="content">
             <h1 className="title">Escolha um Preço de Teste</h1>
-            
+
             <div className="satisfaction-section">
               <h2 className="section-title">SUA SATISFAÇÃO É IMPORTANTE PARA NÓS</h2>
               <p className="description">
                 Ajudamos milhões de pessoas a <b>{displayText}</b>, e queremos ajudar você também.
               </p>
-              {/* Debug info - remover em produção */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mt-2">
                   Debug: "{displayText}" (prop: "{capturedText}")
@@ -116,7 +114,6 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
               <p className="description">
                 Ajudamos milhões de pessoas a <b>{displayText}</b>, e queremos ajudar você também.
               </p>
-              {/* Debug info - remover em produção */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mt-2">
                   Debug: "{displayText}" (prop: "{capturedText}")
@@ -136,14 +133,14 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText = "explorar orig
                   </button>
                 ))}
               </div>
-              
+
               <div className="help-text">
                 <p>Esta opção nos ajudará a financiar aqueles que precisam escolher os menores preços de teste!</p>
                 <div className="arrow-pointer">→</div>
               </div>
             </div>
 
-            <button 
+            <button
               className={`view-reading-button ${selectedPrice ? 'active' : 'inactive'}`}
               onClick={handleViewReading}
               disabled={!selectedPrice}

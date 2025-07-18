@@ -1,76 +1,148 @@
-// src/App.tsx
-
 import React, { useState, useEffect } from 'react';
+
 import TrialChoice from './TrialChoice';
+
 import './TrialChoice.css';
 
+
+
 function App() {
-  const [chosenQuizOption, setChosenQuizOption] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
-  useEffect(() => {
-    const getQuizChoiceFromLocalStorage = () => {
-      console.log('🚀 React: Tentando ler a escolha do quiz do localStorage...');
-      const savedChoice = localStorage.getItem('nebulaQuizChoice');
+  const [capturedText, setCapturedText] = useState<string>('');
 
-      if (savedChoice && savedChoice.trim()) {
-        console.log('✅ React: Escolha do quiz encontrada no localStorage:', `"${savedChoice}"`);
-        setChosenQuizOption(savedChoice);
-      } else {
-        console.warn('⚠️ React: Nenhuma escolha do quiz encontrada no localStorage ou vazia. Usando fallback.');
-        setChosenQuizOption('explorar origens de vidas passadas'); // Fallback consistente
-      }
-      setLoading(false);
-    };
+  const [loading, setLoading] = useState<boolean>(true);
 
-    getQuizChoiceFromLocalStorage();
+  const [error, setError] = useState<string>('');
 
-    const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
-      getQuizChoiceFromLocalStorage();
-    };
-    window.addEventListener('popstate', handlePopState);
 
-    window.addEventListener('storage', getQuizChoiceFromLocalStorage);
 
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('storage', getQuizChoiceFromLocalStorage);
-    };
-  }, []);
+  useEffect(() => {
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Preparando sua experiência personalizada...</p>
-          <p className="text-sm text-gray-500 mt-2">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
+    const fetchCapturedText = async () => {
 
-  // Lógica de roteamento simples para renderizar o componente correto
-  // Se a rota for a nossa rota customizada para TrialChoice, renderiza TrialChoice.
-  // Caso contrário, mostra uma mensagem genérica.
-  // IMPORTANTE: Seu React App deve ter apenas a página de TrialChoice para simplificar.
-  // Se houver outras páginas, você precisará de um roteador mais completo como react-router-dom.
-  if (currentPath === '/meu-app/trial-choice') {
-    return (
-      <div className="min-h-screen bg-gray-100">
-        <TrialChoice capturedText={chosenQuizOption} />
-      </div>
-    );
-  }
+      try {
 
-  // Fallback para outras rotas (ex: se alguém tentar acessar a raiz do seu app)
-  return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <p className="text-gray-600">Conteúdo da rota {currentPath} (não TrialChoice). Verifique a URL.</p>
-    </div>
-  );
+        console.log('🚀 React: Iniciando busca por texto capturado...');
+
+        
+
+        // Buscar imediatamente
+
+        const response = await fetch('/api/captured-text');
+
+        
+
+        if (!response.ok) {
+
+          throw new Error(`HTTP error! status: ${response.status}`);
+
+        }
+
+        
+
+        const data = await response.json();
+
+        console.log('📨 React: Resposta do servidor:', data);
+
+        
+
+        if (data.capturedText && data.capturedText.trim()) {
+
+          console.log('✅ React: Texto capturado recebido:', `"${data.capturedText}"`);
+
+          setCapturedText(data.capturedText);
+
+          setError('');
+
+        } else {
+
+          console.log('⚠️ React: Nenhum texto capturado encontrado');
+
+          setCapturedText('identificar seu arquétipo de bruxa');
+
+          setError('Usando conteúdo padrão');
+
+        }
+
+      } catch (error) {
+
+        console.error('❌ React: Erro ao buscar texto capturado:', error);
+
+        setCapturedText('identificar seu arquétipo de bruxa');
+
+        setError('Erro ao carregar conteúdo personalizado');
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+
+
+    fetchCapturedText();
+
+  }, []);
+
+
+
+  if (loading) {
+
+    return (
+
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+
+        <div className="text-center">
+
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+
+          <p className="text-gray-600">Capturando informações personalizadas...</p>
+
+          <p className="text-sm text-gray-500 mt-2">Fazendo requisição direta para o servidor...</p>
+
+        </div>
+
+      </div>
+
+    );
+
+  }
+
+
+
+  return (
+
+    <div className="min-h-screen bg-gray-100">
+
+      {error && (
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4 mx-4">
+
+          <div className="flex">
+
+            <div className="text-yellow-700 text-xs">
+
+              {error}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      <TrialChoice capturedText={capturedText} />
+
+    </div>
+
+  );
+
 }
 
+
+
 export default App;
+

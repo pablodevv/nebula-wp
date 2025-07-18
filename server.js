@@ -194,15 +194,12 @@ app.use(async (req, res) => {
             });
 
             // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE E MANIPULAÇÃO DE DOM ---
-            // Usando concatenação de strings para as variáveis para evitar o erro de sintaxe
-            // no servidor ao interpretar template literals aninhados.
             const clientScript = `
                 <script>
                     (function() {
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
                         const proxyPrefix = '/reading';
-                        // Injetando proxyHost e targetPagePath como strings literais
                         const currentProxyHost = '${proxyHost}'; 
                         const targetPagePath = '/pt/witch-power/wpGoal'; 
 
@@ -257,41 +254,56 @@ app.use(async (req, res) => {
                         // --- FUNÇÃO PARA GERENCIAR BOTÕES INVISÍVEIS ---
                         let buttonsInjected = false; // Flag para controlar injeção
 
-                        // Definição dos botões com suas coordenadas, dimensões e texto a ser salvo
+                        // Definição dos botões com suas coordenadas e dimensões PRECISAS
                         const invisibleButtonsConfig = [
                             { 
-                                id: 'btn-choice-1', 
-                                top: '440px', 
-                                left: '50px', 
-                                width: '270px', 
-                                height: '55px', 
-                                text: 'texto da escolha 1' 
+                                id: 'btn-choice-1', // "Entender meu mapa astral"
+                                top: '206px', 
+                                left: '40px', 
+                                width: '330px', 
+                                height: '66px', 
+                                text: 'Entender meu mapa astral' 
                             },
                             { 
-                                id: 'btn-choice-2', 
-                                top: '500px', 
-                                left: '50px', 
-                                width: '270px', 
-                                height: '55px', 
-                                text: 'texto da escolha 2' 
+                                id: 'btn-choice-2', // "Identificar meu arquétipo de bruxa"
+                                top: '292px', 
+                                left: '40px', 
+                                width: '330px', 
+                                height: '66px', 
+                                text: 'Identificar meu arquétipo de bruxa' 
                             },
                             { 
-                                id: 'btn-choice-3', 
-                                top: '560px', 
-                                left: '50px', 
-                                width: '270px', 
-                                height: '55px', 
-                                text: 'texto da escolha 3' 
+                                id: 'btn-choice-3', // "Explorar minhas vidas passadas"
+                                top: '377px', 
+                                left: '40px', 
+                                width: '330px', 
+                                height: '66px', 
+                                text: 'Explorar minhas vidas passadas' 
                             },
                             { 
-                                id: 'btn-choice-4', 
-                                top: '620px', 
-                                left: '50px', 
-                                width: '270px', 
-                                height: '55px', 
-                                text: 'texto da escolha 4' 
+                                id: 'btn-choice-4', // "Revelar minha aura de bruxa"
+                                top: '460px', 
+                                left: '40px', 
+                                width: '330px', 
+                                height: '66px', 
+                                text: 'Revelar minha aura de bruxa' 
+                            },
+                            { 
+                                id: 'btn-choice-5', // "Desvendar meu destino e propósito"
+                                top: '543px', 
+                                left: '40px', 
+                                width: '330px', 
+                                height: '66px', 
+                                text: 'Desvendar meu destino e propósito' 
+                            },
+                            { 
+                                id: 'btn-choice-6', // "Encontrar marcas, símbolos que me guiem"
+                                top: '629px', 
+                                left: '40px', 
+                                width: '330px', 
+                                height: '66px', 
+                                text: 'Encontrar marcas, símbolos que me guiem' 
                             }
-                            // Adicione mais botões aqui se precisar
                         ];
 
                         function manageInvisibleButtons() {
@@ -308,7 +320,7 @@ app.use(async (req, res) => {
                                 invisibleButtonsConfig.forEach(config => {
                                     const button = document.createElement('div');
                                     button.id = config.id;
-                                    button.style.position = 'absolute';
+                                    button.style.position = 'absolute'; // Usamos absolute para coordenadas fixas
                                     button.style.top = config.top;
                                     button.style.left = config.left;
                                     button.style.width = config.width;
@@ -316,7 +328,7 @@ app.use(async (req, res) => {
                                     button.style.zIndex = '9999999'; // Acima de tudo
                                     button.style.cursor = 'pointer'; // Para indicar que é clicável
                                     
-                                    // Torna o botão invisível para o usuário final
+                                    // Torna o botão totalmente invisível para o usuário final
                                     button.style.opacity = '0'; 
                                     button.style.pointerEvents = 'auto'; // Garante que seja clicável mesmo invisível
 
@@ -349,11 +361,10 @@ app.use(async (req, res) => {
                                         }
 
                                         // 2. Enviar dados para o front-end React (trialChoice.tsx)
-                                        // Enviamos uma mensagem para o window, que o seu app React pode ouvir.
                                         window.postMessage({
                                             type: 'QUIZ_CHOICE_SELECTED',
                                             text: config.text
-                                        }, window.location.origin); // O targetOrigin deve ser o seu próprio host (Render URL)
+                                        }, window.location.origin); 
                                         console.log(\`Dados enviados para o React: '\${config.text}'\`);
                                     });
                                 });
@@ -382,7 +393,6 @@ app.use(async (req, res) => {
                             manageInvisibleButtons();
 
                             // Monitora a URL a cada 500ms (0.5 segundos)
-                            // Isso é crucial para SPAs como a Nebula.
                             setInterval(manageInvisibleButtons, 500); 
                         });
 
@@ -390,7 +400,6 @@ app.use(async (req, res) => {
                 </script>
             `;
             
-            // Agora sim, injetamos a string construída
             $('head').prepend(clientScript);
 
             res.setHeader('Content-Type', 'text/html');

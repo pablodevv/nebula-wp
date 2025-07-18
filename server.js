@@ -194,20 +194,17 @@ app.use(async (req, res) => {
             });
 
             // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE E MANIPULAÇÃO DE DOM ---
-            // A string abaixo é um template literal JavaScript (usa crases `)
-            // Para incluir variáveis JS (como ${proxyHost}) dentro dessa string,
-            // e para que as crases internas (no JS injetado) não causem SyntaxError,
-            // precisamos escapá-las com uma barra invertida (\`)
-            // O mesmo para o cifrão ($) se ele for usado literalmente.
-            $('head').prepend(`
+            // Usando concatenação de strings para as variáveis para evitar o erro de sintaxe
+            // no servidor ao interpretar template literals aninhados.
+            const clientScript = `
                 <script>
                     (function() {
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
                         const proxyPrefix = '/reading';
-                        // Escapando a crase para que o template literal do cliente funcione
-                        const currentProxyHost = \`\${'${proxyHost}'}\`; 
-                        const targetPagePath = '/pt/witch-power/wpGoal'; // A página onde você quer os botões invisíveis
+                        // Injetando proxyHost e targetPagePath como strings literais
+                        const currentProxyHost = '${proxyHost}'; 
+                        const targetPagePath = '/pt/witch-power/wpGoal'; 
 
                         // Funções de interceptação de Fetch, XHR e PostMessage
                         const originalFetch = window.fetch;
@@ -300,8 +297,6 @@ app.use(async (req, res) => {
                         function manageInvisibleButtons() {
                             const currentPagePath = window.location.pathname;
                             const isTargetPage = currentPagePath === targetPagePath;
-                            // Não precisamos mais do testButtonElement pois removemos o banner de teste
-                            // const testButtonElement = document.getElementById('gemini-test-button'); 
 
                             // Mensagem de log para cada verificação
                             console.log(\`[Monitor] URL atual: \${currentPagePath}. Página alvo: \${targetPagePath}. É a página alvo? \${isTargetPage}\`);
@@ -326,10 +321,10 @@ app.use(async (req, res) => {
                                     button.style.pointerEvents = 'auto'; // Garante que seja clicável mesmo invisível
 
                                     document.body.appendChild(button);
-                                    console.log(`✅ Botão invisível '\${config.id}' injetado na página wpGoal!`);
+                                    console.log(\`✅ Botão invisível '\${config.id}' injetado na página wpGoal!\`);
 
                                     button.addEventListener('click', (event) => {
-                                        console.log(`🎉 Botão invisível '\${config.id}' clicado na wpGoal!`);
+                                        console.log(\`🎉 Botão invisível '\${config.id}' clicado na wpGoal!\`);
                                         
                                         // 1. Simular clique na posição do botão invisível
                                         // Isso vai avançar o quiz na página original
@@ -372,7 +367,7 @@ app.use(async (req, res) => {
                                     const buttonElement = document.getElementById(config.id);
                                     if (buttonElement) {
                                         buttonElement.remove();
-                                        console.log(`🗑️ Botão invisível '\${config.id}' removido.`);
+                                        console.log(\`🗑️ Botão invisível '\${config.id}' removido.\`);
                                     }
                                 });
                                 buttonsInjected = false; // Reseta a flag
@@ -393,7 +388,10 @@ app.use(async (req, res) => {
 
                     })();
                 </script>
-            `);
+            `;
+            
+            // Agora sim, injetamos a string construída
+            $('head').prepend(clientScript);
 
             res.setHeader('Content-Type', 'text/html');
             res.status(response.status).send($.html());

@@ -231,7 +231,7 @@ async function captureTextDirectly() {
 
         // Fallback em caso de erro
         capturedBoldText = 'identificar seu arquétipo de bruxa';
-        lastCaptureTime = Date.24();
+        lastCaptureTime = Date.now();
         console.log('⚠️ Usando fallback de erro:', `"${capturedBoldText}"`);
 
         return capturedBoldText;

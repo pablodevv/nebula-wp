@@ -310,7 +310,8 @@ app.use(async (req, res) => {
                             const currentPagePath = window.location.pathname;
                             const isTargetPage = currentPagePath === targetPagePath;
 
-                            console.log(`[Monitor] Caminho atual: ${currentPagePath}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);
+                            // Correção nos logs: usando vírgulas para separar as partes.
+                            console.log('[Monitor]', 'Caminho atual:', currentPagePath, 'Página alvo:', targetPagePath, 'É a página alvo?', isTargetPage);
 
                             if (isTargetPage && !buttonsInjected) {
                                 console.log('Página wpGoal detectada! Injetando botões invisíveis...');
@@ -330,10 +331,10 @@ app.use(async (req, res) => {
                                     button.style.pointerEvents = 'auto'; 
 
                                     document.body.appendChild(button);
-                                    console.log(`✅ Botão invisível '${config.id}' injetado na página wpGoal!`);
+                                    console.log('✅ Botão invisível \'' + config.id + '\' injetado na página wpGoal!'); // Alterado aqui também
 
                                     button.addEventListener('click', (event) => {
-                                        console.log(`🎉 Botão invisível '${config.id}' clicado na wpGoal!`);
+                                        console.log('🎉 Botão invisível \'' + config.id + '\' clicado na wpGoal!'); // Alterado aqui também
                                         
                                         button.style.pointerEvents = 'none'; 
                                         
@@ -344,7 +345,7 @@ app.use(async (req, res) => {
                                         const targetElement = document.elementFromPoint(x, y);
 
                                         if (targetElement) {
-                                            // AQUI ESTÃO AS CORREÇÕES:
+                                            // Correções nos logs: usando vírgulas para separar as partes.
                                             console.log('Simulando clique no elemento original:', targetElement);
                                             const clickEvent = new MouseEvent('click', {
                                                 view: window,
@@ -354,20 +355,20 @@ app.use(async (req, res) => {
                                                 clientY: y
                                             });
                                             targetElement.dispatchEvent(clickEvent);
-                                            console.log('Cliques simulados em:', targetElement); // Outra linha de log ajustada
+                                            console.log('Cliques simulados em:', targetElement); 
 
                                             window.postMessage({
                                                 type: 'QUIZ_CHOICE_SELECTED',
                                                 text: config.text
                                             }, window.location.origin); 
-                                            console.log(`Dados enviados para o React: '${config.text}'`);
+                                            console.log('Dados enviados para o React: \'' + config.text + '\''); // Alterado aqui também
 
                                         } else {
                                             console.warn('Nenhum elemento encontrado para simular clique nas coordenadas. O botão original não foi detectado.');
                                         }
 
                                         button.remove(); 
-                                        console.log(`🗑️ Botão invisível '${config.id}' removido após simulação de clique.`);
+                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido após simulação de clique.'); // Alterado aqui também
 
                                         buttonsInjected = false; 
                                     });
@@ -381,7 +382,7 @@ app.use(async (req, res) => {
                                     const buttonElement = document.getElementById(config.id);
                                     if (buttonElement) {
                                         buttonElement.remove();
-                                        console.log(`🗑️ Botão invisível '${config.id}' removido.`);
+                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido.'); // Alterado aqui também
                                     }
                                 });
                                 buttonsInjected = false; 

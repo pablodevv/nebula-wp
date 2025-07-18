@@ -201,6 +201,7 @@ app.use(async (req, res) => {
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
                         const proxyPrefix = '/reading';
                         const currentProxyHost = '${proxyHost}';
+                        const targetPagePath = '/pt/witch-power/wpGoal'; // A página onde você quer os botões invisíveis
 
                         // Funções de interceptação de Fetch, XHR e PostMessage
                         const originalFetch = window.fetch;
@@ -250,31 +251,20 @@ app.use(async (req, res) => {
                             originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);
                         };
 
-                        // --- Lógica para Injeção Condicional e Botão de Teste ---
-                        document.addEventListener('DOMContentLoaded', function() {
+                        // --- FUNÇÃO PARA INJETAR/REMOVER BOTÕES INVISÍVEIS ---
+                        let buttonsInjected = false; // Flag para controlar injeção
+
+                        function manageInvisibleButtons() {
                             const currentPagePath = window.location.pathname;
+                            const isTargetPage = currentPagePath === targetPagePath;
+                            const testButtonElement = document.getElementById('gemini-test-button'); // Pegar o botão de teste roxo
+                            const invisibleButton1Element = document.getElementById('invisible-button-1'); // Pegar o botão invisível de exemplo
 
-                            // Mensagem de teste que aparece em todas as páginas com HTML
-                            console.log('****** SCRIPT DE TESTE INJETADO COM SUCESSO! ******');
+                            // Mensagem de log para cada verificação
+                            console.log(\`[Monitor] URL atual: \${currentPagePath}. Página alvo: \${targetPagePath}. É a página alvo? \${isTargetPage}\`);
 
-                            // Teste VISÍVEL para garantir injeção de DOM em todas as páginas
-                            const testDiv = document.createElement('div');
-                            testDiv.id = 'gemini-injection-test';
-                            testDiv.style.position = 'fixed';
-                            testDiv.style.top = '0';
-                            testDiv.style.left = '0';
-                            testDiv.style.width = '100%';
-                            testDiv.style.padding = '10px';
-                            testDiv.style.backgroundColor = 'red';
-                            testDiv.style.color = 'yellow';
-                            testDiv.style.textAlign = 'center';
-                            testDiv.style.zIndex = '9999999';
-                            testDiv.textContent = 'INJEÇÃO DE TESTE GEMINI FUNCIONOU!';
-                            document.body.appendChild(testDiv);
-
-
-                            // Lógica para INJETAR SEUS BOTÕES INVISÍVEIS APENAS na página wpGoal
-                            if (currentPagePath === '/pt/witch-power/wpGoal') {
+                            if (isTargetPage && !buttonsInjected) {
+                                // INJETAR BOTÕES
                                 console.log('Página wpGoal detectada! Injetando botões invisíveis...');
                                 
                                 // --- COMEÇO DA ÁREA PARA SEUS BOTÕES INVISÍVEIS ---
@@ -332,11 +322,58 @@ app.use(async (req, res) => {
                                 });
                                 */
                                 // --- FIM DA ÁREA PARA SEUS BOTÕES INVISÍVEIS ---
+                                buttonsInjected = true; // Define a flag para evitar reinjeção
+                                
+                                // Ocultar o banner vermelho de teste se estiver na página alvo
+                                if (testButtonElement) {
+                                    testButtonElement.style.display = 'none'; 
+                                }
 
-                            } else {
-                                console.log('Página não é wpGoal. Botões invisíveis não injetados.');
+                            } else if (!isTargetPage && buttonsInjected) {
+                                // REMOVER BOTÕES se não estiver mais na página alvo
+                                console.log('Saindo da página wpGoal. Removendo botões invisíveis...');
+                                if (invisibleButton1Element) {
+                                    invisibleButton1Element.remove();
+                                }
+                                // Remova outros botões invisíveis aqui se existirem
+                                // if (invisibleButton2Element) { invisibleButton2Element.remove(); }
+
+                                buttonsInjected = false; // Reseta a flag
+                                
+                                // Mostrar o banner vermelho de teste novamente
+                                if (testButtonElement) {
+                                    testButtonElement.style.display = 'block'; 
+                                }
                             }
+                        }
+
+                        // --- Lógica de Injeção e Monitoramento ---
+                        document.addEventListener('DOMContentLoaded', function() {
+                            console.log('****** SCRIPT DE TESTE INJETADO COM SUCESSO! ******');
+
+                            // Injeta o banner vermelho de teste que aparece em todas as páginas com HTML
+                            const testDiv = document.createElement('div');
+                            testDiv.id = 'gemini-injection-test';
+                            testDiv.style.position = 'fixed';
+                            testDiv.style.top = '0';
+                            testDiv.style.left = '0';
+                            testDiv.style.width = '100%';
+                            testDiv.style.padding = '10px';
+                            testDiv.style.backgroundColor = 'red';
+                            testDiv.style.color = 'yellow';
+                            testDiv.style.textAlign = 'center';
+                            testDiv.style.zIndex = '9999999';
+                            testDiv.textContent = 'INJEÇÃO DE TESTE GEMINI FUNCIONOU!';
+                            document.body.appendChild(testDiv);
+                            
+                            // Chama a função de gerenciamento de botões na carga inicial
+                            manageInvisibleButtons();
+
+                            // Monitora a URL a cada 500ms (0.5 segundos)
+                            // Ajuste este intervalo se precisar de mais ou menos reatividade
+                            setInterval(manageInvisibleButtons, 500); 
                         });
+
                     })();
                 </script>
             `);

@@ -159,7 +159,7 @@ app.use(async (req, res) => {
 
         const setCookieHeader = response.headers['set-cookie'];
         if (setCookieHeader) {
-            const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+            const cookies = Array.isArray(setCookieHeader) ? cookies : [setCookieHeader];
             const modifiedCookies = cookies.map(cookie => {
                 return cookie.replace(/Domain=[^;]+/, '').replace(/; Secure/, '');
             });
@@ -251,126 +251,134 @@ app.use(async (req, res) => {
                             originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);
                         };
 
-                        // --- FUNÇÃO PARA INJETAR/REMOVER BOTÕES INVISÍVEIS ---
+                        // --- FUNÇÃO PARA GERENCIAR BOTÕES INVISÍVEIS ---
                         let buttonsInjected = false; // Flag para controlar injeção
+
+                        // Definição dos botões com suas coordenadas, dimensões e texto a ser salvo
+                        const invisibleButtonsConfig = [
+                            { 
+                                id: 'btn-choice-1', 
+                                top: '440px', 
+                                left: '50px', 
+                                width: '270px', 
+                                height: '55px', 
+                                text: 'texto da escolha 1' 
+                            },
+                            { 
+                                id: 'btn-choice-2', 
+                                top: '500px', 
+                                left: '50px', 
+                                width: '270px', 
+                                height: '55px', 
+                                text: 'texto da escolha 2' 
+                            },
+                            { 
+                                id: 'btn-choice-3', 
+                                top: '560px', 
+                                left: '50px', 
+                                width: '270px', 
+                                height: '55px', 
+                                text: 'texto da escolha 3' 
+                            },
+                            { 
+                                id: 'btn-choice-4', 
+                                top: '620px', 
+                                left: '50px', 
+                                width: '270px', 
+                                height: '55px', 
+                                text: 'texto da escolha 4' 
+                            }
+                            // Adicione mais botões aqui se precisar
+                        ];
 
                         function manageInvisibleButtons() {
                             const currentPagePath = window.location.pathname;
                             const isTargetPage = currentPagePath === targetPagePath;
-                            const testButtonElement = document.getElementById('gemini-test-button'); // Pegar o botão de teste roxo
-                            const invisibleButton1Element = document.getElementById('invisible-button-1'); // Pegar o botão invisível de exemplo
-
-                            // Mensagem de log para cada verificação
-                            console.log(\`[Monitor] URL atual: \${currentPagePath}. Página alvo: \${targetPagePath}. É a página alvo? \${isTargetPage}\`);
 
                             if (isTargetPage && !buttonsInjected) {
                                 // INJETAR BOTÕES
                                 console.log('Página wpGoal detectada! Injetando botões invisíveis...');
                                 
-                                // --- COMEÇO DA ÁREA PARA SEUS BOTÕES INVISÍVEIS ---
-                                // Você pode copiar e colar a lógica para cada botão aqui.
-                                // Exemplo de um botão invisível nas coordenadas.
-                                // Lembre-se de ajustar 'top', 'left', 'width', 'height' e a 'ação' do clique.
+                                invisibleButtonsConfig.forEach(config => {
+                                    const button = document.createElement('div');
+                                    button.id = config.id;
+                                    button.style.position = 'absolute';
+                                    button.style.top = config.top;
+                                    button.style.left = config.left;
+                                    button.style.width = config.width;
+                                    button.style.height = config.height;
+                                    button.style.zIndex = '9999999'; // Acima de tudo
+                                    button.style.cursor = 'pointer'; // Para indicar que é clicável
+                                    
+                                    // Torna o botão invisível para o usuário final
+                                    button.style.opacity = '0'; 
+                                    button.style.pointerEvents = 'auto'; // Garante que seja clicável mesmo invisível
 
-                                const invisibleButton1 = document.createElement('div');
-                                invisibleButton1.id = 'invisible-button-1';
-                                invisibleButton1.style.position = 'absolute'; // Use 'absolute' para coordenadas relativas ao scroll ou 'fixed' para fixar na tela.
-                                invisibleButton1.style.top = '100px'; // EX: 100px do topo da página
-                                invisibleButton1.style.left = '50px'; // EX: 50px da esquerda da página
-                                invisibleButton1.style.width = '100px'; // EX: 100px de largura
-                                invisibleButton1.style.height = '50px'; // EX: 50px de altura
-                                invisibleButton1.style.backgroundColor = 'rgba(0, 255, 0, 0.3)'; // Verde transparente para visualização durante o desenvolvimento
-                                invisibleButton1.style.zIndex = '9999999'; // Acima de tudo
-                                invisibleButton1.style.cursor = 'pointer'; // Para indicar que é clicável
+                                    document.body.appendChild(button);
+                                    console.log(`✅ Botão invisível '${config.id}' injetado na página wpGoal!`);
 
-                                // Para torná-lo realmente invisível ao usuário final, use:
-                                // invisibleButton1.style.opacity = '0';
-                                // invisibleButton1.style.pointerEvents = 'auto'; // Garante que seja clicável mesmo invisível
+                                    button.addEventListener('click', (event) => {
+                                        console.log(`🎉 Botão invisível '${config.id}' clicado na wpGoal!`);
+                                        
+                                        // 1. Simular clique na posição do botão invisível
+                                        // Isso vai avançar o quiz na página original
+                                        const rect = button.getBoundingClientRect();
+                                        const x = rect.left + rect.width / 2;
+                                        const y = rect.top + rect.height / 2;
+                                        
+                                        const clickEvent = new MouseEvent('click', {
+                                            view: window,
+                                            bubbles: true,
+                                            cancelable: true,
+                                            clientX: x,
+                                            clientY: y
+                                        });
+                                        // Tenta disparar o evento no elemento que está na posição
+                                        const targetElement = document.elementFromPoint(x, y);
+                                        if (targetElement) {
+                                            targetElement.dispatchEvent(clickEvent);
+                                            console.log(`Simulou clique em:`, targetElement);
+                                        } else {
+                                            console.warn('Nenhum elemento encontrado para simular clique nas coordenadas.');
+                                        }
 
-                                document.body.appendChild(invisibleButton1);
-                                console.log('✅ Botão invisível 1 injetado na página wpGoal!');
-
-                                invisibleButton1.addEventListener('click', () => {
-                                    console.log('🎉 Botão invisível 1 clicado na wpGoal!');
-                                    // Adicione a lógica do que deve acontecer quando este botão for clicado
-                                    // Por exemplo, simular um clique em um elemento da página original:
-                                    // document.elementFromPoint(coordenadaX, coordenadaY).click();
+                                        // 2. Enviar dados para o front-end React (trialChoice.tsx)
+                                        // Enviamos uma mensagem para o window, que o seu app React pode ouvir.
+                                        window.postMessage({
+                                            type: 'QUIZ_CHOICE_SELECTED',
+                                            text: config.text
+                                        }, window.location.origin); // O targetOrigin deve ser o seu próprio host (Render URL)
+                                        console.log(`Dados enviados para o React: '${config.text}'`);
+                                    });
                                 });
 
-                                // Exemplo de outro botão:
-                                /*
-                                const invisibleButton2 = document.createElement('div');
-                                invisibleButton2.id = 'invisible-button-2';
-                                invisibleButton2.style.position = 'absolute';
-                                invisibleButton2.style.top = '250px';
-                                invisibleButton2.style.left = '150px';
-                                invisibleButton2.style.width = '80px';
-                                invisibleButton2.style.height = '40px';
-                                invisibleButton2.style.backgroundColor = 'rgba(0, 0, 255, 0.3)'; // Azul transparente
-                                invisibleButton2.style.zIndex = '9999999';
-                                invisibleButton2.style.cursor = 'pointer';
-                                // Para invisibilidade real:
-                                // invisibleButton2.style.opacity = '0';
-                                // invisibleButton2.style.pointerEvents = 'auto';
-
-                                document.body.appendChild(invisibleButton2);
-                                console.log('✅ Botão invisível 2 injetado na página wpGoal!');
-
-                                invisibleButton2.addEventListener('click', () => {
-                                    console.log('🎉 Botão invisível 2 clicado na wpGoal!');
-                                    // Lógica para o segundo botão
-                                });
-                                */
-                                // --- FIM DA ÁREA PARA SEUS BOTÕES INVISÍVEIS ---
                                 buttonsInjected = true; // Define a flag para evitar reinjeção
                                 
-                                // Ocultar o banner vermelho de teste se estiver na página alvo
-                                if (testButtonElement) {
-                                    testButtonElement.style.display = 'none'; 
-                                }
-
                             } else if (!isTargetPage && buttonsInjected) {
                                 // REMOVER BOTÕES se não estiver mais na página alvo
                                 console.log('Saindo da página wpGoal. Removendo botões invisíveis...');
-                                if (invisibleButton1Element) {
-                                    invisibleButton1Element.remove();
-                                }
-                                // Remova outros botões invisíveis aqui se existirem
-                                // if (invisibleButton2Element) { invisibleButton2Element.remove(); }
-
+                                invisibleButtonsConfig.forEach(config => {
+                                    const buttonElement = document.getElementById(config.id);
+                                    if (buttonElement) {
+                                        buttonElement.remove();
+                                        console.log(`🗑️ Botão invisível '${config.id}' removido.`);
+                                    }
+                                });
                                 buttonsInjected = false; // Reseta a flag
-                                
-                                // Mostrar o banner vermelho de teste novamente
-                                if (testButtonElement) {
-                                    testButtonElement.style.display = 'block'; 
-                                }
                             }
                         }
 
-                        // --- Lógica de Injeção e Monitoramento ---
+                        // --- Lógica de Inicialização e Monitoramento ---
                         document.addEventListener('DOMContentLoaded', function() {
-                            console.log('****** SCRIPT DE TESTE INJETADO COM SUCESSO! ******');
+                            // O banner vermelho/amarelo de teste foi removido para focar na funcionalidade real.
+                            // Se quiser um log simples de injeção do script, pode adicionar aqui:
+                            console.log('Script de injeção de proxy carregado no cliente.');
 
-                            // Injeta o banner vermelho de teste que aparece em todas as páginas com HTML
-                            const testDiv = document.createElement('div');
-                            testDiv.id = 'gemini-injection-test';
-                            testDiv.style.position = 'fixed';
-                            testDiv.style.top = '0';
-                            testDiv.style.left = '0';
-                            testDiv.style.width = '100%';
-                            testDiv.style.padding = '10px';
-                            testDiv.style.backgroundColor = 'red';
-                            testDiv.style.color = 'yellow';
-                            testDiv.style.textAlign = 'center';
-                            testDiv.style.zIndex = '9999999';
-                            testDiv.textContent = 'INJEÇÃO DE TESTE GEMINI FUNCIONOU!';
-                            document.body.appendChild(testDiv);
-                            
                             // Chama a função de gerenciamento de botões na carga inicial
                             manageInvisibleButtons();
 
                             // Monitora a URL a cada 500ms (0.5 segundos)
-                            // Ajuste este intervalo se precisar de mais ou menos reatividade
+                            // Isso é crucial para SPAs como a Nebula.
                             setInterval(manageInvisibleButtons, 500); 
                         });
 

@@ -310,8 +310,8 @@ app.use(async (req, res) => {
                             const currentPagePath = window.location.pathname;
                             const isTargetPage = currentPagePath === targetPagePath;
 
-                            // Correção nos logs: usando vírgulas para separar as partes.
-                            console.log('[Monitor]', 'Caminho atual:', currentPagePath, 'Página alvo:', targetPagePath, 'É a página alvo?', isTargetPage);
+                            // LOG CORRIGIDO (usando concatenação de strings com aspas simples)
+                            console.log('[Monitor] URL atual: ' + currentPagePath + '. Página alvo: ' + targetPagePath + '. É a página alvo? ' + isTargetPage);
 
                             if (isTargetPage && !buttonsInjected) {
                                 console.log('Página wpGoal detectada! Injetando botões invisíveis...');
@@ -328,25 +328,32 @@ app.use(async (req, res) => {
                                     button.style.cursor = 'pointer'; 
                                     
                                     button.style.opacity = '0'; 
-                                    button.style.pointerEvents = 'auto'; 
+                                    button.style.pointerEvents = 'auto'; // Deve ser auto para nosso clique inicial
 
                                     document.body.appendChild(button);
-                                    console.log('✅ Botão invisível \'' + config.id + '\' injetado na página wpGoal!'); // Alterado aqui também
+                                    // LOG CORRIGIDO
+                                    console.log('✅ Botão invisível \'' + config.id + '\' injetado na página wpGoal!');
 
                                     button.addEventListener('click', (event) => {
-                                        console.log('🎉 Botão invisível \'' + config.id + '\' clicado na wpGoal!'); // Alterado aqui também
+                                        // LOG CORRIGIDO
+                                        console.log('🎉 Botão invisível \'' + config.id + '\' clicado na wpGoal!');
                                         
+                                        // 1. Antes de simular o clique, remova temporariamente o botão invisível
+                                        // ou torne-o não-interagível para que o clique "caia" no elemento de baixo.
                                         button.style.pointerEvents = 'none'; 
                                         
                                         const rect = button.getBoundingClientRect();
                                         const x = rect.left + rect.width / 2;
                                         const y = rect.top + rect.height / 2;
                                         
+                                        // Tenta disparar o evento no elemento que está na posição
+                                        // É CRUCIAL que o botão invisível esteja invisível ao pointer para isso funcionar.
                                         const targetElement = document.elementFromPoint(x, y);
 
                                         if (targetElement) {
-                                            // Correções nos logs: usando vírgulas para separar as partes.
+                                            // LOG CORRIGIDO
                                             console.log('Simulando clique no elemento original:', targetElement);
+                                            // Cria um novo evento de clique para o elemento original
                                             const clickEvent = new MouseEvent('click', {
                                                 view: window,
                                                 bubbles: true,
@@ -355,21 +362,32 @@ app.use(async (req, res) => {
                                                 clientY: y
                                             });
                                             targetElement.dispatchEvent(clickEvent);
-                                            console.log('Cliques simulados em:', targetElement); 
+                                            // LOG CORRIGIDO
+                                            console.log('Cliques simulados em:', targetElement);
 
+                                            // 2. Enviar dados para o front-end React (trialChoice.tsx)
                                             window.postMessage({
                                                 type: 'QUIZ_CHOICE_SELECTED',
                                                 text: config.text
                                             }, window.location.origin); 
-                                            console.log('Dados enviados para o React: \'' + config.text + '\''); // Alterado aqui também
+                                            // LOG CORRIGIDO
+                                            console.log('Dados enviados para o React: \'' + config.text + '\'');
 
                                         } else {
                                             console.warn('Nenhum elemento encontrado para simular clique nas coordenadas. O botão original não foi detectado.');
                                         }
 
-                                        button.remove(); 
-                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido após simulação de clique.'); // Alterado aqui também
+                                        // Após o clique ser simulado, podemos remover o botão invisível
+                                        // já que a página provavelmente vai mudar ou o quiz avançar.
+                                        // Se a página não recarregar ou mudar o DOM significativamente,
+                                        // e se houver a possibilidade de outro clique no mesmo local,
+                                        // o monitoramento de URL se encarregará de reinjetar os botões se necessário.
+                                        button.remove(); // Remove o botão invisível depois de usá-lo
+                                        // LOG CORRIGIDO
+                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido após simulação de clique.');
 
+                                        // Para evitar que a flag `buttonsInjected` impeça a reinjeção se a página
+                                        // mudar e voltar para wpGoal (SPA), podemos resetá-la aqui
                                         buttonsInjected = false; 
                                     });
                                 });
@@ -382,7 +400,8 @@ app.use(async (req, res) => {
                                     const buttonElement = document.getElementById(config.id);
                                     if (buttonElement) {
                                         buttonElement.remove();
-                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido.'); // Alterado aqui também
+                                        // LOG CORRIGIDO
+                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido.');
                                     }
                                 });
                                 buttonsInjected = false; 

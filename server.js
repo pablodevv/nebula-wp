@@ -78,7 +78,7 @@ function extractTextFromHTML(html) {
             }
         }
 
-        // ESTRATÉGHE 2: Procurar em elementos específicos (revisado para ser mais genérico)
+        // ESTRATÉGIA 2: Procurar em elementos específicos (revisado para ser mais genérico)
         const specificElements = $('p, span, div, h1, h2, h3, b').filter((i, el) => {
             const text = $(el).text().trim();
             return text.includes('Ajudamos milhões de pessoas a') && text.includes('e queremos ajudar você também');
@@ -206,7 +206,7 @@ async function captureTextDirectly() {
             'descobrir seus poderes ocultos',
             'encontrar marcas e símbolos que as guiam',
             'revelar seus dons espirituais',
-            'revelar minha aura de bruxa' // Adicionado da sua lista
+            'revelar minha aura de bruxa'
         ];
 
         const htmlLower = response.data.toLowerCase();
@@ -517,10 +517,14 @@ app.use(async (req, res) => {
                 $('h1:contains("Trial Payment Ancestral")').text('Pagamento da Prova Ancestral (Preços e Links Atualizados)');
             }
 
+            ---
+            ### Injetando Botões Invisíveis via Coordenadas (wpGoal)
+            ---
+            ```javascript
             // --- NOVO SCRIPT PARA CAPTURAR O QUIZ E INSERIR BOTÕES INVISÍVEIS ---
             // APENAS NA PÁGINA ESPECÍFICA DO QUIZ: /pt/witch-power/wpGoal
             if (req.url.includes('/pt/witch-power/wpGoal')) {
-                console.log('Injetando script de botões invisíveis na página wpGoal.');
+                console.log('Injetando script de botões invisíveis (coordenadas fixas) na página wpGoal.');
 
                 // Estilos CSS para o botão invisível
                 $('head').append(`
@@ -528,8 +532,8 @@ app.use(async (req, res) => {
                         .invisible-overlay-button {
                             position: absolute;
                             z-index: 99999; /* Garante que ele fique acima de tudo */
-                            opacity: 0; /* Totalmente invisível */
-                            background: rgba(0, 255, 0, 0.1); /* Cor para debug, remova ou defina para 0 */
+                            opacity: 0; /* Totalmente invisível. Mude para 0.5 para debug */
+                            background: rgba(0, 0, 255, 0.1); /* Cor para debug (azul), remova ou defina para 0 */
                             cursor: pointer;
                             border: none;
                             padding: 0;
@@ -543,94 +547,154 @@ app.use(async (req, res) => {
                 $('body').append(`
                     <script>
                         (function() {
-                            const setupInvisibleButtons = () => {
-                                console.log('🔮 Configurando botões invisíveis para o quiz...');
+                            console.log('🔮 Configurando botões invisíveis para o quiz (modo coordenadas)...');
+
+                            // Definindo as coordenadas para Desktop (1920x1080)
+                            const desktopCoords = [
+                                { text: "Descobrir meus poderes ocultos", top: 260, left: 795, width: 330, height: 66 },
+                                { text: "Identificar meu arquétipo de bruxa", top: 344, left: 795, width: 330, height: 66 },
+                                { text: "Explorar minhas vidas passadas", top: 428, left: 795, width: 330, height: 66 },
+                                { text: "Revelar minha aura de bruxa", top: 512, left: 795, width: 330, height: 66 },
+                                { text: "Desvendar meu destino e propósito", top: 596, left: 795, width: 330, height: 66 },
+                                { text: "Encontrar marcas, símbolos que me guiem", top: 680, left: 795, width: 330, height: 66 }
+                            ];
+
+                            // Definindo as coordenadas para Mobile (iPhone XR, 414px de largura)
+                            const mobileCoords = [
+                                { text: "Descobrir meus poderes ocultos", top: 208, left: 40, width: 330, height: 66 },
+                                { text: "Identificar meu arquétipo de bruxa", top: 292, left: 40, width: 330, height: 66 },
+                                { text: "Explorar minhas vidas passadas", top: 377, left: 40, width: 330, height: 66 },
+                                { text: "Revelar minha aura de bruxa", top: 460, left: 40, width: 330, height: 66 },
+                                { text: "Desvendar meu destino e propósito", top: 543, left: 40, width: 330, height: 66 },
+                                { text: "Encontrar marcas, símbolos que me guiem", top: 629, left: 40, width: 330, height: 66 }
+                            ];
+
+                            // Funções para simular clique no botão original
+                            // Esta é a parte mais crítica, pois depende de como o site original manipula seus botões.
+                            // Vamos tentar simular um clique no elemento LI que contém o texto da opção.
+                            const simulateOriginalClick = (choiceText) => {
+                                console.log('Tentando simular clique no botão original para: ' + choiceText);
                                 const originalButtons = document.querySelectorAll('li[data-testid="answer-button"]');
-                                console.log('Encontrados ' + originalButtons.length + ' botões originais do quiz.');
-
-                                originalButtons.forEach((originalButton, index) => {
-                                    // Remove qualquer botão invisível anterior para evitar duplicatas
-                                    const existingOverlay = originalButton.querySelector('.invisible-overlay-button');
-                                    if (existingOverlay) {
-                                        existingOverlay.remove();
+                                let clicked = false;
+                                for (const btn of originalButtons) {
+                                    const spanText = btn.querySelector('span.sc-5303d838-10.gdosuv'); // Seletor do span com o texto
+                                    if (spanText && spanText.textContent.trim() === choiceText) {
+                                        console.log('Original button found for "' + choiceText + '", attempting click...');
+                                        btn.click(); // Tenta o método click() nativo
+                                        clicked = true;
+                                        break;
                                     }
+                                }
+                                if (!clicked) {
+                                    console.warn('Original button for "' + choiceText + '" not found via span text. Falling back to general LI click attempt.');
+                                    // Fallback: se o seletor do span não funcionar, tente achar o LI pelo texto completo.
+                                    for (const btn of originalButtons) {
+                                        if (btn.textContent.includes(choiceText)) {
+                                            btn.click();
+                                            clicked = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (!clicked) {
+                                    console.error('Failed to simulate click on original button for: ' + choiceText);
+                                }
+                            };
 
-                                    const rect = originalButton.getBoundingClientRect();
-                                    
-                                    // Cria o botão invisível
+                            const createButtons = () => {
+                                // Remover botões invisíveis anteriores para evitar duplicação em caso de redimensionamento
+                                document.querySelectorAll('.invisible-overlay-button').forEach(btn => btn.remove());
+
+                                const currentWidth = window.innerWidth;
+                                let activeCoords;
+
+                                // Definir breakpoints para escolher as coordenadas
+                                if (currentWidth >= 1024) { // Considerar desktop a partir de 1024px de largura
+                                    activeCoords = desktopCoords;
+                                    console.log('Usando coordenadas DESKTOP.');
+                                } else if (currentWidth <= 768) { // Considerar mobile/tablet pequeno até 768px
+                                    activeCoords = mobileCoords;
+                                    console.log('Usando coordenadas MOBILE.');
+                                } else { // Para larguras entre 769px e 1023px (tablets e notebooks menores)
+                                    // Aqui você pode adicionar lógica de interpolação se as posições variarem muito
+                                    // ou definir um terceiro conjunto de coordenadas para tablets.
+                                    // Por simplicidade, vamos usar as coordenadas de desktop, mas centralizadas proporcionalmente.
+                                    activeCoords = desktopCoords.map(coord => {
+                                        const newWidth = currentWidth * (330 / 1920); // Largura proporcional
+                                        const newLeft = (currentWidth - newWidth) / 2; // Centraliza
+                                        return {
+                                            ...coord,
+                                            left: newLeft,
+                                            width: newWidth,
+                                            // As tops e heights provavelmente escalam linearmente ou são fixas no layout responsivo
+                                            // Se o layout for muito diferente, você precisará de coordenadas específicas para este breakpoint
+                                        };
+                                    });
+                                    console.log('Usando coordenadas ADAPTADAS para tela intermediária.');
+                                }
+
+
+                                activeCoords.forEach((coord, index) => {
                                     const overlayButton = document.createElement('button');
                                     overlayButton.className = 'invisible-overlay-button';
                                     
-                                    // Posiciona o botão invisível exatamente sobre o botão original
-                                    overlayButton.style.top = (rect.top + window.scrollY) + 'px';
-                                    overlayButton.style.left = (rect.left + window.scrollX) + 'px';
-                                    overlayButton.style.width = rect.width + 'px';
-                                    overlayButton.style.height = rect.height + 'px';
+                                    overlayButton.style.top = coord.top + 'px';
+                                    
+                                    // Ajuste para centralizar se a largura da tela mudar para desktop
+                                    if (currentWidth >= 1024) {
+                                        // A sua coordenada de left (795px) está baseada numa tela de 1920px de largura
+                                        // O centro da tela de 1920px é 960px.
+                                        // O botão começa em 795px, então ele está a 960 - 795 = 165px à esquerda do centro.
+                                        // Ou seja, ele está centralizado com base na fórmula (largura_tela / 2) - (largura_botao / 2)
+                                        // Para 1920x1080: (1920/2) - (330/2) = 960 - 165 = 795.
+                                        overlayButton.style.left = (currentWidth / 2 - coord.width / 2) + 'px';
+                                    } else if (currentWidth <= 768) {
+                                         // Para mobile, você deu um left fixo. Usamos esse.
+                                        overlayButton.style.left = coord.left + 'px';
+                                    } else {
+                                        // Para telas intermediárias (tablets, notebooks menores), tenta centralizar também
+                                        overlayButton.style.left = (currentWidth / 2 - coord.width / 2) + 'px';
+                                    }
 
-                                    // Adiciona o texto da opção para facilitar a identificação
-                                    const chosenTextElement = originalButton.querySelector('span.sc-5303d838-10.gdosuv');
-                                    const chosenText = chosenTextElement ? chosenTextElement.textContent.trim() : 'Opção ' + (index + 1);
-                                    overlayButton.dataset.quizChoice = chosenText; // Armazena a escolha no dataset
+                                    overlayButton.style.width = coord.width + 'px';
+                                    overlayButton.style.height = coord.height + 'px';
+                                    overlayButton.dataset.quizChoice = coord.text; // Armazena a escolha no dataset
 
                                     overlayButton.addEventListener('click', function(event) {
-                                        event.preventDefault(); // Evita qualquer comportamento padrão extra do botão invisível
-                                        event.stopPropagation(); // Impede que o clique se propague para elementos abaixo imediatamente
+                                        event.preventDefault(); // Impede qualquer comportamento padrão (navegação, etc.)
+                                        event.stopPropagation(); // Impede que o clique se propague imediatamente para elementos abaixo
 
                                         const capturedChoice = this.dataset.quizChoice;
                                         console.log('✅ Botão invisível clicado! Escolha capturada: ' + capturedChoice);
                                         localStorage.setItem('nebulaQuizChoice', capturedChoice); // Salva no localStorage
 
-                                        // Agora, simula o clique no botão original
-                                        console.log('Simulando clique no botão original...');
-                                        originalButton.click(); // Isso deve acionar o script original do quiz
+                                        // Agora, tenta simular o clique no botão original real
+                                        simulateOriginalClick(capturedChoice);
                                     });
 
-                                    // Adiciona o botão invisível ao corpo do documento
                                     document.body.appendChild(overlayButton);
-                                    console.log('Botão invisível #' + (index + 1) + ' para "' + chosenText + '" criado e posicionado.');
+                                    console.log('Botão invisível para "' + coord.text + '" criado e posicionado.');
                                 });
                             };
 
-                            // Chama a função de setup quando o DOM estiver pronto
-                            if (document.readyState === 'loading') {
-                                document.addEventListener('DOMContentLoaded', setupInvisibleButtons);
-                            } else {
-                                setupInvisibleButtons();
-                            }
+                            // Cria os botões inicialmente
+                            createButtons();
 
-                            // Observa mudanças no DOM caso os botões sejam carregados dinamicamente
-                            const observer = new MutationObserver((mutationsList, observer) => {
-                                for (const mutation of mutationsList) {
-                                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                                        // Verifica se algum dos nós adicionados ou seus descendentes são os botões do quiz
-                                        const foundButtons = Array.from(mutation.addedNodes).some(node =>
-                                            node.nodeType === 1 && (node.matches('li[data-testid="answer-button"]') || node.querySelector('li[data-testid="answer-button"]'))
-                                        );
-                                        if (foundButtons) {
-                                            console.log('🎨 Botões do quiz detectados por MutationObserver. Re-configurando botões invisíveis.');
-                                            setupInvisibleButtons();
-                                            // Opcional: desconectar o observer após a primeira configuração bem-sucedida se os botões não mudarem mais
-                                            // observer.disconnect();
-                                            break; // Para de observar após encontrar e re-configurar
-                                        }
-                                    }
-                                }
-                            });
+                            // Adiciona listeners para recriar os botões em caso de redimensionamento da janela
+                            // Isso é crucial para a responsividade das coordenadas fixas
+                            window.addEventListener('resize', createButtons);
 
-                            // Começa a observar o corpo do documento para mudanças
-                            observer.observe(document.body, { childList: true, subtree: true });
-
-                            // Adiciona um listener para redimensionamento de tela para reajustar os botões
-                            window.addEventListener('resize', setupInvisibleButtons);
-                            window.addEventListener('scroll', setupInvisibleButtons); // Se a página for scrollável e os botões saírem da posição fixa
+                            // Opcional: Se a página puder rolar e os botões originais não forem fixed/sticky
+                            // window.addEventListener('scroll', createButtons);
                         })();
                     </script>
                 `);
             }
+            ```
 
-            res.status(response.status).send($.html());
+            `res.status(response.status).send($.html());`
         } else {
-            res.status(response.status).send(response.data);
+            `res.status(response.status).send(response.data);`
         }
 
     } catch (error) {

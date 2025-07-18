@@ -3,10 +3,11 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const path = require('path');
 const { URL } = require('url');
-const fileUpload = require('express-fileupload'); // Para upload de arquivos (ex: foto da palma)
-const cors = require('cors'); // Re-adicionado para garantir flexibilidade nas requisições
-const https = require('https'); // Para lidar com problemas de certificado SSL (development)
-const FormData = require('form-data'); // Importar form-data para uploads
+const fileUpload = require('express-fileupload');
+const cors = require('cors');
+const https = require('https');
+const FormData = require('form-data');
+const zlib = require('zlib'); // Importar zlib para descompressão manual
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -32,26 +33,24 @@ const agent = new https.Agent({
 // Middleware para servir arquivos estáticos da build do React (se existirem na raiz do projeto)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Usa express-fileupload para lidar com uploads de arquivos (multipart/form-data)
 app.use(fileUpload({
-    limits: { fileSize: 50 * 1024 * 1024 }, // Limite de 50MB
-    createParentPath: true, // Cria diretórios pais se não existirem
-    uriDecodeFileNames: true, // Decodifica nomes de arquivo URI
-    preserveExtension: true // Mantém a extensão original do arquivo
+    limits: { fileSize: 50 * 1024 * 1024 },
+    createParentPath: true,
+    uriDecodeFileNames: true,
+    preserveExtension: true
 }));
 
-app.use(express.json()); // Para parsing de JSON no corpo da requisição
-app.use(express.urlencoded({ extended: true })); // Para parsing de URL-encoded no corpo da requisição
-app.use(cors()); // Permite CORS, útil para desenvolvimento
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
 // --- API endpoint para obter o texto capturado (para o React App) ---
 app.get('/api/captured-text', async (req, res) => {
     console.log('📡 API /api/captured-text chamada');
 
-    // Se capturedBoldText está vazio ou é o valor padrão e já faz muito tempo, tenta recapturar
-    if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa' || (Date.now() - lastCaptureTime > 3600000 && !isCapturing)) { // 1 hora de validade
+    if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa' || (Date.now() - lastCaptureTime > 3600000 && !isCapturing)) {
         console.log('🔄 Texto capturado ausente/antigo. Tentando recapturar do site original...');
-        await captureTextDirectly(); // Tenta obter um valor padrão
+        await captureTextDirectly();
     }
 
     console.log('📝 Texto atual na variável:', `"${capturedBoldText}"`);
@@ -79,9 +78,9 @@ app.post('/api/set-selected-choice', (req, res) => {
     }
 });
 
-
-// --- Funções para Extração e Captura de Texto (do seu código antigo) ---
+// --- Funções para Extração e Captura de Texto ---
 function extractTextFromHTML(html) {
+    // ... (mesma lógica de extractTextFromHTML) ...
     console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
 
     try {
@@ -187,6 +186,7 @@ function extractTextFromHTML(html) {
 }
 
 async function captureTextDirectly() {
+    // ... (mesma lógica de captureTextDirectly) ...
     if (isCapturing) {
         console.log('⏳ Captura já em andamento...');
         return capturedBoldText;
@@ -203,24 +203,41 @@ async function captureTextDirectly() {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br', // Remover se causar problemas com arraybuffer
+                // Removendo 'Accept-Encoding' para que o Axios não tente decodificar automaticamente,
+                // vamos fazer isso manualmente para evitar problemas.
+                // 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
             },
+            responseType: 'arraybuffer', // Receber como buffer para descompressão manual
             timeout: 30000,
-            httpsAgent: agent, // Usar o agente para ignorar SSL se necessário
+            httpsAgent: agent,
         });
 
         console.log('✅ Resposta recebida! Status:', response.status);
-        console.log('📊 Tamanho do HTML:', response.data.length);
+        
+        let responseData = response.data;
+        const contentEncoding = response.headers['content-encoding'];
+        if (contentEncoding === 'gzip') {
+            console.log('📦 Descomprimindo resposta gzip...');
+            responseData = zlib.gunzipSync(responseData);
+        } else if (contentEncoding === 'deflate') {
+            console.log('📦 Descomprimindo resposta deflate...');
+            responseData = zlib.inflateSync(responseData);
+        } else if (contentEncoding === 'br') {
+            console.log('📦 Descomprimindo resposta brotli...');
+            responseData = zlib.brotliDecompressSync(responseData); // Requires Node.js 11.7.0+
+        }
+        
+        const html = responseData.toString('utf8');
+        console.log('📊 Tamanho do HTML (após descompressão):', html.length);
 
-        // Verificar se contém o padrão esperado
-        if (response.data.includes('Ajudamos milhões de pessoas a')) {
+        if (html.includes('Ajudamos milhões de pessoas a')) {
             console.log('🎉 HTML contém o padrão "Ajudamos milhões de pessoas a"!');
 
-            const extractedText = extractTextFromHTML(response.data);
+            const extractedText = extractTextFromHTML(html);
 
             if (extractedText && extractedText.length > 5) {
                 capturedBoldText = extractedText;
@@ -233,13 +250,11 @@ async function captureTextDirectly() {
         } else {
             console.log('⚠️ HTML não contém o padrão esperado');
             console.log('📝 Primeiros 500 caracteres do HTML:');
-            console.log(response.data.substring(0, 500));
+            console.log(html.substring(0, 500));
         }
 
-        // Se chegou até aqui, não conseguiu capturar
         console.log('❌ Não foi possível capturar o texto');
 
-        // Tentar com diferentes textos conhecidos no HTML
         const knownTexts = [
             'identificar seu arquétipo de bruxa',
             'explorar origens de vidas passadas',
@@ -249,7 +264,7 @@ async function captureTextDirectly() {
             'revelar seus dons espirituais'
         ];
 
-        const htmlLower = response.data.toLowerCase();
+        const htmlLower = html.toLowerCase();
         for (const text of knownTexts) {
             if (htmlLower.includes(text.toLowerCase())) {
                 capturedBoldText = text;
@@ -259,7 +274,6 @@ async function captureTextDirectly() {
             }
         }
 
-        // Fallback final
         capturedBoldText = 'identificar seu arquétipo de bruxa';
         lastCaptureTime = Date.now();
         console.log('⚠️ Usando fallback:', `"${capturedBoldText}"`);
@@ -269,7 +283,6 @@ async function captureTextDirectly() {
     } catch (error) {
         console.error('❌ ERRO na requisição direta:', error.message);
 
-        // Fallback em caso de erro
         capturedBoldText = 'identificar seu arquétipo de bruxa';
         lastCaptureTime = Date.now();
         console.log('⚠️ Usando fallback de erro:', `"${capturedBoldText}"`);
@@ -283,15 +296,13 @@ async function captureTextDirectly() {
 
 // --- Rota específica para a página customizada de trialChoice (Seu React App) ---
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
+    // ... (mesma lógica) ...
     console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
 
     try {
-        // NÃO CHAMA captureTextDirectly() aqui. O texto virá da API /api/captured-text
         console.log('✅ Servindo página React customizada...\n');
-
-        // Envia o index.html do seu build React
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 
     } catch (error) {
@@ -302,6 +313,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
 
 // --- Proxy para a API principal (Mantido da versão anterior, se for usado) ---
 app.use('/api-proxy', async (req, res) => {
+    // ... (mesma lógica de proxy da API) ...
     const apiTargetUrl = `https://api.appnebula.co${req.url.replace('/api-proxy', '')}`;
     console.log(`[API PROXY] Requisição: ${req.url} -> Proxy para: ${apiTargetUrl}`);
 
@@ -309,7 +321,7 @@ app.use('/api-proxy', async (req, res) => {
     delete requestHeaders['host'];
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
-    delete requestHeaders['accept-encoding']; // Evitar problemas de encoding
+    delete requestHeaders['accept-encoding'];
 
     try {
         const response = await axios({
@@ -322,7 +334,7 @@ app.use('/api-proxy', async (req, res) => {
             validateStatus: function (status) {
                 return status >= 200 && status < 400;
             },
-            httpsAgent: agent, // Usar o agente para ignorar SSL se necessário
+            httpsAgent: agent,
         });
 
         Object.keys(response.headers).forEach(header => {
@@ -356,37 +368,24 @@ app.use('/api-proxy', async (req, res) => {
     }
 });
 
-
 // --- Middleware Principal do Proxy Reverso ---
 app.use(async (req, res) => {
     let targetDomain = MAIN_TARGET_URL;
     let requestPath = req.url;
-    const currentProxyHost = req.protocol + '://' + req.get('host'); // Seu domínio no Render
+    const currentProxyHost = req.protocol + '://' + req.get('host');
 
-    // Remove headers que podem causar problemas em proxies ou loops
     const requestHeaders = { ...req.headers };
     delete requestHeaders['host'];
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
-    delete requestHeaders['accept-encoding']; // Re-adicionado para evitar problemas de encoding
+    delete requestHeaders['accept-encoding']; // Removido para forçar descompressão manual
 
-    // Lógica para Proxeamento do Subdomínio de Leitura (Mão)
     if (req.url.startsWith('/reading/')) {
         targetDomain = READING_SUBDOMAIN_TARGET;
         requestPath = req.url.substring('/reading'.length);
         if (requestPath === '') requestPath = '/';
         console.log(`[READING PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
         console.log(`[READING PROXY] Método: ${req.method}`);
-
-        if (req.files && Object.keys(req.files).length > 0) {
-            console.log(`[READING PROXY] Arquivos recebidos: ${JSON.stringify(Object.keys(req.files))}`);
-            const photoFile = req.files.photo; // Assuming 'photo' is the field name for the file
-            if (photoFile) {
-                console.log(`[READING PROXY] Arquivo 'photo': name=${photoFile.name}, size=${photoFile.size}, mimetype=${photoFile.mimetype}`);
-            }
-        } else {
-            console.log(`[READING PROXY] Corpo recebido (tipo): ${typeof req.body}`);
-        }
     } else {
         console.log(`[MAIN PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
     }
@@ -395,21 +394,17 @@ app.use(async (req, res) => {
 
     try {
         let requestData = req.body;
-
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
-
             if (photoFile) {
-                const formData = new FormData(); // Usar o FormData importado
+                const formData = new FormData();
                 formData.append('photo', photoFile.data, {
                     filename: photoFile.name,
                     contentType: photoFile.mimetype,
                 });
                 requestData = formData;
-                // Remove content-type/content-length para que o form-data defina o boundary
                 delete requestHeaders['content-type'];
                 delete requestHeaders['content-length'];
-                // Adiciona os headers corretos do form-data
                 Object.assign(requestHeaders, formData.getHeaders());
             }
         }
@@ -419,13 +414,38 @@ app.use(async (req, res) => {
             url: targetUrl,
             headers: requestHeaders,
             data: requestData,
-            responseType: 'arraybuffer',
-            maxRedirects: 0, // Importante para interceptar redirecionamentos
+            responseType: 'arraybuffer', // Receber como buffer para descompressão manual
+            maxRedirects: 0,
             validateStatus: function (status) {
                 return status >= 200 && status < 400;
             },
-            httpsAgent: agent, // Usar o agente para ignorar SSL se necessário
+            httpsAgent: agent,
         });
+
+        // --- MANUSEIO DA DESCOMPRESSÃO E HTML ---
+        let responseData = response.data;
+        const contentEncoding = response.headers['content-encoding'];
+        let htmlContent = null;
+
+        if (contentEncoding === 'gzip') {
+            console.log('SERVER: Descomprimindo resposta gzip do destino...');
+            responseData = zlib.gunzipSync(responseData);
+        } else if (contentEncoding === 'deflate') {
+            console.log('SERVER: Descomprimindo resposta deflate do destino...');
+            responseData = zlib.inflateSync(responseData);
+        } else if (contentEncoding === 'br') {
+            console.log('SERVER: Descomprimindo resposta brotli do destino...');
+            responseData = zlib.brotliDecompressSync(responseData);
+        }
+
+        const contentType = response.headers['content-type'] || '';
+        if (contentType.includes('text/html')) {
+            htmlContent = responseData.toString('utf8');
+            console.log(`SERVER: Conteúdo HTML recebido do destino. Tamanho: ${htmlContent.length}`);
+        } else {
+            console.log(`SERVER: Conteúdo não é HTML. Tipo: ${contentType}`);
+        }
+        // --- FIM DO MANUSEIO DA DESCOMPRESSÃO E HTML ---
 
         // Lógica de Interceptação de Redirecionamento (Status 3xx)
         if (response.status >= 300 && response.status < 400) {
@@ -439,14 +459,12 @@ app.use(async (req, res) => {
                     fullRedirectUrl = redirectLocation;
                 }
 
-                // Esta regra AINDA captura redirecionamentos do SERVIDOR DE DESTINO para /email
                 if (fullRedirectUrl.includes('/pt/witch-power/email')) {
-                    console.log('Interceptando redirecionamento do servidor de destino para /email. Redirecionando para /onboarding.');
+                    console.log('SERVER: Interceptando redirecionamento do servidor de destino para /email. Redirecionando para /onboarding.');
                     return res.redirect(302, '/pt/witch-power/onboarding');
                 }
-                // Se o redirecionamento é para a URL do quiz (que é a home do seu React app)
                 if (fullRedirectUrl.includes('/pt/witch-power/wpGoal')) {
-                    console.log('Interceptando redirecionamento para /wpGoal. Redirecionando para /pt/witch-power/trialChoice.');
+                    console.log('SERVER: Interceptando redirecionamento para /wpGoal. Redirecionando para /pt/witch-power/trialChoice.');
                     return res.redirect(302, '/pt/witch-power/trialChoice');
                 }
 
@@ -458,7 +476,7 @@ app.use(async (req, res) => {
                 }
                 if (proxiedRedirectPath === '') proxiedRedirectPath = '/';
 
-                console.log(`Redirecionamento do destino: ${fullRedirectUrl} -> Reescrevendo para: ${proxiedRedirectPath}`);
+                console.log(`SERVER: Redirecionamento do destino: ${fullRedirectUrl} -> Reescrevendo para: ${proxiedRedirectPath}`);
                 return res.redirect(response.status, proxiedRedirectPath);
             }
         }
@@ -470,44 +488,34 @@ app.use(async (req, res) => {
             }
         });
 
-        // Lida com o cabeçalho 'Set-Cookie': reescreve o domínio do cookie para o seu domínio
         const setCookieHeader = response.headers['set-cookie'];
         if (setCookieHeader) {
             const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
             const modifiedCookies = cookies.map(cookie => {
                 return cookie
-                    .replace(/Domain=[^;]+/, '') // Remove o domínio original do cookie
-                    .replace(/; Secure/, '') // Remove a flag Secure (se você não usar HTTPS no Render localmente)
-                    // Reescreve o Path do cookie para corresponder à sua rota de proxy
+                    .replace(/Domain=[^;]+/, '')
+                    .replace(/; Secure/, '')
                     .replace(/; Path=\//, `; Path=${req.baseUrl || '/'}`);
             });
             res.setHeader('Set-Cookie', modifiedCookies);
         }
 
         // Lógica de Modificação de Conteúdo (Apenas para HTML)
-        const contentType = response.headers['content-type'] || '';
-        if (contentType.includes('text/html')) {
-            let html = response.data.toString('utf8');
+        if (htmlContent) { // Usar o htmlContent já processado
+            let html = htmlContent;
 
-            // 🎯 INTERCEPTAÇÃO ADICIONAL: Se este HTML contém o padrão, capturar também
-            // Mantenho essa lógica para popular capturedBoldText caso o usuário caia diretamente em trialChoice
-            // ou se o servidor reiniciar e não houver seleção anterior.
             if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing && !capturedBoldText) {
-                console.log('\n🎯 INTERCEPTANDO HTML NO MIDDLEWARE para pré-popular capturedBoldText!');
-                console.log('URL:', req.url);
-
+                console.log('SERVER: INTERCEPTANDO HTML NO MIDDLEWARE para pré-popular capturedBoldText!');
                 const extractedText = extractTextFromHTML(html);
-
                 if (extractedText && extractedText.length > 5) {
                     capturedBoldText = extractedText;
                     lastCaptureTime = Date.now();
-                    console.log('🎉 SUCESSO! Texto capturado via middleware:', `"${capturedBoldText}"`);
+                    console.log('SERVER: SUCESSO! Texto capturado via middleware:', `"${capturedBoldText}"`);
                 }
             }
 
             const $ = cheerio.load(html);
 
-            // Reescrever todas as URLs relativas e absolutas
             $('[href], [src], [action]').each((i, el) => {
                 const element = $(el);
                 let attrName = '';
@@ -522,16 +530,18 @@ app.use(async (req, res) => {
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
                     if (originalUrl) {
-                        if (originalUrl.startsWith('/') && !originalUrl.startsWith('/reading/')) {
-                            // URLs relativas ao root já serão tratadas pelo proxy sem modificação aqui.
-                            // Deixe como está, elas serão resolvidas pelo navegador contra o seu proxy.
-                        } else if (originalUrl.startsWith('/reading/')) {
-                            // URLs para o subdomínio de leitura, já estão corretas
+                        if (originalUrl.startsWith('/')) { // Simplificado para todas as URLs relativas
+                            // No proxy, URLs relativas já serão tratadas pelo próprio proxy.
+                            // Mas para garantir, podemos reescrever as que apontam para o domínio principal.
+                            if (originalUrl.startsWith('/pt/witch-power/')) {
+                                // Deixa essas como estão, o proxy já as manipula.
+                            } else {
+                                // Se for uma URL raiz que não é do quiz, pode precisar de tratamento mais genérico.
+                                // Por agora, se for apenas '/', '/' ou '/favicon.ico' etc., deixamos.
+                            }
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
-                            // Reescreve URLs absolutas para o MAIN_TARGET_URL para relativas
                             element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
                         } else if (originalUrl.startsWith(READING_SUBDOMAIN_TARGET)) {
-                            // Reescreve URLs absolutas para o READING_SUBDOMAIN_TARGET para o prefixo /reading
                             element.attr(attrName, originalUrl.replace(READING_SUBDOMAIN_TARGET, '/reading'));
                         }
                     }
@@ -539,74 +549,46 @@ app.use(async (req, res) => {
             });
 
             // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE ---
-            $('head').prepend(
+            const clientScript =
                 '<script>' +
                 '(function() {' +
-                'console.log(\'INJECTED SCRIPT: Script started execution.\');' + // <-- LOG DE INÍCIO DO SCRIPT
+                'console.log(\'CLIENT: INJECTED SCRIPT: Script started execution.\');' +
                 'const readingSubdomainTarget = \'' + READING_SUBDOMAIN_TARGET + '\';' +
                 'const mainTargetOrigin = \'' + MAIN_TARGET_URL + '\';' +
                 'const proxyReadingPrefix = \'/reading\';' +
-                'const proxyApiPrefix = \'' + currentProxyHost + '/api-proxy\';' + // Garante que a API do Nebula usa seu proxy
+                'const proxyApiPrefix = \'' + currentProxyHost + '/api-proxy\';' +
                 'const currentProxyHost = \'' + currentProxyHost + '\';' +
                 'const targetPagePath = \'/pt/witch-power/wpGoal\';' +
 
-                // Interceptação de Fetch
+                // Interceptação de Fetch, XHR, PostMessage (sem alterações aqui, mantendo a lógica de reescrita de URLs)
                 'const originalFetch = window.fetch;' +
                 'window.fetch = function(input, init) {' +
                 'let url = input;' +
                 'if (typeof input === \'string\') {' +
-                'if (input.startsWith(readingSubdomainTarget)) {' +
-                'url = input.replace(readingSubdomainTarget, proxyReadingPrefix);' +
-                'console.log(\'PROXY SHIM: REWRITE FETCH URL (Reading): \', input, \'->\', url);' +
-                '} else if (input.startsWith(\'https://api.appnebula.co\')) {' +
-                'url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
-                'console.log(\'PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url);' +
-                '} else if (input.startsWith(mainTargetOrigin)) {' +
-                'url = input.replace(mainTargetOrigin, currentProxyHost);' +
-                'console.log(\'PROXY SHIM: REWRITE FETCH URL (Main): \', input, \'->\', url);' +
-                '}' +
+                'if (input.startsWith(readingSubdomainTarget)) { url = input.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (Reading): \', input, \'->\', url); }' +
+                'else if (input.startsWith(\'https://api.appnebula.co\')) { url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url); }' +
+                'else if (input.startsWith(mainTargetOrigin)) { url = input.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (Main): \', input, \'->\', url); }' +
                 '} else if (input instanceof Request) {' +
-                'if (input.url.startsWith(readingSubdomainTarget)) {' +
-                'url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input);' +
-                'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url);' +
-                '} else if (input.url.startsWith(\'https://api.appnebula.co\')) {' +
-                'url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input);' +
-                'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url);' +
-                '} else if (input.url.startsWith(mainTargetOrigin)) {' +
-                'url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);' +
-                'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url);' +
-                '}' +
+                'if (input.url.startsWith(readingSubdomainTarget)) { url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url); }' +
+                'else if (input.url.startsWith(\'https://api.appnebula.co\')) { url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url); }' +
+                'else if (input.url.startsWith(mainTargetOrigin)) { url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url); }' +
                 '}' +
                 'return originalFetch.call(this, url, init);' +
                 '};' +
-
-                // Interceptação de XHR
                 'const originalXHRopen = XMLHttpRequest.prototype.open;' +
                 'XMLHttpRequest.prototype.open = function(method, url, async, user, password) {' +
                 'let modifiedUrl = url;' +
                 'if (typeof url === \'string\') {' +
-                'if (url.startsWith(readingSubdomainTarget)) {' +
-                'modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix);' +
-                'console.log(\'PROXY SHIM: REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl);' +
-                '} else if (url.startsWith(\'https://api.appnebula.co\')) {' +
-                'modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
-                'console.log(\'PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl);' +
-                '} else if (url.startsWith(mainTargetOrigin)) {' +
-                'modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);' +
-                'console.log(\'PROXY SHIM: REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl);' +
-                '}' +
+                'if (url.startsWith(readingSubdomainTarget)) { modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl); }' +
+                'else if (url.startsWith(\'https://api.appnebula.co\')) { modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl); }' +
+                'else if (url.startsWith(mainTargetOrigin)) { modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl); }' +
                 '}' +
                 'originalXHRopen.call(this, method, modifiedUrl, async, user, password);' +
                 '};' +
-
-                // Interceptação de PostMessage
                 'const originalPostMessage = window.postMessage;' +
                 'window.postMessage = function(message, targetOrigin, transfer) {' +
                 'let modifiedTargetOrigin = targetOrigin;' +
-                'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) {' +
-                'modifiedTargetOrigin = currentProxyHost;' +
-                'console.log(\'PROXY SHIM: REWRITE PostMessage TargetOrigin: \', targetOrigin, \'->\', modifiedTargetOrigin);' +
-                '}' +
+                'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) { modifiedTargetOrigin = currentProxyHost; console.log(\'CLIENT: PROXY SHIM: REWRITE PostMessage TargetOrigin: \', targetOrigin, \'->\', modifiedTargetOrigin); }' +
                 'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
                 '};' +
 
@@ -623,7 +605,7 @@ app.use(async (req, res) => {
 
                 'function injectInvisibleButtons() {' +
                 'if (buttonsInjected) return;' +
-                'console.log(\'INJECTED SCRIPT: Página wpGoal detectada! Tentando injetar botões invisíveis...\');' + // <-- LOG ANTES DA INJEÇÃO
+                'console.log(\'CLIENT: INJECTED SCRIPT: Página wpGoal detectada! Tentando injetar botões invisíveis...\');' +
                 'invisibleButtonsConfig.forEach(config => {' +
                 'const button = document.createElement(\'button\');' +
                 'button.id = config.id;' +
@@ -634,100 +616,62 @@ app.use(async (req, res) => {
                 'width: ${config.width};' +
                 'height: ${config.height};' +
                 'background: transparent;' +
-                'border: 2px solid red;' + // Apenas para visualização durante o desenvolvimento, REMOVER em produção
+                'border: 2px solid red;' +
                 'cursor: pointer;' +
                 'z-index: 9999;' +
                 '`;' +
-                'button.addEventListener(\'click\', async (event) => {' + // Usar async para o fetch
-                'console.log(`INJECTED SCRIPT: Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
-
-                '// 1. Enviar a escolha do usuário para o servidor proxy' +
+                'button.addEventListener(\'click\', async (event) => {' +
+                'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
                 'try {' +
-                'await fetch(\'/api/set-selected-choice\', {' + // Novo endpoint
-                'method: \'POST\',' +
-                'headers: {' +
-                '\'Content-Type\': \'application/json\'' +
-                '},' +
-                'body: JSON.stringify({ selectedText: config.text })' +
-                '});' +
-                'console.log(`INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
-                '} catch (error) {' +
-                'console.error(\'INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error);' +
-                '}' +
-
-                '// 2. Notificar o React App (se estiver no mesmo domínio)' +
+                'await fetch(\'/api/set-selected-choice\', { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: JSON.stringify({ selectedText: config.text }) });' +
+                'console.log(`CLIENT: INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
+                '} catch (error) { console.error(\'CLIENT: INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error); }' +
                 'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' +
-
-                '// 3. Simular clique no botão original para avançar o quiz' +
                 'const rect = button.getBoundingClientRect();' +
                 'const centerX = rect.left + rect.width / 2;' +
                 'const centerY = rect.top + rect.height / 2;' +
                 'const originalElement = document.elementFromPoint(centerX, centerY);' +
-                'if (originalElement) {' +
-                'console.log(`INJECTED SCRIPT: Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
-                'event.stopPropagation();' +
-                'event.preventDefault();' +
-                'originalElement.click();' +
-                '} else {' +
-                'console.log(`INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`);' +
-                '}' +
+                'if (originalElement) { console.log(`CLIENT: INJECTED SCRIPT: Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement); event.stopPropagation(); event.preventDefault(); originalElement.click(); }' +
+                'else { console.log(`CLIENT: INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`); }' +
                 '});' +
                 'document.body.appendChild(button);' +
-                'console.log(`INJECTED SCRIPT: Botão invisível \'${config.id}\' injetado na página wpGoal!`);' + // <-- LOG DE BOTÃO INJETADO
+                'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
                 '});' +
                 'buttonsInjected = true;' +
                 '}' +
 
                 'function removeInvisibleButtons() {' +
                 'if (!buttonsInjected) return;' +
-                'console.log(\'INJECTED SCRIPT: Saindo da página wpGoal. Removendo botões invisíveis...\');' + // <-- LOG DE REMOÇÃO
+                'console.log(\'CLIENT: INJECTED SCRIPT: Saindo da página wpGoal. Removendo botões invisíveis...\');' +
                 'invisibleButtonsConfig.forEach(config => {' +
                 'const button = document.getElementById(config.id);' +
-                'if (button) {' +
-                'button.remove();' +
-                'console.log(`INJECTED SCRIPT: Botão invisível \'${config.id}\' removido.`);' +
-                '}' +
+                'if (button) { button.remove(); console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' removido.`); }' +
                 '});' +
                 'buttonsInjected = false;' +
                 '}' +
 
                 'function monitorUrlChanges() {' +
-                'console.log(\'INJECTED SCRIPT: monitorUrlChanges called.\');' + // <-- LOG DE CHAMADA DA FUNÇÃO
+                'console.log(\'CLIENT: INJECTED SCRIPT: monitorUrlChanges called.\');' +
                 'const currentUrl = window.location.pathname;' +
                 'const isTargetPage = currentUrl === targetPagePath;' +
-                'console.log(`INJECTED SCRIPT: [Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
-
-                'if (isTargetPage) {' +
-                'injectInvisibleButtons();' +
-                '} else {' +
-                'removeInvisibleButtons();' +
-                '}' +
+                'console.log(`CLIENT: INJECTED SCRIPT: [Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
+                'if (isTargetPage) { injectInvisibleButtons(); } else { removeInvisibleButtons(); }' +
                 '}' +
 
-                'console.log(\'INJECTED SCRIPT: Adding DOMContentLoaded listener.\');' + // <-- LOG ADICIONAL
-                'document.addEventListener(\'DOMContentLoaded\', () => {' +
-                'console.log(\'INJECTED SCRIPT: DOMContentLoaded fired.\');' + // <-- LOG ADICIONAL
-                'monitorUrlChanges();' +
-                '});' +
+                'console.log(\'CLIENT: INJECTED SCRIPT: Adding DOMContentLoaded listener.\');' +
+                'document.addEventListener(\'DOMContentLoaded\', () => { console.log(\'CLIENT: INJECTED SCRIPT: DOMContentLoaded fired.\'); monitorUrlChanges(); });' +
                 'window.addEventListener(\'popstate\', monitorUrlChanges);' +
                 'const originalPushState = history.pushState;' +
-                'history.pushState = function() {' +
-                'originalPushState.apply(this, arguments);' +
-                'console.log(\'INJECTED SCRIPT: history.pushState detected.\');' + // <-- LOG ADICIONAL
-                'monitorUrlChanges();' +
-                '};' +
+                'history.pushState = function() { originalPushState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.pushState detected.\'); monitorUrlChanges(); };' +
                 'const originalReplaceState = history.replaceState;' +
-                'history.replaceState = function() {' +
-                'originalReplaceState.apply(this, arguments);' +
-                'console.log(\'INJECTED SCRIPT: history.replaceState detected.\');' + // <-- LOG ADICIONAL
-                'monitorUrlChanges();' +
-                '};' +
+                'history.replaceState = function() { originalReplaceState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.replaceState detected.\'); monitorUrlChanges(); };' +
                 '})();' +
-                '</script>'
-            );
+                '</script>';
 
-            // Converte preços USD para BRL (se aplicável, mantenho sua lógica)
-            html = $.html().replace(CONVERSION_PATTERN, (match, p1) => { // Use $.html() para obter o HTML modificado pelo Cheerio
+            $('head').prepend(clientScript);
+            console.log('SERVER: Script de cliente injetado no <head>.'); // Log no servidor
+
+            html = $.html().replace(CONVERSION_PATTERN, (match, p1) => {
                 const usdValue = parseFloat(p1);
                 const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2);
                 return `R$${brlValue.replace('.', ',')}`;
@@ -736,14 +680,15 @@ app.use(async (req, res) => {
             res.status(response.status).send(html);
         } else {
             // Se não for HTML, envia os dados como estão
-            res.status(response.status).send(response.data);
+            res.status(response.status).send(responseData); // Enviar responseData diretamente (buffer)
         }
 
     } catch (error) {
-        console.error(`❌ ERRO no proxy para ${targetUrl}:`, error.message);
+        console.error(`❌ SERVER: ERRO no proxy para ${targetUrl}:`, error.message);
         if (error.response) {
-            console.error('Status do destino:', error.response.status);
-            res.status(error.response.status).send(error.response.data);
+            console.error('SERVER: Status do destino:', error.response.status);
+            // Tenta enviar a data original se houver, caso contrário, mensagem de erro
+            res.status(error.response.status).send(error.response.data || 'Erro ao processar a requisição de proxy.');
         } else {
             res.status(500).send('Erro ao processar a requisição de proxy.');
         }
@@ -754,6 +699,4 @@ app.use(async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor proxy rodando na porta ${PORT}`);
     console.log(`Acessível em: http://localhost:${PORT}`);
-    // Opcional: Chama captureTextDirectly na inicialização para popular o valor padrão
-    // captureTextDirectly();
 });

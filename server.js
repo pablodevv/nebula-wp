@@ -6,6 +6,7 @@ const { URL } = require('url');
 const fileUpload = require('express-fileupload'); // Para upload de arquivos (ex: foto da palma)
 const cors = require('cors'); // Re-adicionado para garantir flexibilidade nas requisições
 const https = require('https'); // Para lidar com problemas de certificado SSL (development)
+const FormData = require('form-data'); // Importar form-data para uploads
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -336,11 +337,11 @@ app.use('/api-proxy', async (req, res) => {
     } catch (error) {
         console.error('[API PROXY] Erro na requisição da API:', error.message);
         if (error.response) {
-                console.error('[API PROXY] Status da API:', error.response.status);
-                res.status(error.response.status).send(error.response.data);
-            } else {
-                res.status(500).send('Erro ao proxy a API.');
-            }
+            console.error('[API PROXY] Status da API:', error.response.status);
+            res.status(error.response.status).send(error.response.data);
+        } else {
+            res.status(500).send('Erro ao proxy a API.');
+        }
     }
 });
 
@@ -388,7 +389,7 @@ app.use(async (req, res) => {
             const photoFile = req.files.photo;
 
             if (photoFile) {
-                const formData = new (require('form-data'))();
+                const formData = new FormData(); // Usar o FormData importado
                 formData.append('photo', photoFile.data, {
                     filename: photoFile.name,
                     contentType: photoFile.mimetype,
@@ -524,163 +525,158 @@ app.use(async (req, res) => {
                 }
             });
 
-            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE (CUIDADO REDOBRADO COM ASPAS/CRASES) ---
+            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE ---
             $('head').prepend(
                 '<script>' +
-                    '(function() {' +
-                    'const readingSubdomainTarget = \'' + READING_SUBDOMAIN_TARGET + '\';' +
-                    'const mainTargetOrigin = \'' + MAIN_TARGET_URL + '\';' +
-                    'const proxyReadingPrefix = \'/reading\';' +
-                    'const proxyApiPrefix = \'' + currentProxyHost + '/api-proxy\';' + // Garante que a API do Nebula usa seu proxy
-                    'const currentProxyHost = \'' + currentProxyHost + '\';' +
-                    'const targetPagePath = \'/pt/witch-power/wpGoal\';' +
+                '(function() {' +
+                'const readingSubdomainTarget = \'' + READING_SUBDOMAIN_TARGET + '\';' +
+                'const mainTargetOrigin = \'' + MAIN_TARGET_URL + '\';' +
+                'const proxyReadingPrefix = \'/reading\';' +
+                'const proxyApiPrefix = \'' + currentProxyHost + '/api-proxy\';' + // Garante que a API do Nebula usa seu proxy
+                'const currentProxyHost = \'' + currentProxyHost + '\';' +
+                'const targetPagePath = \'/pt/witch-power/wpGoal\';' +
 
-                    // Interceptação de Fetch
-                    'const originalFetch = window.fetch;' +
-                    'window.fetch = function(input, init) {' +
-                    'let url = input;' +
-                    'if (typeof input === \'string\') {' +
-                    'if (input.startsWith(readingSubdomainTarget)) {' +
-                    'url = input.replace(readingSubdomainTarget, proxyReadingPrefix);' +
-                    'console.log(\'PROXY SHIM: REWRITE FETCH URL (Reading): \', input, \'->\', url);' +
-                    '} else if (input.startsWith(\'https://api.appnebula.co\')) {' + // Adicionado para API principal
-                    'url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
-                    'console.log(\'PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url);' +
-                    '} else if (input.startsWith(mainTargetOrigin)) {' + // URLs do mainTarget
-                    'url = input.replace(mainTargetOrigin, currentProxyHost);' +
-                    'console.log(\'PROXY SHIM: REWRITE FETCH URL (Main): \', input, \'->\', url);' +
-                    '}' +
-                    '} else if (input instanceof Request) {' +
-                    'if (input.url.startsWith(readingSubdomainTarget)) {' +
-                    'url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input);' +
-                    'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url);' +
-                    '} else if (input.url.startsWith(\'https://api.appnebula.co\')) {' + // Adicionado para API principal
-                    'url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input);' +
-                    'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url);' +
-                    '} else if (input.url.startsWith(mainTargetOrigin)) {' + // URLs do mainTarget
-                    'url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);' +
-                    'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url);' +
-                    '}' +
-                    '}' +
-                    'return originalFetch.call(this, url, init);' +
-                    '};' +
+                // Interceptação de Fetch
+                'const originalFetch = window.fetch;' +
+                'window.fetch = function(input, init) {' +
+                'let url = input;' +
+                'if (typeof input === \'string\') {' +
+                'if (input.startsWith(readingSubdomainTarget)) {' +
+                'url = input.replace(readingSubdomainTarget, proxyReadingPrefix);' +
+                'console.log(\'PROXY SHIM: REWRITE FETCH URL (Reading): \', input, \'->\', url);' +
+                '} else if (input.startsWith(\'https://api.appnebula.co\')) {' +
+                'url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
+                'console.log(\'PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url);' +
+                '} else if (input.startsWith(mainTargetOrigin)) {' +
+                'url = input.replace(mainTargetOrigin, currentProxyHost);' +
+                'console.log(\'PROXY SHIM: REWRITE FETCH URL (Main): \', input, \'->\', url);' +
+                '}' +
+                '} else if (input instanceof Request) {' +
+                'if (input.url.startsWith(readingSubdomainTarget)) {' +
+                'url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input);' +
+                'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url);' +
+                '} else if (input.url.startsWith(\'https://api.appnebula.co\')) {' +
+                'url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input);' +
+                'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url);' +
+                '} else if (input.url.startsWith(mainTargetOrigin)) {' +
+                'url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);' +
+                'console.log(\'PROXY SHIM: REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url);' +
+                '}' +
+                '}' +
+                'return originalFetch.call(this, url, init);' +
+                '};' +
 
-                    // Interceptação de XHR
-                    'const originalXHRopen = XMLHttpRequest.prototype.open;' +
-                    'XMLHttpRequest.prototype.open = function(method, url, async, user, password) {' +
-                    'let modifiedUrl = url;' +
-                    'if (typeof url === \'string\') {' +
-                    'if (url.startsWith(readingSubdomainTarget)) {' +
-                    'modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix);' +
-                    'console.log(\'PROXY SHIM: REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl);' +
-                    '} else if (url.startsWith(\'https://api.appnebula.co\')) {' + // Adicionado para API principal
-                    'modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
-                    'console.log(\'PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl);' +
-                    '} else if (url.startsWith(mainTargetOrigin)) {' + // URLs do mainTarget
-                    'modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);' +
-                    'console.log(\'PROXY SHIM: REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl);' +
-                    '}' +
-                    '}' +
-                    'originalXHRopen.call(this, method, modifiedUrl, async, user, password);' +
-                    '};' +
+                // Interceptação de XHR
+                'const originalXHRopen = XMLHttpRequest.prototype.open;' +
+                'XMLHttpRequest.prototype.open = function(method, url, async, user, password) {' +
+                'let modifiedUrl = url;' +
+                'if (typeof url === \'string\') {' +
+                'if (url.startsWith(readingSubdomainTarget)) {' +
+                'modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix);' +
+                'console.log(\'PROXY SHIM: REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl);' +
+                '} else if (url.startsWith(\'https://api.appnebula.co\')) {' +
+                'modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix);' +
+                'console.log(\'PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl);' +
+                '} else if (url.startsWith(mainTargetOrigin)) {' +
+                'modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);' +
+                'console.log(\'PROXY SHIM: REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl);' +
+                '}' +
+                '}' +
+                'originalXHRopen.call(this, method, modifiedUrl, async, user, password);' +
+                '};' +
 
-                    // Interceptação de PostMessage
-                    'const originalPostMessage = window.postMessage;' +
-                    'window.postMessage = function(message, targetOrigin, transfer) {' +
-                    'let modifiedTargetOrigin = targetOrigin;' +
-                    'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) {' +
-                    'modifiedTargetOrigin = currentProxyHost;' +
-                    'console.log(\'PROXY SHIM: REWRITE PostMessage TargetOrigin: \', targetOrigin, \'->\', modifiedTargetOrigin);' +
-                    '}' +
-                    'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
-                    '};' +
+                // Interceptação de PostMessage
+                'const originalPostMessage = window.postMessage;' +
+                'window.postMessage = function(message, targetOrigin, transfer) {' +
+                'let modifiedTargetOrigin = targetOrigin;' +
+                'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) {' +
+                'modifiedTargetOrigin = currentProxyHost;' +
+                'console.log(\'PROXY SHIM: REWRITE PostMessage TargetOrigin: \', targetOrigin, \'->\', modifiedTargetOrigin);' +
+                '}' +
+                'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
+                '};' +
 
-                    // --- Lógica de Botões Invisíveis ---
-                    'let buttonsInjected = false;' +
-                    'const invisibleButtonsConfig = [' +
-                    '{ id: \'btn-choice-1\', top: \'206px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Entender meu mapa astral\' },' +
-                    '{ id: \'btn-choice-2\', top: \'292px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Identificar meu arquétipo de bruxa\' },' +
-                    '{ id: \'btn-choice-3\', top: \'377px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Explorar minhas vidas passadas\' },' +
-                    '{ id: \'btn-choice-4\', top: \'460px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Revelar minha aura de bruxa\' },' +
-                    '{ id: \'btn-choice-5\', top: \'543px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Desvendar meu destino e propósito\' },' +
-                    '{ id: \'btn-choice-6\', top: \'628px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Descobrir meus poderes ocultos\' }' +
-                    '];' +
+                // --- Lógica de Botões Invisíveis ---
+                'let buttonsInjected = false;' +
+                'const invisibleButtonsConfig = [' +
+                '{ id: \'btn-choice-1\', top: \'206px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Entender meu mapa astral\' },' +
+                '{ id: \'btn-choice-2\', top: \'292px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Identificar meu arquétipo de bruxa\' },' +
+                '{ id: \'btn-choice-3\', top: \'377px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Explorar minhas vidas passadas\' },' +
+                '{ id: \'btn-choice-4\', top: \'460px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Revelar minha aura de bruxa\' },' +
+                '{ id: \'btn-choice-5\', top: \'543px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Desvendar meu destino e propósito\' },' +
+                '{ id: \'btn-choice-6\', top: \'628px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Descobrir meus poderes ocultos\' }' +
+                '];' +
 
-                    'function injectInvisibleButtons() {' +
-                    'if (buttonsInjected) return;' +
-                    'console.log(\'Página wpGoal detectada! Injetando botões invisíveis...\');' +
-                    'invisibleButtonsConfig.forEach(config => {' +
-                    'const button = document.createElement(\'button\');' +
-                    'button.id = config.id;' +
-                    'button.style.cssText = `' +
-                    'position: absolute;' +
-                    'top: ${config.top};' +
-                    'left: ${config.left};' +
-                    'width: ${config.width};' +
-                    'height: ${config.height};' +
-                    'background: transparent;' +
-                    'border: 2px solid red;' + // Apenas para visualização durante o desenvolvimento, REMOVER em produção
-                    'cursor: pointer;' +
-                    'z-index: 9999;' +
-                    '`;' +
-                    // **AQUI ESTÁ A MUDANÇA PRINCIPAL:** Adicionando o event listener para salvar a escolha
-                    'button.addEventListener(\'click\', () => {' +
-                    'console.log(`✅ Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
-                    'localStorage.setItem(\'selectedChoiceText\', config.text);' + // Salva o texto no localStorage
-                    '});' +
-                    'document.body.appendChild(button);' +
-                    'console.log(`✅ Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
-                    '});' +
-                    'buttonsInjected = true;' +
-                    '}' +
+                'function injectInvisibleButtons() {' +
+                'if (buttonsInjected) return;' +
+                'console.log(\'Página wpGoal detectada! Injetando botões invisíveis...\');' +
+                'invisibleButtonsConfig.forEach(config => {' +
+                'const button = document.createElement(\'button\');' +
+                'button.id = config.id;' +
+                'button.style.cssText = `' +
+                'position: absolute;' +
+                'top: ${config.top};' +
+                'left: ${config.left};' +
+                'width: ${config.width};' +
+                'height: ${config.height};' +
+                'background: transparent;' +
+                'border: 2px solid red;' + // Apenas para visualização durante o desenvolvimento, REMOVER em produção
+                'cursor: pointer;' +
+                'z-index: 9999;' +
+                '`;' +
+                'button.addEventListener(\'click\', () => {' +
+                'console.log(`✅ Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
+                'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' + // ENVIA VIA POSTMESSAGE
+                '});' +
+                'document.body.appendChild(button);' +
+                'console.log(`✅ Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
+                '});' +
+                'buttonsInjected = true;' +
+                '}' +
 
-                    'function removeInvisibleButtons() {' +
-                    'if (!buttonsInjected) return;' +
-                    'console.log(\'Saindo da página wpGoal. Removendo botões invisíveis...\');' +
-                    'invisibleButtonsConfig.forEach(config => {' +
-                    'const button = document.getElementById(config.id);' +
-                    'if (button) {' +
-                    'button.remove();' +
-                    'console.log(`🗑️ Botão invisível \'${config.id}\' removido.`);' +
-                    '}' +
-                    '});' +
-                    'buttonsInjected = false;' +
-                    '}' +
+                'function removeInvisibleButtons() {' +
+                'if (!buttonsInjected) return;' +
+                'console.log(\'Saindo da página wpGoal. Removendo botões invisíveis...\');' +
+                'invisibleButtonsConfig.forEach(config => {' +
+                'const button = document.getElementById(config.id);' +
+                'if (button) {' +
+                'button.remove();' +
+                'console.log(`🗑️ Botão invisível \'${config.id}\' removido.`);' +
+                '}' +
+                '});' +
+                'buttonsInjected = false;' +
+                '}' +
 
-                    'function monitorUrlChanges() {' +
-                    'const currentUrl = window.location.pathname;' +
-                    'const isTargetPage = currentUrl === targetPagePath;' +
-                    'console.log(`[Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
+                'function monitorUrlChanges() {' +
+                'const currentUrl = window.location.pathname;' +
+                'const isTargetPage = currentUrl === targetPagePath;' +
+                'console.log(`[Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
 
-                    'if (isTargetPage) {' +
-                    'injectInvisibleButtons();' +
-                    '} else {' +
-                    'removeInvisibleButtons();' +
-                    '}' +
-                    '}' +
+                'if (isTargetPage) {' +
+                'injectInvisibleButtons();' +
+                '} else {' +
+                'removeInvisibleButtons();' +
+                '}' +
+                '}' +
 
-                    '// Executa a função ao carregar a página e monitora mudanças na URL' +
-                    'document.addEventListener(\'DOMContentLoaded\', monitorUrlChanges);' +
-                    'window.addEventListener(\'popstate\', monitorUrlChanges);' + // Para navegação via histórico
-                    '// Para SPAs que mudam a URL sem recarregar (ex: pushState)' +
-                    'const originalPushState = history.pushState;' +
-                    'history.pushState = function() {' +
-                    'originalPushState.apply(this, arguments);' +
-                    'monitorUrlChanges();' +
-                    '};' +
-                    'const originalReplaceState = history.replaceState;' +
-                    'history.replaceState = function() {' +
-                    'originalReplaceState.apply(this, arguments);' +
-                    'monitorUrlChanges();' +
-                    '};' +
-                    '})();' +
+                'document.addEventListener(\'DOMContentLoaded\', monitorUrlChanges);' +
+                'window.addEventListener(\'popstate\', monitorUrlChanges);' +
+                'const originalPushState = history.pushState;' +
+                'history.pushState = function() {' +
+                'originalPushState.apply(this, arguments);' +
+                'monitorUrlChanges();' +
+                '};' +
+                'const originalReplaceState = history.replaceState;' +
+                'history.replaceState = function() {' +
+                'originalReplaceState.apply(this, arguments);' +
+                'monitorUrlChanges();' +
+                '};' +
+                '})();' +
                 '</script>'
             );
 
-            // --- FIM DA INJEÇÃO DE SCRIPTS CLIENT-SIDE ---
-
             // Converte preços USD para BRL (se aplicável, mantenho sua lógica)
-            html = html.replace(CONVERSION_PATTERN, (match, p1) => {
+            html = $.html().replace(CONVERSION_PATTERN, (match, p1) => { // Use $.html() para obter o HTML modificado pelo Cheerio
                 const usdValue = parseFloat(p1);
                 const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2);
                 return `R$${brlValue.replace('.', ',')}`;
@@ -707,4 +703,6 @@ app.use(async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor proxy rodando na porta ${PORT}`);
     console.log(`Acessível em: http://localhost:${PORT}`);
+    // Inicializa a captura de texto na inicialização do servidor, se necessário
+    // captureTextDirectly(); // Pode ser chamado aqui se precisar pré-carregar antes da primeira requisição
 });

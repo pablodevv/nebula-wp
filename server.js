@@ -188,238 +188,230 @@ app.use(async (req, res) => {
                     } else if (url.startsWith(MAIN_TARGET_URL)) {
                         $(elem).attr(attr, url.replace(MAIN_TARGET_URL, proxyHost));
                     } else if (url.startsWith(READING_SUBDOMAIN_TARGET)) {
-                        $(elem).attr(attr, url.replace(READING_SUBDOMAIN_TARGET, `/reading`));
+                        $(elem).attr(attr, url.replace(READING_TARGET_URL, `/reading`));
                     }
                 }
             });
 
             // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE E MANIPULAÇÃO DE DOM ---
-            const clientScript = `
-                <script>
-                    (function() {
-                        const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
-                        const mainTargetOrigin = '${MAIN_TARGET_URL}';
-                        const proxyPrefix = '/reading';
-                        const currentProxyHost = '${proxyHost}'; 
-                        const targetPagePath = '/pt/witch-power/wpGoal'; 
+            // TODO O clientScript AGORA USA APENAS ASPAS SIMPLES/DUPLAS E CONCATENAÇÃO
+            const clientScript = 
+                '<script>' +
+                    '(function() {' +
+                        'const readingSubdomainTarget = \'' + READING_SUBDOMAIN_TARGET + '\';' +
+                        'const mainTargetOrigin = \'' + MAIN_TARGET_URL + '\';' +
+                        'const proxyPrefix = \'/reading\';' +
+                        'const currentProxyHost = \'' + proxyHost + '\';' + 
+                        'const targetPagePath = \'/pt/witch-power/wpGoal\';' + 
 
                         // Funções de interceptação de Fetch, XHR e PostMessage
-                        const originalFetch = window.fetch;
-                        window.fetch = function(input, init) {
-                            let url = input;
-                            if (typeof input === 'string') {
-                                if (input.startsWith(readingSubdomainTarget)) {
-                                    url = input.replace(readingSubdomainTarget, proxyPrefix);
-                                } else if (input.startsWith(mainTargetOrigin)) {
-                                    url = input.replace(mainTargetOrigin, currentProxyHost);
-                                } else if (input.startsWith('https://api.appnebula.co')) {
-                                    url = input.replace('https://api.appnebula.co', currentProxyHost + '/api-proxy');
-                                }
-                            } else if (input instanceof Request) {
-                                if (input.url.startsWith(readingSubdomainTarget)) {
-                                    url = new Request(input.url.replace(readingSubdomainTarget, proxyPrefix), input);
-                                } else if (input.url.startsWith(mainTargetOrigin)) {
-                                    url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);
-                                } else if (input.url.startsWith('https://api.appnebula.co')) {
-                                    url = new Request(input.url.replace('https://api.appnebula.co', currentProxyHost + '/api-proxy'), input);
-                                }
-                            }
-                            return originalFetch.call(this, url, init);
-                        };
+                        'const originalFetch = window.fetch;' +
+                        'window.fetch = function(input, init) {' +
+                            'let url = input;' +
+                            'if (typeof input === \'string\') {' +
+                                'if (input.startsWith(readingSubdomainTarget)) {' +
+                                    'url = input.replace(readingSubdomainTarget, proxyPrefix);' +
+                                '} else if (input.startsWith(mainTargetOrigin)) {' +
+                                    'url = input.replace(mainTargetOrigin, currentProxyHost);' +
+                                '} else if (input.startsWith(\'https://api.appnebula.co\')) {' +
+                                    'url = input.replace(\'https://api.appnebula.co\', currentProxyHost + \'/api-proxy\');' +
+                                '}' +
+                            '} else if (input instanceof Request) {' +
+                                'if (input.url.startsWith(readingSubdomainTarget)) {' +
+                                    'url = new Request(input.url.replace(readingSubdomainTarget, proxyPrefix), input);' +
+                                '} else if (input.url.startsWith(mainTargetOrigin)) {' +
+                                    'url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input);' +
+                                '} else if (input.url.startsWith(\'https://api.appnebula.co\')) {' +
+                                    'url = new Request(input.url.replace(\'https://api.appnebula.co\', currentProxyHost + \'/api-proxy\'), input);' +
+                                '}' +
+                            '}' +
+                            'return originalFetch.call(this, url, init);' +
+                        '};' +
 
-                        const originalXHRopen = XMLHttpRequest.prototype.open;
-                        XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-                            let modifiedUrl = url;
-                            if (typeof url === 'string') {
-                                if (url.startsWith(readingSubdomainTarget)) {
-                                    modifiedUrl = url.replace(readingSubdomainTarget, proxyPrefix);
-                                } else if (url.startsWith(mainTargetOrigin)) {
-                                    modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);
-                                } else if (url.startsWith('https://api.appnebula.co')) {
-                                    modifiedUrl = url.replace('https://api.appnebula.co', currentProxyHost + '/api-proxy');
-                                }
-                            }
-                            originalXHRopen.call(this, method, modifiedUrl, async, user, password);
-                        };
+                        'const originalXHRopen = XMLHttpRequest.prototype.open;' +
+                        'XMLHttpRequest.prototype.open = function(method, url, async, user, password) {' +
+                            'let modifiedUrl = url;' +
+                            'if (typeof url === \'string\') {' +
+                                'if (url.startsWith(readingSubdomainTarget)) {' +
+                                    'modifiedUrl = url.replace(readingSubdomainTarget, proxyPrefix);' +
+                                '} else if (url.startsWith(mainTargetOrigin)) {' +
+                                    'modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);' +
+                                '} else if (url.startsWith(\'https://api.appnebula.co\')) {' +
+                                    'modifiedUrl = url.replace(\'https://api.appnebula.co\', currentProxyHost + \'/api-proxy\');' +
+                                '}' +
+                            '}' +
+                            'originalXHRopen.call(this, method, modifiedUrl, async, user, password);' +
+                        '};' +
 
-                        const originalPostMessage = window.postMessage;
-                        window.postMessage = function(message, targetOrigin, transfer) {
-                            let modifiedTargetOrigin = targetOrigin;
-                            if (typeof targetOrigin === 'string' && targetOrigin.startsWith(mainTargetOrigin)) {
-                                modifiedTargetOrigin = currentProxyHost;
-                            }
-                            originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);
-                        };
+                        'const originalPostMessage = window.postMessage;' +
+                        'window.postMessage = function(message, targetOrigin, transfer) {' +
+                            'let modifiedTargetOrigin = targetOrigin;' +
+                            'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) {' +
+                                'modifiedTargetOrigin = currentProxyHost;' +
+                            '}' +
+                            'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
+                        '};' +
 
                         // --- FUNÇÃO PARA GERENCIAR BOTÕES INVISÍVEIS ---
-                        let buttonsInjected = false; // Flag para controlar injeção
+                        'let buttonsInjected = false;' + // Flag para controlar injeção
 
                         // Definição dos botões com suas coordenadas e dimensões PRECISAS
-                        const invisibleButtonsConfig = [
-                            { 
-                                id: 'btn-choice-1', // "Entender meu mapa astral"
-                                top: '206px', 
-                                left: '40px', 
-                                width: '330px', 
-                                height: '66px', 
-                                text: 'Entender meu mapa astral' 
-                            },
-                            { 
-                                id: 'btn-choice-2', // "Identificar meu arquétipo de bruxa"
-                                top: '292px', 
-                                left: '40px', 
-                                width: '330px', 
-                                height: '66px', 
-                                text: 'Identificar meu arquétipo de bruxa' 
-                            },
-                            { 
-                                id: 'btn-choice-3', // "Explorar minhas vidas passadas"
-                                top: '377px', 
-                                left: '40px', 
-                                width: '330px', 
-                                height: '66px', 
-                                text: 'Explorar minhas vidas passadas' 
-                            },
-                            { 
-                                id: 'btn-choice-4', // "Revelar minha aura de bruxa"
-                                top: '460px', 
-                                left: '40px', 
-                                width: '330px', 
-                                height: '66px', 
-                                text: 'Revelar minha aura de bruxa' 
-                            },
-                            { 
-                                id: 'btn-choice-5', // "Desvendar meu destino e propósito"
-                                top: '543px', 
-                                left: '40px', 
-                                width: '330px', 
-                                height: '66px', 
-                                text: 'Desvendar meu destino e propósito' 
-                            },
-                            { 
-                                id: 'btn-choice-6', // "Encontrar marcas, símbolos que me guiem"
-                                top: '629px', 
-                                left: '40px', 
-                                width: '330px', 
-                                height: '66px', 
-                                text: 'Encontrar marcas, símbolos que me guiem' 
-                            }
-                        ];
+                        'const invisibleButtonsConfig = [' +
+                            '{ ' +
+                                'id: \'btn-choice-1\',' + // "Entender meu mapa astral"
+                                'top: \'206px\',' + 
+                                'left: \'40px\',' + 
+                                'width: \'330px\',' + 
+                                'height: \'66px\',' + 
+                                'text: \'Entender meu mapa astral\'' + 
+                            '},' +
+                            '{ ' +
+                                'id: \'btn-choice-2\',' + // "Identificar meu arquétipo de bruxa"
+                                'top: \'292px\',' + 
+                                'left: \'40px\',' + 
+                                'width: \'330px\',' + 
+                                'height: \'66px\',' + 
+                                'text: \'Identificar meu arquétipo de bruxa\'' + 
+                            '},' +
+                            '{ ' +
+                                'id: \'btn-choice-3\',' + // "Explorar minhas vidas passadas"
+                                'top: \'377px\',' + 
+                                'left: \'40px\',' + 
+                                'width: \'330px\',' + 
+                                'height: \'66px\',' + 
+                                'text: \'Explorar minhas vidas passadas\'' + 
+                            '},' +
+                            '{ ' +
+                                'id: \'btn-choice-4\',' + // "Revelar minha aura de bruxa"
+                                'top: \'460px\',' + 
+                                'left: \'40px\',' + 
+                                'width: \'330px\',' + 
+                                'height: \'66px\',' + 
+                                'text: \'Revelar minha aura de bruxa\'' + 
+                            '},' +
+                            '{ ' +
+                                'id: \'btn-choice-5\',' + // "Desvendar meu destino e propósito"
+                                'top: \'543px\',' + 
+                                'left: \'40px\',' + 
+                                'width: \'330px\',' + 
+                                'height: \'66px\',' + 
+                                'text: \'Desvendar meu destino e propósito\'' + 
+                            '},' +
+                            '{ ' +
+                                'id: \'btn-choice-6\',' + // "Encontrar marcas, símbolos que me guiem"
+                                'top: \'629px\',' + 
+                                'left: \'40px\',' + 
+                                'width: \'330px\',' + 
+                                'height: \'66px\',' + 
+                                'text: \'Encontrar marcas, símbolos que me guiem\'' + 
+                            '}' +
+                        '];' +
 
-                        function manageInvisibleButtons() {
-                            const currentPagePath = window.location.pathname;
-                            const isTargetPage = currentPagePath === targetPagePath;
+                        'function manageInvisibleButtons() {' +
+                            'const currentPagePath = window.location.pathname;' +
+                            'const isTargetPage = currentPagePath === targetPagePath;' +
 
-                            // LOG CORRIGIDO (usando concatenação de strings com aspas simples)
-                            console.log('[Monitor] URL atual: ' + currentPagePath + '. Página alvo: ' + targetPagePath + '. É a página alvo? ' + isTargetPage);
+                            // Logs agora usando concatenação, sem crases
+                            'console.log(\'[Monitor] URL atual: \' + currentPagePath + \'. Página alvo: \' + targetPagePath + \'. É a página alvo? \' + isTargetPage);' +
 
-                            if (isTargetPage && !buttonsInjected) {
-                                console.log('Página wpGoal detectada! Injetando botões invisíveis...');
+                            'if (isTargetPage && !buttonsInjected) {' +
+                                'console.log(\'Página wpGoal detectada! Injetando botões invisíveis...\');' +
                                 
-                                invisibleButtonsConfig.forEach(config => {
-                                    const button = document.createElement('div');
-                                    button.id = config.id;
-                                    button.style.position = 'absolute';
-                                    button.style.top = config.top;
-                                    button.style.left = config.left;
-                                    button.style.width = config.width;
-                                    button.style.height = config.height;
-                                    button.style.zIndex = '9999999'; 
-                                    button.style.cursor = 'pointer'; 
+                                'invisibleButtonsConfig.forEach(config => {' +
+                                    'const button = document.createElement(\'div\');' +
+                                    'button.id = config.id;' +
+                                    'button.style.position = \'absolute\';' +
+                                    'button.style.top = config.top;' +
+                                    'button.style.left = config.left;' +
+                                    'button.style.width = config.width;' +
+                                    'button.style.height = config.height;' +
+                                    'button.style.zIndex = \'9999999\';' + 
+                                    'button.style.cursor = \'pointer\';' + 
                                     
-                                    button.style.opacity = '0'; 
-                                    button.style.pointerEvents = 'auto'; // Deve ser auto para nosso clique inicial
+                                    'button.style.opacity = \'0\';' + 
+                                    'button.style.pointerEvents = \'auto\';' + // Deve ser auto para nosso clique inicial
 
-                                    document.body.appendChild(button);
-                                    // LOG CORRIGIDO
-                                    console.log('✅ Botão invisível \'' + config.id + '\' injetado na página wpGoal!');
+                                    'document.body.appendChild(button);' +
+                                    'console.log(\'✅ Botão invisível \\\'\' + config.id + \'\\\' injetado na página wpGoal!\');' +
 
-                                    button.addEventListener('click', (event) => {
-                                        // LOG CORRIGIDO
-                                        console.log('🎉 Botão invisível \'' + config.id + '\' clicado na wpGoal!');
+                                    'button.addEventListener(\'click\', (event) => {' +
+                                        'console.log(\'🎉 Botão invisível \\\'\' + config.id + \'\\\' clicado na wpGoal!\');' +
                                         
                                         // 1. Antes de simular o clique, remova temporariamente o botão invisível
                                         // ou torne-o não-interagível para que o clique "caia" no elemento de baixo.
-                                        button.style.pointerEvents = 'none'; 
+                                        'button.style.pointerEvents = \'none\';' + 
                                         
-                                        const rect = button.getBoundingClientRect();
-                                        const x = rect.left + rect.width / 2;
-                                        const y = rect.top + rect.height / 2;
+                                        'const rect = button.getBoundingClientRect();' +
+                                        'const x = rect.left + rect.width / 2;' +
+                                        'const y = rect.top + rect.height / 2;' +
                                         
                                         // Tenta disparar o evento no elemento que está na posição
                                         // É CRUCIAL que o botão invisível esteja invisível ao pointer para isso funcionar.
-                                        const targetElement = document.elementFromPoint(x, y);
+                                        'const targetElement = document.elementFromPoint(x, y);' +
 
-                                        if (targetElement) {
-                                            // LOG CORRIGIDO
-                                            console.log('Simulando clique no elemento original:', targetElement);
+                                        'if (targetElement) {' +
+                                            'console.log(\'Simulando clique no elemento original:\', targetElement);' +
                                             // Cria um novo evento de clique para o elemento original
-                                            const clickEvent = new MouseEvent('click', {
-                                                view: window,
-                                                bubbles: true,
-                                                cancelable: true,
-                                                clientX: x,
-                                                clientY: y
-                                            });
-                                            targetElement.dispatchEvent(clickEvent);
-                                            // LOG CORRIGIDO
-                                            console.log('Cliques simulados em:', targetElement);
+                                            'const clickEvent = new MouseEvent(\'click\', {' +
+                                                'view: window,' +
+                                                'bubbles: true,' +
+                                                'cancelable: true,' +
+                                                'clientX: x,' +
+                                                'clientY: y' +
+                                            '});' +
+                                            'targetElement.dispatchEvent(clickEvent);' +
+                                            'console.log(\'Cliques simulados em:\', targetElement);' +
 
                                             // 2. Enviar dados para o front-end React (trialChoice.tsx)
-                                            window.postMessage({
-                                                type: 'QUIZ_CHOICE_SELECTED',
-                                                text: config.text
-                                            }, window.location.origin); 
-                                            // LOG CORRIGIDO
-                                            console.log('Dados enviados para o React: \'' + config.text + '\'');
+                                            'window.postMessage({' +
+                                                'type: \'QUIZ_CHOICE_SELECTED\',' +
+                                                'text: config.text' +
+                                            '}, window.location.origin);' + 
+                                            'console.log(\'Dados enviados para o React: \\\'\' + config.text + \'\\\'\');' +
 
-                                        } else {
-                                            console.warn('Nenhum elemento encontrado para simular clique nas coordenadas. O botão original não foi detectado.');
-                                        }
+                                        '} else {' +
+                                            'console.warn(\'Nenhum elemento encontrado para simular clique nas coordenadas. O botão original não foi detectado.\');' +
+                                        '}' +
 
                                         // Após o clique ser simulado, podemos remover o botão invisível
                                         // já que a página provavelmente vai mudar ou o quiz avançar.
                                         // Se a página não recarregar ou mudar o DOM significativamente,
                                         // e se houver a possibilidade de outro clique no mesmo local,
                                         // o monitoramento de URL se encarregará de reinjetar os botões se necessário.
-                                        button.remove(); // Remove o botão invisível depois de usá-lo
-                                        // LOG CORRIGIDO
-                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido após simulação de clique.');
+                                        'button.remove();' + // Remove o botão invisível depois de usá-lo
+                                        'console.log(\'🗑️ Botão invisível \\\'\' + config.id + \'\\\' removido após simulação de clique.\');' +
 
-                                        // Para evitar que a flag `buttonsInjected` impeça a reinjeção se a página
-                                        // mudar e voltar para wpGoal (SPA), podemos resetá-la aqui
-                                        buttonsInjected = false; 
-                                    });
-                                });
+                                        // Resetar a flag `buttonsInjected` (o comentário também foi removido)
+                                        'buttonsInjected = false;' + 
+                                    '});' +
+                                '});' +
 
-                                buttonsInjected = true; 
+                                'buttonsInjected = true;' + 
                                 
-                            } else if (!isTargetPage && buttonsInjected) {
-                                console.log('Saindo da página wpGoal. Removendo botões invisíveis...');
-                                invisibleButtonsConfig.forEach(config => {
-                                    const buttonElement = document.getElementById(config.id);
-                                    if (buttonElement) {
-                                        buttonElement.remove();
-                                        // LOG CORRIGIDO
-                                        console.log('🗑️ Botão invisível \'' + config.id + '\' removido.');
-                                    }
-                                });
-                                buttonsInjected = false; 
-                            }
-                        }
+                            '} else if (!isTargetPage && buttonsInjected) {' +
+                                'console.log(\'Saindo da página wpGoal. Removendo botões invisíveis...\');' +
+                                'invisibleButtonsConfig.forEach(config => {' +
+                                    'const buttonElement = document.getElementById(config.id);' +
+                                    'if (buttonElement) {' +
+                                        'buttonElement.remove();' +
+                                        'console.log(\'🗑️ Botão invisível \\\'\' + config.id + \'\\\' removido.\');' +
+                                    '}' +
+                                '});' +
+                                'buttonsInjected = false;' + 
+                            '}' +
+                        '}' +
 
                         // --- Lógica de Inicialização e Monitoramento ---
-                        document.addEventListener('DOMContentLoaded', function() {
-                            console.log('Script de injeção de proxy carregado no cliente.');
+                        'document.addEventListener(\'DOMContentLoaded\', function() {' +
+                            'console.log(\'Script de injeção de proxy carregado no cliente.\');' +
 
-                            manageInvisibleButtons();
+                            'manageInvisibleButtons();' +
 
-                            setInterval(manageInvisibleButtons, 500); 
-                        });
+                            'setInterval(manageInvisibleButtons, 500);' + 
+                        '});' +
 
-                    })();
-                </script>
-            `;
+                    '})();' +
+                '</script>';
             
             $('head').prepend(clientScript);
 

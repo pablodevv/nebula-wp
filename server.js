@@ -200,7 +200,7 @@ app.use(async (req, res) => {
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
                         const proxyPrefix = '/reading';
-                        const currentProxyHost = '${proxyHost}';
+                        const currentProxyHost = \`${proxyHost}\`;
                         const targetPagePath = '/pt/witch-power/wpGoal'; // A página onde você quer os botões invisíveis
 
                         // Funções de interceptação de Fetch, XHR e PostMessage

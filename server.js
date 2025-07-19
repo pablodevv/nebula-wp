@@ -328,20 +328,6 @@ app.get('/pt/witch-power/date', async (req, res) => {
     }
 });
 
-
-
-
-// --- Rota SPA para scanPreview ---
-// aceita /scanPreview, /scanPreview/, /scanPreview?x=1 ...
-app.get(/^\/pt\/witch-power\/scanPreview(\/.*)?$/, (req, res) => {
-  console.log('\n=== SERVINDO SPA scanPreview ===', req.url);
- res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
-
-
-
-
 // --- Proxy para a API principal (Mantido da versão anterior, se for usado) ---
 app.use('/api-proxy', async (req, res) => {
     const apiTargetUrl = `https://api.appnebula.co${req.url.replace('/api-proxy', '')}`;

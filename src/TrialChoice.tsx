@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 interface TrialChoiceProps {
   capturedText?: string;
+  onPriceSelect: (priceOption: { value: string; link: string }) => void;
 }
 
 interface QuizChoiceMessage {
@@ -9,7 +10,7 @@ interface QuizChoiceMessage {
   text: string;
 }
 
-const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText }) => {
+const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
   // Inicializa displayText com capturedText ou um valor padrão
   const [displayText, setDisplayText] = useState<string>(capturedText && capturedText.trim() ? capturedText : "explorar origens de vidas passadas");
@@ -65,16 +66,16 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText }) => {
     if (selectedPrice) {
       const selectedPriceData = prices.find(p => p.value === selectedPrice);
       if (selectedPriceData) {
-        window.location.href = selectedPriceData.link;
+        onPriceSelect(selectedPriceData);
       }
     }
   };
 
   const prices = [
-    { value: '$1', link: '/pt/witch-power/trial-1' },
-    { value: '$5', link: '/pt/witch-power/trial-5' },
-    { value: '$9', link: '/pt/witch-power/trial-9' },
-    { value: '$13.67', link: '/pt/witch-power/trial-13' }
+    { value: '$1', link: 'https://example.com/payment-1' },
+    { value: '$5', link: 'https://example.com/payment-5' },
+    { value: '$9', link: 'https://example.com/payment-9' },
+    { value: '$13.67', link: 'https://example.com/payment-13' }
   ];
 
   return (

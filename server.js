@@ -594,7 +594,7 @@ app.use(async (req, res) => {
                 'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
                 '};\n' +
 
-                // --- Lógica de Botões Invisíveis ---
+                // --- Lógica de Botões Invisíveis (CORRIGIDA com base na versão antiga) ---
                 'let buttonsInjected = false;' +
                 'const invisibleButtonsConfig = [' +
                 '{ id: \'btn-choice-1\', top: \'206px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Entender meu mapa astral\' },' +
@@ -605,77 +605,163 @@ app.use(async (req, res) => {
                 '{ id: \'btn-choice-6\', top: \'628px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Descobrir meus poderes ocultos\' }' +
                 '];' +
 
-                'function injectInvisibleButtons() {' +
-                'if (buttonsInjected) return;' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: Página wpGoal detectada! Tentando injetar botões invisíveis...\');' +
+                // FUNÇÃO CORRIGIDA baseada na versão antiga
+                'function manageInvisibleButtons() {' +
+                'const currentPagePath = window.location.pathname;' +
+                'const isTargetPage = currentPagePath === targetPagePath;' +
+                'console.log(\'[Monitor] URL atual: \' + currentPagePath + \'. Página alvo: \' + targetPagePath + \'. É a página alvo? \' + isTargetPage);' +
+
+                'if (isTargetPage && !buttonsInjected) {' +
+                'console.log(\'Página wpGoal detectada! Injetando botões invisíveis...\');' +
+                
                 'invisibleButtonsConfig.forEach(config => {' +
-                'const button = document.createElement(\'button\');' +
+                'const button = document.createElement(\'div\');' +
                 'button.id = config.id;' +
-                'button.style.cssText = `' +
-                'position: absolute;' +
-                'top: ${config.top};' +
-                'left: ${config.left};' +
-                'width: ${config.width};' +
-                'height: ${config.height};' +
-                'background: transparent;' +
-                'border: 2px solid red;' +
-                'cursor: pointer;' +
-                'z-index: 9999;' +
-                '`;' +
-                'button.addEventListener(\'click\', async (event) => {' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
-                // --- PARTE NOVA/ATUALIZADA: Envio da escolha para o servidor ---
+                'button.style.position = \'absolute\';' +
+                'button.style.top = config.top;' + 
+                'button.style.left = config.left;' + 
+                'button.style.width = config.width;' + 
+                'button.style.height = config.height;' + 
+                'button.style.zIndex = \'9999999\';' + 
+                'button.style.cursor = \'pointer\';' + 
+                'button.style.opacity = \'0\';' + 
+                'button.style.pointerEvents = \'auto\';' + 
+                'document.body.appendChild(button);' +
+                'console.log(\'✅ Botão invisível \\\'\' + config.id + \'\\\' injetado na página wpGoal!\');' +
+
+                // EVENT LISTENER CORRIGIDO da versão antiga
+                'button.addEventListener(\'click\', (event) => {' +
+                'console.log(\'🎉 Botão invisível \\\'\' + config.id + \'\\\' clicado na wpGoal!\');' +
+                'button.style.pointerEvents = \'none\';' + 
+                'const rect = button.getBoundingClientRect();' +
+                'const x = rect.left + rect.width / 2;' +
+                'const y = rect.top + rect.height / 2;' +
+                'const targetElement = document.elementFromPoint(x, y);' +
+
+                'if (targetElement) {' +
+                'console.log(\'Simulando clique no elemento original:\', targetElement);' +
+                'const clickEvent = new MouseEvent(\'click\', {' +
+                'view: window,' +
+                'bubbles: true,' +
+                'cancelable: true,' +
+                'clientX: x,' +
+                'clientY: y' +
+                '});' +
+                'targetElement.dispatchEvent(clickEvent);' +
+                'console.log(\'Cliques simulados em:\', targetElement);' +
+
+                // 1. Enviar escolha para o servidor
                 'try {' +
-                'await fetch(\'/api/set-selected-choice\', { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: JSON.stringify({ selectedText: config.text }) });' +
+                'fetch(\'/api/set-selected-choice\', { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: JSON.stringify({ selectedText: config.text }) });' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
                 '} catch (error) { console.error(\'CLIENT: INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error); }' +
-                // --- FIM PARTE NOVA/ATUALIZADA ---
-                'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' +
-                'const rect = button.getBoundingClientRect();' +
-                'const centerX = rect.left + rect.width / 2;' +
-                'const centerY = rect.top + rect.height / 2;' +
-                'const originalElement = document.elementFromPoint(centerX, centerY);' +
-                'if (originalElement) { console.log(`CLIENT: INJECTED SCRIPT: Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement); event.stopPropagation(); event.preventDefault(); originalElement.click(); }' +
-                'else { console.log(`CLIENT: INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`); }' +
-                'button.remove();' + // Remove o botão invisível após o clique
-                'buttonsInjected = false;' + // Reseta o estado
-                '});' +
-                'document.body.appendChild(button);' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
-                // FECHAMENTO DO FOREACH AQUI, COMO NO SEU CÓDIGO MAIS RECENTE
-                '});' + // Fechamento do forEach
-                'buttonsInjected = true;' +
-                '}' +
 
-                'function removeInvisibleButtons() {' +
-                'if (!buttonsInjected) return;' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: Saindo da página wpGoal. Removendo botões invisíveis...\');' +
+                // 2. Enviar dados para o React
+                'window.postMessage({' +
+                'type: \'QUIZ_CHOICE_SELECTED\',' +
+                'text: config.text' +
+                '}, window.location.origin);' + 
+                'console.log(\'Dados enviados para o React: \\\'\' + config.text + \'\\\'\');' +
+                '} else {' +
+                'console.warn(\'Nenhum elemento encontrado para simular clique nas coordenadas. O botão original não foi detectado.\');' +
+                '}' +
+                'button.remove();' + 
+                'console.log(\'🗑️ Botão invisível \\\'\' + config.id + \'\\\' removido após simulação de clique.\');' +
+                'buttonsInjected = false;' + 
+                '});' +
+                '});' +
+                'buttonsInjected = true;' + 
+                '} else if (!isTargetPage && buttonsInjected) {' +
+                'console.log(\'Saindo da página wpGoal. Removendo botões invisíveis...\');' +
                 'invisibleButtonsConfig.forEach(config => {' +
-                'const button = document.getElementById(config.id);' +
-                'if (button) { button.remove(); console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' removido.`); }' +
+                'const buttonElement = document.getElementById(config.id);' +
+                'if (buttonElement) {' +
+                'buttonElement.remove();' +
+                'console.log(\'🗑️ Botão invisível \\\'\' + config.id + \'\\\' removido.\');' +
+                '}' +
                 '});' +
-                'buttonsInjected = false;' +
+                'buttonsInjected = false;' + 
+                '}' +
                 '}' +
 
-                'function monitorUrlChanges() {' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: monitorUrlChanges called.\');' +
-                'const currentUrl = window.location.pathname;' +
-                'const isTargetPage = currentUrl === targetPagePath;' +
-                'console.log(`CLIENT: INJECTED SCRIPT: [Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
-                'if (isTargetPage) { injectInvisibleButtons(); } else { removeInvisibleButtons(); }' +
-                '}' +
-
-                'console.log(\'CLIENT: INJECTED SCRIPT: Adding DOMContentLoaded listener.\');' +
-                'document.addEventListener(\'DOMContentLoaded\', () => { console.log(\'CLIENT: INJECTED SCRIPT: DOMContentLoaded fired.\'); monitorUrlChanges(); });' +
-                'window.addEventListener(\'popstate\', monitorUrlChanges);' +
-                'const originalPushState = history.pushState;' +
-                'history.pushState = function() { originalPushState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.pushState detected.\'); monitorUrlChanges(); };' +
-                'const originalReplaceState = history.replaceState;' +
-                'history.replaceState = function() { originalReplaceState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.replaceState detected.\'); monitorUrlChanges(); };' +
+                // INICIALIZAÇÃO CORRIGIDA da versão antiga
+                'document.addEventListener(\'DOMContentLoaded\', function() {' +
+                'console.log(\'Script de injeção de proxy carregado no cliente.\');' +
+                'manageInvisibleButtons();' +
+                'setInterval(manageInvisibleButtons, 500);' + 
+                '});' +
                 '})();' +
                 '</script>';
 
             $('head').prepend(clientScript);
+
+            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/email (da versão antiga) ---
+            $('head').append(
+                '<script>' +
+                'console.log(\'CLIENT-SIDE REDIRECT SCRIPT: Initializing.\');' +
+                'let redirectCheckInterval;' +
+                'function handleEmailRedirect() {' +
+                'const currentPath = window.location.pathname;' +
+                'if (currentPath.startsWith(\'/pt/witch-power/email\')) {' +
+                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. Forçando redirecionamento para /pt/witch-power/onboarding\');' +
+                'if (redirectCheckInterval) {' +
+                'clearInterval(redirectCheckInterval);' +
+                '}' +
+                'window.location.replace(\'/pt/witch-power/onboarding\');' +
+                '}' +
+                '}' +
+                'document.addEventListener(\'DOMContentLoaded\', handleEmailRedirect);' +
+                'window.addEventListener(\'popstate\', handleEmailRedirect);' +
+                'redirectCheckInterval = setInterval(handleEmailRedirect, 100);' +
+                'window.addEventListener(\'beforeunload\', () => {' +
+                'if (redirectCheckInterval) {' +
+                'clearInterval(redirectCheckInterval);' +
+                '}' +
+                '});' +
+                'handleEmailRedirect();' +
+                '</script>'
+            );
+
+            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice (da versão antiga) ---
+            $('head').append(
+                '<script>' +
+                'console.log(\'CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.\');' +
+                'let trialChoiceRedirectInterval;' +
+                'function handleTrialChoiceRedirect() {' +
+                'const currentPath = window.location.pathname;' +
+                'if (currentPath === \'/pt/witch-power/trialChoice\') {' +
+                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/trialChoice detectada. Forçando reload para interceptação do servidor.\');' +
+                'if (trialChoiceRedirectInterval) {' +
+                'clearInterval(trialChoiceRedirectInterval);' +
+                '}' +
+                'window.location.reload();' +
+                '}' +
+                '}' +
+                'document.addEventListener(\'DOMContentLoaded\', handleTrialChoiceRedirect);' +
+                'window.addEventListener(\'popstate\', handleTrialChoiceRedirect);' +
+                'trialChoiceRedirectInterval = setInterval(handleTrialChoiceRedirect, 200);' +
+                'if (window.MutationObserver && document.body) {' +
+                'const observer = new MutationObserver(function(mutations) {' +
+                'mutations.forEach(function(mutation) {' +
+                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
+                'setTimeout(handleTrialChoiceRedirect, 50);' +
+                '}' +
+                '});' +
+                '});' +
+                'observer.observe(document.body, {' +
+                'childList: true,' +
+                'subtree: true' +
+                '});' +
+                '}' +
+                'window.addEventListener(\'beforeunload\', () => {' +
+                'if (trialChoiceRedirectInterval) {' +
+                'clearInterval(trialChoiceRedirectInterval);' +
+                '}' +
+                '});' +
+                'handleTrialChoiceRedirect();' +
+                '</script>'
+            );
+
             console.log('SERVER: Script de cliente injetado no <head>.'); // Log no servidor
 
             html = $.html().replace(CONVERSION_PATTERN, (match, p1) => {

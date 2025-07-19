@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Menu } from 'lucide-react';
 
-function App() {
+function Date() {
   const [birthDate, setBirthDate] = useState('');
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,7 +20,8 @@ function App() {
 
   const handleContinue = () => {
     if (birthDate.length === 10) {
-      alert(`Data selecionada: ${birthDate}`);
+      // Redireciona para scanPreview
+      window.location.href = '/pt/witch-power/scanPreview';
     } else {
       alert('Por favor, digite uma data válida no formato DD/MM/AAAA');
     }
@@ -139,4 +140,4 @@ function App() {
   );
 }
 
-export default App;
+export default Date;

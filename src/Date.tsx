@@ -21,8 +21,8 @@ function Date() {
   const handleContinue = () => {
     if (birthDate.length === 10) {
       console.log('📅 Date.tsx: Redirecionando para scanPreview com data:', birthDate);
-      // Redireciona para scanPreview mantendo no proxy (URL relativa)
-      window.location.href = '/pt/witch-power/scanPreview';
+      // Redireciona para scanPreview mantendo no proxy (URL absoluta)
+      window.location.href = `${window.location.origin}/pt/witch-power/scanPreview`;
     } else {
       alert('Por favor, digite uma data válida no formato DD/MM/AAAA');
     }

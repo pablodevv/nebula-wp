@@ -20,12 +20,15 @@ function Date() {
 
   const handleContinue = () => {
     if (birthDate.length === 10) {
+      console.log('📅 Date.tsx: Redirecionando para scanPreview com data:', birthDate);
       // Redireciona para scanPreview
       window.location.href = '/pt/witch-power/scanPreview';
     } else {
       alert('Por favor, digite uma data válida no formato DD/MM/AAAA');
     }
   };
+
+  console.log('🏗️ Date.tsx: Componente renderizando');
 
   return (
     <div className="min-h-screen bg-white flex flex-col max-w-sm mx-auto relative overflow-hidden">

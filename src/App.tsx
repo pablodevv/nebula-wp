@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TrialChoice from './TrialChoice';
 import TrialPaymentAncestral from './TrialPaymentAncestral';
+import Date from './Date';
 import './TrialChoice.css';
 
 interface PriceOption {
@@ -12,10 +13,23 @@ function App() {
   const [capturedText, setCapturedText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState<'trial' | 'payment'>('trial');
+  const [currentPage, setCurrentPage] = useState<'trial' | 'payment' | 'date'>('trial');
   const [selectedPrice, setSelectedPrice] = useState<PriceOption | null>(null);
 
+  // Detectar se estamos na rota /date
   useEffect(() => {
+    const currentPath = window.location.pathname;
+    if (currentPath === '/pt/witch-power/date') {
+      setCurrentPage('date');
+      setLoading(false);
+      return;
+    }
+  }, []);
+
+  useEffect(() => {
+    // Só buscar texto capturado se não estivermos na página de data
+    if (currentPage === 'date') return;
+    
     const fetchCapturedText = async () => {
       try {
         console.log('🚀 React: Iniciando busca por texto capturado...');
@@ -48,7 +62,7 @@ function App() {
     };
 
     fetchCapturedText();
-  }, []);
+  }, [currentPage]);
 
   const handlePriceSelection = (priceOption: PriceOption) => {
     setSelectedPrice(priceOption);
@@ -58,6 +72,11 @@ function App() {
   const handleBackToTrial = () => {
     setCurrentPage('trial');
   };
+
+  // Se estivermos na página de data, mostrar diretamente
+  if (currentPage === 'date') {
+    return <Date />;
+  }
 
   if (loading) {
     return (

@@ -296,7 +296,6 @@ async function captureTextDirectly() {
 }
 // --- FIM PARTE NOVA/ATUALIZADA ---
 
-
 // --- Rota específica para a página customizada de trialChoice (Seu React App) ---
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
@@ -304,7 +303,7 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('URL acessada:', req.url);
 
     try {
-        console.log('✅ Servindo página React customizada...\n');
+        console.log('✅ Servindo página React customizada (trialChoice)...\n');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 
     } catch (error) {
@@ -326,6 +325,23 @@ app.get('/pt/witch-power/date', async (req, res) => {
     } catch (error) {
         console.error('\n❌ ERRO CRÍTICO ao servir date:', error.message);
         res.status(500).send('Erro ao carregar a página de data.');
+    }
+});
+
+// --- Rota adicional para scanPreview (para onde o Date redireciona) ---
+app.get('/pt/witch-power/scanPreview', async (req, res) => {
+    console.log('\n=== INTERCEPTANDO SCANPREVIEW ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('URL acessada:', req.url);
+
+    try {
+        console.log('✅ Redirecionando scanPreview para o site original...');
+        // Redireciona para o site original
+        res.redirect(302, `${MAIN_TARGET_URL}${req.url}`);
+
+    } catch (error) {
+        console.error('\n❌ ERRO CRÍTICO ao redirecionar scanPreview:', error.message);
+        res.status(500).send('Erro ao redirecionar para scanPreview.');
     }
 });
 

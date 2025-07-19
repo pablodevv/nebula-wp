@@ -501,6 +501,10 @@ app.use(async (req, res) => {
                     console.log('SERVER: Interceptando redirecionamento para /wpGoal. Redirecionando para /pt/witch-power/trialChoice.');
                     return res.redirect(302, '/pt/witch-power/trialChoice');
                 }
+                if (fullRedirectUrl.includes('/pt/witch-power/date')) {
+                    console.log('SERVER: Interceptando redirecionamento para /date. Redirecionando para /pt/witch-power/date.');
+                    return res.redirect(302, '/pt/witch-power/date');
+                }
 
                 let proxiedRedirectPath = fullRedirectUrl;
                 if (proxiedRedirectPath.startsWith(MAIN_TARGET_URL)) {
@@ -794,6 +798,45 @@ app.use(async (req, res) => {
                 '</script>'
             );
 
+            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/date ---
+            $('head').append(
+                '<script>' +
+                'console.log(\'CLIENT-SIDE DATE REDIRECT SCRIPT: Initializing.\');' +
+                'let dateRedirectInterval;' +
+                'function handleDateRedirect() {' +
+                'const currentPath = window.location.pathname;' +
+                'if (currentPath === \'/pt/witch-power/date\') {' +
+                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/date detectada. Forçando reload para interceptação do servidor.\');' +
+                'if (dateRedirectInterval) {' +
+                'clearInterval(dateRedirectInterval);' +
+                '}' +
+                'window.location.reload();' +
+                '}' +
+                '}' +
+                'document.addEventListener(\'DOMContentLoaded\', handleDateRedirect);' +
+                'window.addEventListener(\'popstate\', handleDateRedirect);' +
+                'dateRedirectInterval = setInterval(handleDateRedirect, 200);' +
+                'if (window.MutationObserver && document.body) {' +
+                'const observer = new MutationObserver(function(mutations) {' +
+                'mutations.forEach(function(mutation) {' +
+                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
+                'setTimeout(handleDateRedirect, 50);' +
+                '}' +
+                '});' +
+                '});' +
+                'observer.observe(document.body, {' +
+                'childList: true,' +
+                'subtree: true' +
+                '});' +
+                '}' +
+                'window.addEventListener(\'beforeunload\', () => {' +
+                'if (dateRedirectInterval) {' +
+                'clearInterval(dateRedirectInterval);' +
+                '}' +
+                '});' +
+                'handleDateRedirect();' +
+                '</script>'
+            );
             console.log('SERVER: Script de cliente injetado no <head>.'); // Log no servidor
 
             html = $.html().replace(CONVERSION_PATTERN, (match, p1) => {

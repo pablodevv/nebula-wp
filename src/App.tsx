@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
-
 import TrialChoice from './TrialChoice';
-
+import TrialPaymentAncestral from './TrialPaymentAncestral';
 import './TrialChoice.css';
+
+interface PriceOption {
+  value: string;
+  link: string;
+}
 
 function App() {
   const [capturedText, setCapturedText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<'trial' | 'payment'>('trial');
+  const [selectedPrice, setSelectedPrice] = useState<PriceOption | null>(null);
 
   useEffect(() => {
     const fetchCapturedText = async () => {
@@ -44,6 +50,15 @@ function App() {
     fetchCapturedText();
   }, []);
 
+  const handlePriceSelection = (priceOption: PriceOption) => {
+    setSelectedPrice(priceOption);
+    setCurrentPage('payment');
+  };
+
+  const handleBackToTrial = () => {
+    setCurrentPage('trial');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -67,7 +82,18 @@ function App() {
           </div>
         </div>
       )}
-      <TrialChoice capturedText={capturedText} />
+      
+      {currentPage === 'trial' ? (
+        <TrialChoice 
+          capturedText={capturedText} 
+          onPriceSelect={handlePriceSelection}
+        />
+      ) : (
+        <TrialPaymentAncestral 
+          selectedPrice={selectedPrice}
+          onBack={handleBackToTrial}
+        />
+      )}
     </div>
   );
 }

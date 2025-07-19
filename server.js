@@ -313,6 +313,22 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     }
 });
 
+// --- Rota específica para a página de data de nascimento ---
+app.get('/pt/witch-power/date', async (req, res) => {
+    console.log('\n=== INTERCEPTANDO DATE ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('URL acessada:', req.url);
+
+    try {
+        console.log('✅ Servindo página React customizada (Date)...\n');
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+
+    } catch (error) {
+        console.error('\n❌ ERRO CRÍTICO ao servir date:', error.message);
+        res.status(500).send('Erro ao carregar a página de data.');
+    }
+});
+
 // --- Proxy para a API principal (Mantido da versão anterior, se for usado) ---
 app.use('/api-proxy', async (req, res) => {
     const apiTargetUrl = `https://api.appnebula.co${req.url.replace('/api-proxy', '')}`;

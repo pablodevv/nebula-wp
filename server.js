@@ -333,11 +333,14 @@ app.get('/pt/witch-power/scanPreview', async (req, res) => {
     console.log('\n=== INTERCEPTANDO SCANPREVIEW ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
+    console.log('Query params:', req.query);
+    console.log('Headers:', req.headers);
 
     try {
-        console.log('✅ Redirecionando scanPreview para o site original...');
-        // Redireciona para o site original
-        res.redirect(302, `${MAIN_TARGET_URL}${req.url}`);
+        console.log('✅ INTERCEPTADO: scanPreview - Redirecionando para o site original...');
+        const targetUrl = `${MAIN_TARGET_URL}${req.url}`;
+        console.log('🎯 Redirecionando para:', targetUrl);
+        res.redirect(302, targetUrl);
 
     } catch (error) {
         console.error('\n❌ ERRO CRÍTICO ao redirecionar scanPreview:', error.message);

@@ -328,25 +328,19 @@ app.get('/pt/witch-power/date', async (req, res) => {
     }
 });
 
-// --- Rota adicional para scanPreview (para onde o Date redireciona) ---
-app.get('/pt/witch-power/scanPreview', async (req, res) => {
-    console.log('\n=== INTERCEPTANDO SCANPREVIEW ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('URL acessada:', req.url);
-    console.log('Query params:', req.query);
-    console.log('Headers:', req.headers);
 
-    try {
-        console.log('✅ INTERCEPTADO: scanPreview - Redirecionando para o site original...');
-        const targetUrl = `${MAIN_TARGET_URL}${req.url}`;
-        console.log('🎯 Redirecionando para:', targetUrl);
-        res.redirect(302, targetUrl);
 
-    } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO ao redirecionar scanPreview:', error.message);
-        res.status(500).send('Erro ao redirecionar para scanPreview.');
-    }
+
+// --- Rota SPA para scanPreview ---
+// aceita /scanPreview, /scanPreview/, /scanPreview?x=1 ...
+app.get(/^\/pt\/witch-power\/scanPreview(\/.*)?$/, (req, res) => {
+  console.log('\n=== SERVINDO SPA scanPreview ===', req.url);
+ res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
+
+
+
 
 // --- Proxy para a API principal (Mantido da versão anterior, se for usado) ---
 app.use('/api-proxy', async (req, res) => {

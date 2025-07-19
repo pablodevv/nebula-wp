@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Book, MessageCircle, Shield, Lock } from 'lucide-react';
 
-const TrialPaymentAncestral: React.FC = () => {
+interface TrialPaymentAncestralProps {
+  selectedPrice?: { value: string; link: string } | null;
+  onBack?: () => void;
+}
+
+const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({ 
+  selectedPrice, 
+  onBack 
+}) => {
   const [timeLeft, setTimeLeft] = useState({ minutes: 0, seconds: 11 });
+
+  // Determina o preço a ser exibido
+  const displayPrice = selectedPrice?.value || '$13.67';
+  const paymentLink = selectedPrice?.link || 'https://example.com/payment-13';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -19,6 +31,11 @@ const TrialPaymentAncestral: React.FC = () => {
 
     return () => clearInterval(timer);
   }, []);
+
+  const handlePayment = () => {
+    // Redireciona para o link externo específico do preço selecionado
+    window.location.href = paymentLink;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,7 +63,10 @@ const TrialPaymentAncestral: React.FC = () => {
             </div>
           </div>
         </div>
-        <button className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg font-medium text-sm">
+        <button 
+          className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg font-medium text-sm"
+          onClick={handlePayment}
+        >
           OBTER MINHA<br />LEITURA
         </button>
       </div>
@@ -111,11 +131,11 @@ const TrialPaymentAncestral: React.FC = () => {
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xl font-bold text-black">Leitura personalizada para</span>
-              <span className="text-2xl font-bold text-purple-600">$13.67</span>
+              <span className="text-2xl font-bold text-purple-600">{displayPrice}</span>
             </div>
             <div className="flex justify-between items-center text-lg">
               <span className="text-gray-700">Total hoje:</span>
-              <span className="font-bold text-black">$13.67</span>
+              <span className="font-bold text-black">{displayPrice}</span>
             </div>
           </div>
         </div>
@@ -127,13 +147,16 @@ const TrialPaymentAncestral: React.FC = () => {
         </div>
 
         {/* CTA Button */}
-        <button className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-4 rounded-xl font-bold text-lg">
+        <button 
+          className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-4 rounded-xl font-bold text-lg"
+          onClick={handlePayment}
+        >
           OBTER MINHA LEITURA
         </button>
 
         {/* Legal Text */}
         <div className="text-center text-xs text-gray-600 leading-relaxed">
-          You are enrolling in monthly subscription to NEBULA service. By continuing you agree that if you don't cancel prior to the end of the 7-day trial for the $13.67 you will automatically be charged $45 every 30 days until you cancel in settings. The charge will appear on your bill as appnebula.co. Learn more about cancellation and refund policy in{' '}
+          You are enrolling in monthly subscription to NEBULA service. By continuing you agree that if you don't cancel prior to the end of the 7-day trial for the {displayPrice} you will automatically be charged $45 every 30 days until you cancel in settings. The charge will appear on your bill as appnebula.co. Learn more about cancellation and refund policy in{' '}
           <a href="#" className="text-purple-600 underline">Subscription policy</a>.
         </div>
 
@@ -404,105 +427,113 @@ const TrialPaymentAncestral: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Media Logos Section */}
-      <div className="pt-8">
-        <h2 className="text-2xl font-bold text-black mb-6 text-center">
-          Destaque no
-        </h2>
-        
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          {/* Row 1 */}
-          <div className="flex justify-center">
-            <div className="text-black font-serif text-lg font-bold" style={{fontFamily: 'Old English Text MT, serif'}}>
-              The New York Times
-            </div>
-          </div>
-          <div className="flex justify-center">
-            <div className="text-black font-bold text-xl">
-              Lifewire
-            </div>
-          </div>
-          
-          {/* Row 2 */}
-          <div className="flex justify-center items-center">
-            <div className="flex items-center">
-              <div className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center mr-2">
-                <span className="text-black font-bold text-sm">R</span>
+          {/* Media Logos Section */}
+          <div className="pt-8">
+            <h2 className="text-2xl font-bold text-black mb-6 text-center">
+              Destaque no
+            </h2>
+            
+            <div className="grid grid-cols-2 gap-6 mb-8">
+              {/* Row 1 */}
+              <div className="flex justify-center">
+                <div className="text-black font-serif text-lg font-bold" style={{fontFamily: 'Old English Text MT, serif'}}>
+                  The New York Times
+                </div>
               </div>
-              <span className="text-black font-bold text-lg">REFINERY29</span>
+              <div className="flex justify-center">
+                <div className="text-black font-bold text-xl">
+                  Lifewire
+                </div>
+              </div>
+              
+              {/* Row 2 */}
+              <div className="flex justify-center items-center">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center mr-2">
+                    <span className="text-black font-bold text-sm">R</span>
+                  </div>
+                  <span className="text-black font-bold text-lg">REFINERY29</span>
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <div className="text-black font-bold text-xl">
+                  Bustle
+                </div>
+              </div>
+              
+              {/* Row 3 */}
+              <div className="flex justify-center col-span-2">
+                <div className="text-black font-light text-xl tracking-widest">
+                  WELL+GOOD
+                </div>
+              </div>
+              
+              {/* Row 4 */}
+              <div className="flex justify-center">
+                <div className="text-black font-bold text-lg">
+                  URBAN<br/>LIST
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <div className="text-black font-bold text-xl">
+                  Beebom
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <div className="text-pink-400 font-bold text-xl">
+                  HYPEBAE
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex justify-center">
-            <div className="text-black font-bold text-xl">
-              Bustle
-            </div>
-          </div>
-          
-          {/* Row 3 */}
-          <div className="flex justify-center col-span-2">
-            <div className="text-black font-light text-xl tracking-widest">
-              WELL+GOOD
-            </div>
-          </div>
-          
-          {/* Row 4 */}
-          <div className="flex justify-center">
-            <div className="text-black font-bold text-lg">
-              URBAN<br/>LIST
-            </div>
-          </div>
-          <div className="flex justify-center">
-            <div className="text-black font-bold text-xl">
-              Beebom
-            </div>
-          </div>
-          <div className="flex justify-center">
-            <div className="text-pink-400 font-bold text-xl">
-              HYPEBAE
-            </div>
-          </div>
-        </div>
 
-        {/* Money Back Guarantee */}
-        <div className="bg-purple-50 rounded-2xl p-6 mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
+            {/* Money Back Guarantee */}
+            <div className="bg-purple-50 rounded-2xl p-6 mb-8">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+              
+              <h3 className="text-2xl font-bold text-black text-center mb-4">
+                Garantia de reembolso
+              </h3>
+              
+              <p className="text-gray-700 text-center leading-relaxed">
+                Estamos certos de que este relatório vai 
+                ajudar você a entender melhor seu parceiro e 
+                sugerir formas de melhorar seu 
+                relacionamento. Com muitas avaliações 
+                excelentes de clientes, estamos prontos para 
+                devolver seu dinheiro caso você sinta que o 
+                relatório não trouxe valor algum.
+              </p>
+            </div>
+
+            {/* Address */}
+            <div className="text-center text-gray-600 text-sm mb-6">
+              500 N RAINBOW BLVD LAS VEGAS, NV 89107
             </div>
           </div>
-          
-          <h3 className="text-2xl font-bold text-black text-center mb-4">
-            Garantia de reembolso
-          </h3>
-          
-          <p className="text-gray-700 text-center leading-relaxed">
-            Estamos certos de que este relatório vai 
-            ajudar você a entender melhor seu parceiro e 
-            sugerir formas de melhorar seu 
-            relacionamento. Com muitas avaliações 
-            excelentes de clientes, estamos prontos para 
-            devolver seu dinheiro caso você sinta que o 
-            relatório não trouxe valor algum.
-          </p>
-        </div>
-
-        {/* Address */}
-        <div className="text-center text-gray-600 text-sm mb-6">
-          500 N RAINBOW BLVD LAS VEGAS, NV 89107
         </div>
       </div>
 
       {/* Footer */}
       <div className="text-center py-6 text-gray-500 text-sm">
         🔒 appnebula.co
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="block mx-auto mt-4 text-purple-600 underline text-sm"
+          >
+            ← Voltar para seleção de preços
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-export default TrialPaymentAncestral;</parameter>
+export default TrialPaymentAncestral;

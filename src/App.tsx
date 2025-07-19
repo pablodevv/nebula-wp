@@ -19,16 +19,27 @@ function App() {
   // Detectar se estamos na rota /date
   useEffect(() => {
     const currentPath = window.location.pathname;
+    console.log('🔍 App.tsx: Detectando rota atual:', currentPath);
+    
     if (currentPath === '/pt/witch-power/date') {
+      console.log('✅ App.tsx: Rota /date detectada, carregando componente Date');
       setCurrentPage('date');
       setLoading(false);
       return;
+    }
+    
+    if (currentPath === '/pt/witch-power/trialChoice') {
+      console.log('✅ App.tsx: Rota /trialChoice detectada');
+      setCurrentPage('trial');
     }
   }, []);
 
   useEffect(() => {
     // Só buscar texto capturado se não estivermos na página de data
-    if (currentPage === 'date') return;
+    if (currentPage === 'date') {
+      console.log('⏭️ App.tsx: Página de data ativa, não buscando texto capturado');
+      return;
+    }
     
     const fetchCapturedText = async () => {
       try {
@@ -75,6 +86,7 @@ function App() {
 
   // Se estivermos na página de data, mostrar diretamente
   if (currentPage === 'date') {
+    console.log('📱 App.tsx: Renderizando componente Date');
     return <Date />;
   }
 

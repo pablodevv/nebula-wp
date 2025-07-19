@@ -21,11 +21,9 @@ const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
 // Variável para armazenar o texto capturado E A ESCOLHA DO USUÁRIO
-// --- PARTE NOVA/ATUALIZADA: Variáveis para captura de texto e escolha ---
 let capturedBoldText = 'identificar seu arquétipo de bruxa'; // Valor padrão
 let lastCaptureTime = Date.now();
 let isCapturing = false;
-// --- FIM PARTE NOVA/ATUALIZADA ---
 
 // Configuração para Axios ignorar SSL para domínios específicos (apenas para desenvolvimento/ambientes problemáticos)
 const agent = new https.Agent({
@@ -46,8 +44,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// --- PARTE NOVA/ATUALIZADA: Endpoints para captura e definição da escolha ---
-// API endpoint para obter o texto capturado (para o React App)
+// --- API endpoint para obter o texto capturado (para o React App) ---
 app.get('/api/captured-text', async (req, res) => {
     console.log('📡 API /api/captured-text chamada');
 
@@ -68,7 +65,7 @@ app.get('/api/captured-text', async (req, res) => {
     });
 });
 
-// NOVO endpoint para receber a escolha do usuário
+// --- NOVO endpoint para receber a escolha do usuário ---
 app.post('/api/set-selected-choice', (req, res) => {
     const { selectedText } = req.body;
     if (selectedText) {
@@ -81,7 +78,7 @@ app.post('/api/set-selected-choice', (req, res) => {
     }
 });
 
-// Funções para Extração e Captura de Texto
+// --- Funções para Extração e Captura de Texto ---
 function extractTextFromHTML(html) {
     console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
 
@@ -294,8 +291,6 @@ async function captureTextDirectly() {
         console.log('🏁 Captura finalizada\n');
     }
 }
-// --- FIM PARTE NOVA/ATUALIZADA ---
-
 
 // --- Rota específica para a página customizada de trialChoice (Seu React App) ---
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
@@ -532,14 +527,11 @@ app.use(async (req, res) => {
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
                     if (originalUrl) {
-                        if (originalUrl.startsWith('/')) { // Simplificado para todas as URLs relativas
-                            // No proxy, URLs relativas já serão tratadas pelo próprio proxy.
-                            // Mas para garantir, podemos reescrever as que apontam para o domínio principal.
+                        if (originalUrl.startsWith('/')) {
                             if (originalUrl.startsWith('/pt/witch-power/')) {
                                 // Deixa essas como estão, o proxy já as manipula.
                             } else {
-                                // Se for uma URL raiz que não é do quiz, pode precisar de tratamento mais genérico.
-                                // Por agora, se for apenas '/', '/' ou '/favicon.ico' etc., deixamos.
+                                // Pode precisar de tratamento mais genérico.
                             }
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
                             element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
@@ -618,27 +610,31 @@ app.use(async (req, res) => {
                 'width: ${config.width};' +
                 'height: ${config.height};' +
                 'background: transparent;' +
-                'border: 2px solid red;' +
+                'border: 2px solid red;' + // Mantenha a borda para depuração, ou mude para 'none' para invisibilidade total
                 'cursor: pointer;' +
                 'z-index: 9999;' +
                 '`;' +
                 'button.addEventListener(\'click\', async (event) => {' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
-                // --- PARTE NOVA/ATUALIZADA: Envio da escolha para o servidor ---
                 'try {' +
                 'await fetch(\'/api/set-selected-choice\', { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: JSON.stringify({ selectedText: config.text }) });' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
                 '} catch (error) { console.error(\'CLIENT: INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error); }' +
-                // --- FIM PARTE NOVA/ATUALIZADA ---
                 'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' +
                 'const rect = button.getBoundingClientRect();' +
                 'const centerX = rect.left + rect.width / 2;' +
                 'const centerY = rect.top + rect.height / 2;' +
                 'const originalElement = document.elementFromPoint(centerX, centerY);' +
-                'if (originalElement) { console.log(`CLIENT: INJECTED SCRIPT: Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement); event.stopPropagation(); event.preventDefault(); originalElement.click(); }' +
-                'else { console.log(`CLIENT: INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`); }' +
-                'button.remove();' + // Remove o botão invisível após o clique
-                'buttonsInjected = false;' + // Reseta o estado
+                'if (originalElement) { ' +
+                'console.log(`CLIENT: INJECTED SCRIPT: Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
+                'event.stopPropagation();' +
+                'event.preventDefault();' +
+                'originalElement.click();' +
+                '} else { ' +
+                'console.log(`CLIENT: INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`); ' +
+                '}' +
+                // Remove TODOS os botões invisíveis após o clique
+                'removeInvisibleButtons();' +
                 '});' +
                 'document.body.appendChild(button);' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
@@ -648,7 +644,7 @@ app.use(async (req, res) => {
 
                 'function removeInvisibleButtons() {' +
                 'if (!buttonsInjected) return;' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: Saindo da página wpGoal. Removendo botões invisíveis...\');' +
+                'console.log(\'CLIENT: INJECTED SCRIPT: Removendo todos os botões invisíveis...\');' +
                 'invisibleButtonsConfig.forEach(config => {' +
                 'const button = document.getElementById(config.id);' +
                 'if (button) { button.remove(); console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' removido.`); }' +
@@ -671,6 +667,21 @@ app.use(async (req, res) => {
                 'history.pushState = function() { originalPushState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.pushState detected.\'); monitorUrlChanges(); };' +
                 'const originalReplaceState = history.replaceState;' +
                 'history.replaceState = function() { originalReplaceState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.replaceState detected.\'); monitorUrlChanges(); };' +
+                // Adicione este listener para garantir que os botões sejam removidos em navegações SPA
+                'window.addEventListener(\'hashchange\', monitorUrlChanges);' +
+                'window.addEventListener(\'locationchange\', monitorUrlChanges);' + // Evento customizado se necessário, ou usar MutationObserver
+                '// Um MutationObserver pode ser útil para SPAs que não disparam popstate/pushstate para todas as mudanças de rota.' +
+                'const observer = new MutationObserver((mutations) => {' +
+                'mutations.forEach((mutation) => {' +
+                'if (mutation.type === \'childList\' || mutation.type === \'subtree\') {' +
+                'if (window.location.pathname !== targetPagePath && buttonsInjected) {' +
+                'console.log(\'CLIENT: INJECTED SCRIPT: MutationObserver detectou mudança de URL fora da página alvo. Removendo botões.\');' +
+                'removeInvisibleButtons();' +
+                '}' +
+                '}' +
+                '});' +
+                '});' +
+                'observer.observe(document.body, { childList: true, subtree: true });' +
                 '})();' +
                 '</script>';
 
@@ -705,6 +716,4 @@ app.use(async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor proxy rodando na porta ${PORT}`);
     console.log(`Acessível em: http://localhost:${PORT}`);
-    // Opcional: Iniciar a captura de texto automaticamente ao iniciar o servidor
-    // captureTextDirectly();
 });

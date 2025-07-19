@@ -80,7 +80,6 @@ app.post('/api/set-selected-choice', (req, res) => {
 
 // --- Funções para Extração e Captura de Texto ---
 function extractTextFromHTML(html) {
-    // ... (mesma lógica de extractTextFromHTML) ...
     console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
 
     try {
@@ -186,7 +185,6 @@ function extractTextFromHTML(html) {
 }
 
 async function captureTextDirectly() {
-    // ... (mesma lógica de captureTextDirectly) ...
     if (isCapturing) {
         console.log('⏳ Captura já em andamento...');
         return capturedBoldText;
@@ -203,9 +201,6 @@ async function captureTextDirectly() {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-                // Removendo 'Accept-Encoding' para que o Axios não tente decodificar automaticamente,
-                // vamos fazer isso manualmente para evitar problemas.
-                // 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
                 'Cache-Control': 'no-cache',
@@ -228,7 +223,7 @@ async function captureTextDirectly() {
             responseData = zlib.inflateSync(responseData);
         } else if (contentEncoding === 'br') {
             console.log('📦 Descomprimindo resposta brotli...');
-            responseData = zlib.brotliDecompressSync(responseData); // Requires Node.js 11.7.0+
+            responseData = zlib.brotliDecompressSync(responseData);
         }
         
         const html = responseData.toString('utf8');
@@ -296,7 +291,6 @@ async function captureTextDirectly() {
 
 // --- Rota específica para a página customizada de trialChoice (Seu React App) ---
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
-    // ... (mesma lógica) ...
     console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
@@ -306,14 +300,13 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 
     } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO ao servir trialChoice:', error.message);
+    console.error('\n❌ ERRO CRÍTICO ao servir trialChoice:', error.message);
         res.status(500).send('Erro ao carregar a página customizada.');
     }
 });
 
 // --- Proxy para a API principal (Mantido da versão anterior, se for usado) ---
 app.use('/api-proxy', async (req, res) => {
-    // ... (mesma lógica de proxy da API) ...
     const apiTargetUrl = `https://api.appnebula.co${req.url.replace('/api-proxy', '')}`;
     console.log(`[API PROXY] Requisição: ${req.url} -> Proxy para: ${apiTargetUrl}`);
 
@@ -378,7 +371,7 @@ app.use(async (req, res) => {
     delete requestHeaders['host'];
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
-    delete requestHeaders['accept-encoding']; // Removido para forçar descompressão manual
+    delete requestHeaders['accept-encoding'];
 
     if (req.url.startsWith('/reading/')) {
         targetDomain = READING_SUBDOMAIN_TARGET;
@@ -414,7 +407,7 @@ app.use(async (req, res) => {
             url: targetUrl,
             headers: requestHeaders,
             data: requestData,
-            responseType: 'arraybuffer', // Receber como buffer para descompressão manual
+            responseType: 'arraybuffer',
             maxRedirects: 0,
             validateStatus: function (status) {
                 return status >= 200 && status < 400;
@@ -530,14 +523,11 @@ app.use(async (req, res) => {
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
                     if (originalUrl) {
-                        if (originalUrl.startsWith('/')) { // Simplificado para todas as URLs relativas
-                            // No proxy, URLs relativas já serão tratadas pelo próprio proxy.
-                            // Mas para garantir, podemos reescrever as que apontam para o domínio principal.
+                        if (originalUrl.startsWith('/')) {
                             if (originalUrl.startsWith('/pt/witch-power/')) {
-                                // Deixa essas como estão, o proxy já as manipula.
+                                // Deixa como está, o proxy já as manipula
                             } else {
-                                // Se for uma URL raiz que não é do quiz, pode precisar de tratamento mais genérico.
-                                // Por agora, se for apenas '/', '/' ou '/favicon.ico' etc., deixamos.
+                                // Deixar outras URLs relativas como estão para serem resolvidas pelo proxy
                             }
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
                             element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
@@ -560,7 +550,6 @@ app.use(async (req, res) => {
                 'const currentProxyHost = \'' + currentProxyHost + '\';' +
                 'const targetPagePath = \'/pt/witch-power/wpGoal\';' +
 
-                // Interceptação de Fetch, XHR, PostMessage (sem alterações aqui, mantendo a lógica de reescrita de URLs)
                 'const originalFetch = window.fetch;' +
                 'window.fetch = function(input, init) {' +
                 'let url = input;' +
@@ -592,7 +581,6 @@ app.use(async (req, res) => {
                 'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
                 '};' +
 
-                // --- Lógica de Botões Invisíveis ---
                 'let buttonsInjected = false;' +
                 'const invisibleButtonsConfig = [' +
                 '{ id: \'btn-choice-1\', top: \'206px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Entender meu mapa astral\' },' +
@@ -622,17 +610,31 @@ app.use(async (req, res) => {
                 '`;' +
                 'button.addEventListener(\'click\', async (event) => {' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
+
                 'try {' +
                 'await fetch(\'/api/set-selected-choice\', { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: JSON.stringify({ selectedText: config.text }) });' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
                 '} catch (error) { console.error(\'CLIENT: INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error); }' +
                 'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' +
+
                 'const rect = button.getBoundingClientRect();' +
                 'const centerX = rect.left + rect.width / 2;' +
                 'const centerY = rect.top + rect.height / 2;' +
                 'const originalElement = document.elementFromPoint(centerX, centerY);' +
-                'if (originalElement) { console.log(`CLIENT: INJECTED SCRIPT: Simulando clique no elemento original em (${centerX}, ${centerY}):`, originalElement); event.stopPropagation(); event.preventDefault(); originalElement.click(); }' +
-                'else { console.log(`CLIENT: INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`); }' +
+                'if (originalElement) {' +
+                'console.log(`CLIENT: INJECTED SCRIPT: Tentando simular clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
+                'event.stopPropagation();' +
+                'event.preventDefault();' +
+
+                '// Disparar eventos de mouse mais completos para garantir o avanço do quiz' +
+                'const mouseEventOptions = { bubbles: true, cancelable: true, clientX: centerX, clientY: centerY };' +
+                'originalElement.dispatchEvent(new MouseEvent(\'mousedown\', mouseEventOptions));' +
+                'originalElement.dispatchEvent(new MouseEvent(\'mouseup\', mouseEventOptions));' +
+                'originalElement.click();' +
+                'console.log(`CLIENT: INJECTED SCRIPT: Eventos de mousedown/mouseup/click disparados no elemento original.`);' +
+                '} else {' +
+                'console.log(`CLIENT: INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`);' +
+                '}' +
                 '});' +
                 'document.body.appendChild(button);' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
@@ -669,7 +671,7 @@ app.use(async (req, res) => {
                 '</script>';
 
             $('head').prepend(clientScript);
-            console.log('SERVER: Script de cliente injetado no <head>.'); // Log no servidor
+            console.log('SERVER: Script de cliente injetado no <head>.');
 
             html = $.html().replace(CONVERSION_PATTERN, (match, p1) => {
                 const usdValue = parseFloat(p1);
@@ -679,15 +681,13 @@ app.use(async (req, res) => {
 
             res.status(response.status).send(html);
         } else {
-            // Se não for HTML, envia os dados como estão
-            res.status(response.status).send(responseData); // Enviar responseData diretamente (buffer)
+            res.status(response.status).send(responseData);
         }
 
     } catch (error) {
         console.error(`❌ SERVER: ERRO no proxy para ${targetUrl}:`, error.message);
         if (error.response) {
             console.error('SERVER: Status do destino:', error.response.status);
-            // Tenta enviar a data original se houver, caso contrário, mensagem de erro
             res.status(error.response.status).send(error.response.data || 'Erro ao processar a requisição de proxy.');
         } else {
             res.status(500).send('Erro ao processar a requisição de proxy.');

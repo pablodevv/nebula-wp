@@ -85,7 +85,6 @@ function extractTextFromHTML(html) {
     try {
         const $ = cheerio.load(html);
 
-        // ESTRATÉGIA 1: Procurar pelo padrão específico no texto completo
         const startPhrase = 'Ajudamos milhões de pessoas a ';
         const endPhrase = ', e queremos ajudar você também.';
 
@@ -106,7 +105,6 @@ function extractTextFromHTML(html) {
             }
         }
 
-        // ESTRATÉGIA 2: Procurar em elementos específicos
         const patterns = [
             'p:contains("Ajudamos milhões") b',
             'b:contains("identificar")',
@@ -132,7 +130,6 @@ function extractTextFromHTML(html) {
             }
         }
 
-        // ESTRATÉGIA 3: Buscar todos os <b> relevantes
         const boldElements = $('b');
         const relevantTexts = [];
 
@@ -162,7 +159,6 @@ function extractTextFromHTML(html) {
             return relevantTexts[0];
         }
 
-        // ESTRATÉGIA 4: Regex para encontrar o padrão no HTML bruto
         const regexPattern = /Ajudamos milhões de pessoas a\s*<b[^>]*>([^<]+)<\/b>\s*,\s*e queremos ajudar você também/gi;
         const match = html.match(regexPattern);
 
@@ -494,7 +490,7 @@ app.use(async (req, res) => {
         }
 
         // Lógica de Modificação de Conteúdo (Apenas para HTML)
-        if (htmlContent) { // Usar o htmlContent já processado
+        if (htmlContent) {
             let html = htmlContent;
 
             if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing && !capturedBoldText) {
@@ -525,9 +521,9 @@ app.use(async (req, res) => {
                     if (originalUrl) {
                         if (originalUrl.startsWith('/')) {
                             if (originalUrl.startsWith('/pt/witch-power/')) {
-                                // Deixa como está, o proxy já as manipula
+                                // URLs internas do quiz, deixamos como estão
                             } else {
-                                // Deixar outras URLs relativas como estão para serem resolvidas pelo proxy
+                                // Outras URLs relativas, deixamos como estão (o proxy as tratará)
                             }
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
                             element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
@@ -538,11 +534,11 @@ app.use(async (req, res) => {
                 }
             });
 
-            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE ---
+            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE (CÓDIGO QUE VOCÊ CONFIRMOU QUE FUNCIONAVA) ---
             const clientScript =
                 '<script>' +
                 '(function() {' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: Script started execution.\');' +
+                'console.log(\'CLIENT: [Script Init] Script started execution.\');' +
                 'const readingSubdomainTarget = \'' + READING_SUBDOMAIN_TARGET + '\';' +
                 'const mainTargetOrigin = \'' + MAIN_TARGET_URL + '\';' +
                 'const proxyReadingPrefix = \'/reading\';' +
@@ -550,17 +546,18 @@ app.use(async (req, res) => {
                 'const currentProxyHost = \'' + currentProxyHost + '\';' +
                 'const targetPagePath = \'/pt/witch-power/wpGoal\';' +
 
+                '// Proxy Shims para Fetch, XHR, PostMessage - Essenciais para reescrever URLs no lado do cliente' +
                 'const originalFetch = window.fetch;' +
                 'window.fetch = function(input, init) {' +
                 'let url = input;' +
                 'if (typeof input === \'string\') {' +
-                'if (input.startsWith(readingSubdomainTarget)) { url = input.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (Reading): \', input, \'->\', url); }' +
-                'else if (input.startsWith(\'https://api.appnebula.co\')) { url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url); }' +
-                'else if (input.startsWith(mainTargetOrigin)) { url = input.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (Main): \', input, \'->\', url); }' +
+                'if (input.startsWith(readingSubdomainTarget)) { url = input.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: [Proxy Shim] REWRITE FETCH URL (Reading): \', input, \'->\', url); }' +
+                'else if (input.startsWith(\'https://api.appnebula.co\')) { url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: [Proxy Shim] REWRITE FETCH URL (API): \', input, \'->\', url); }' +
+                'else if (input.startsWith(mainTargetOrigin)) { url = input.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: [Proxy Shim] REWRITE FETCH URL (Main): \', input, \'->\', url); }' +
                 '} else if (input instanceof Request) {' +
-                'if (input.url.startsWith(readingSubdomainTarget)) { url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url); }' +
-                'else if (input.url.startsWith(\'https://api.appnebula.co\')) { url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url); }' +
-                'else if (input.url.startsWith(mainTargetOrigin)) { url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url); }' +
+                'if (input.url.startsWith(readingSubdomainTarget)) { url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input); console.log(\'CLIENT: [Proxy Shim] REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url); }' +
+                'else if (input.url.startsWith(\'https://api.appnebula.co\')) { url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input); console.log(\'CLIENT: [Proxy Shim] REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url); }' +
+                'else if (input.url.startsWith(mainTargetOrigin)) { url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input); console.log(\'CLIENT: [Proxy Shim] REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url); }' +
                 '}' +
                 'return originalFetch.call(this, url, init);' +
                 '};' +
@@ -568,16 +565,16 @@ app.use(async (req, res) => {
                 'XMLHttpRequest.prototype.open = function(method, url, async, user, password) {' +
                 'let modifiedUrl = url;' +
                 'if (typeof url === \'string\') {' +
-                'if (url.startsWith(readingSubdomainTarget)) { modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl); }' +
-                'else if (url.startsWith(\'https://api.appnebula.co\')) { modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl); }' +
-                'else if (url.startsWith(mainTargetOrigin)) { modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl); }' +
+                'if (url.startsWith(readingSubdomainTarget)) { modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: [Proxy Shim] REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl); }' +
+                'else if (url.startsWith(\'https://api.appnebula.co\')) { modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: [Proxy Shim] REWRITE XHR URL (API): \', url, \'->\', modifiedUrl); }' +
+                'else if (url.startsWith(mainTargetOrigin)) { modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: [Proxy Shim] REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl); }' +
                 '}' +
                 'originalXHRopen.call(this, method, modifiedUrl, async, user, password);' +
                 '};' +
                 'const originalPostMessage = window.postMessage;' +
                 'window.postMessage = function(message, targetOrigin, transfer) {' +
                 'let modifiedTargetOrigin = targetOrigin;' +
-                'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) { modifiedTargetOrigin = currentProxyHost; console.log(\'CLIENT: PROXY SHIM: REWRITE PostMessage TargetOrigin: \', targetOrigin, \'->\', modifiedTargetOrigin); }' +
+                'if (typeof targetOrigin === \'string\' && targetOrigin.startsWith(mainTargetOrigin)) { modifiedTargetOrigin = currentProxyHost; console.log(\'CLIENT: [Proxy Shim] REWRITE PostMessage TargetOrigin: \', targetOrigin, \'->\', modifiedTargetOrigin); }' +
                 'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
                 '};' +
 
@@ -593,7 +590,7 @@ app.use(async (req, res) => {
 
                 'function injectInvisibleButtons() {' +
                 'if (buttonsInjected) return;' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: Página wpGoal detectada! Tentando injetar botões invisíveis...\');' +
+                'console.log(\'CLIENT: [Injection] Página wpGoal detectada! Tentando injetar botões invisíveis...\');' +
                 'invisibleButtonsConfig.forEach(config => {' +
                 'const button = document.createElement(\'button\');' +
                 'button.id = config.id;' +
@@ -604,25 +601,34 @@ app.use(async (req, res) => {
                 'width: ${config.width};' +
                 'height: ${config.height};' +
                 'background: transparent;' +
-                'border: 2px solid red;' +
+                'border: 2px solid red;' + // Mantenho a borda para debug visual
                 'cursor: pointer;' +
                 'z-index: 9999;' +
                 '`;' +
                 'button.addEventListener(\'click\', async (event) => {' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
+                'console.log(`CLIENT: [Click] Botão invisível \'${config.id}\' clicado! Valor: \'${config.text}\'`);' +
 
+                '// 1. Enviar a escolha do usuário para o servidor proxy' +
                 'try {' +
-                'await fetch(\'/api/set-selected-choice\', { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: JSON.stringify({ selectedText: config.text }) });' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
-                '} catch (error) { console.error(\'CLIENT: INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error); }' +
+                'await fetch(\'/api/set-selected-choice\', {' +
+                'method: \'POST\',' +
+                'headers: { \'Content-Type\': \'application/json\' },' +
+                'body: JSON.stringify({ selectedText: config.text })' +
+                '});' +
+                'console.log(`CLIENT: [Click] Escolha \'${config.text}\' enviada para o servidor.`);' +
+                '} catch (error) { console.error(\'CLIENT: [Error] Erro ao enviar escolha para o servidor:\', error); }' +
+                
+                '// 2. Notificar o React App (se estiver no mesmo domínio)' +
                 'window.postMessage({ type: \'QUIZ_CHOICE_SELECTED\', text: config.text }, window.location.origin);' +
 
+                '// 3. Simular clique no botão original para avançar o quiz' +
                 'const rect = button.getBoundingClientRect();' +
                 'const centerX = rect.left + rect.width / 2;' +
                 'const centerY = rect.top + rect.height / 2;' +
                 'const originalElement = document.elementFromPoint(centerX, centerY);' +
+
                 'if (originalElement) {' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Tentando simular clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
+                'console.log(`CLIENT: [Simulate] Tentando simular clique no elemento original em (${centerX}, ${centerY}):`, originalElement);' +
                 'event.stopPropagation();' +
                 'event.preventDefault();' +
 
@@ -630,43 +636,43 @@ app.use(async (req, res) => {
                 'const mouseEventOptions = { bubbles: true, cancelable: true, clientX: centerX, clientY: centerY };' +
                 'originalElement.dispatchEvent(new MouseEvent(\'mousedown\', mouseEventOptions));' +
                 'originalElement.dispatchEvent(new MouseEvent(\'mouseup\', mouseEventOptions));' +
-                'originalElement.click();' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Eventos de mousedown/mouseup/click disparados no elemento original.`);' +
+                'originalElement.click();' + // Manter o .click() também, por segurança
+                'console.log(`CLIENT: [Simulate] Eventos de mousedown/mouseup/click disparados no elemento original.`);' +
                 '} else {' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`);' +
+                'console.log(`CLIENT: [Simulate] Nenhum elemento original encontrado em (${centerX}, ${centerY}) para simular clique.`);' +
                 '}' +
                 '});' +
                 'document.body.appendChild(button);' +
-                'console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
+                'console.log(`CLIENT: [Injection] Botão invisível \'${config.id}\' injetado na página wpGoal!`);' +
                 '});' +
                 'buttonsInjected = true;' +
                 '}' +
 
                 'function removeInvisibleButtons() {' +
                 'if (!buttonsInjected) return;' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: Saindo da página wpGoal. Removendo botões invisíveis...\');' +
+                'console.log(\'CLIENT: [CleanUp] Saindo da página wpGoal. Removendo botões invisíveis...\');' +
                 'invisibleButtonsConfig.forEach(config => {' +
                 'const button = document.getElementById(config.id);' +
-                'if (button) { button.remove(); console.log(`CLIENT: INJECTED SCRIPT: Botão invisível \'${config.id}\' removido.`); }' +
+                'if (button) { button.remove(); console.log(`CLIENT: [CleanUp] Botão invisível \'${config.id}\' removido.`); }' +
                 '});' +
                 'buttonsInjected = false;' +
                 '}' +
 
                 'function monitorUrlChanges() {' +
-                'console.log(\'CLIENT: INJECTED SCRIPT: monitorUrlChanges called.\');' +
+                'console.log(\'CLIENT: [Monitor] monitorUrlChanges called.\');' +
                 'const currentUrl = window.location.pathname;' +
                 'const isTargetPage = currentUrl === targetPagePath;' +
-                'console.log(`CLIENT: INJECTED SCRIPT: [Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
+                'console.log(`CLIENT: [Monitor] URL atual: ${currentUrl}. Página alvo: ${targetPagePath}. É a página alvo? ${isTargetPage}`);' +
                 'if (isTargetPage) { injectInvisibleButtons(); } else { removeInvisibleButtons(); }' +
                 '}' +
 
-                'console.log(\'CLIENT: INJECTED SCRIPT: Adding DOMContentLoaded listener.\');' +
-                'document.addEventListener(\'DOMContentLoaded\', () => { console.log(\'CLIENT: INJECTED SCRIPT: DOMContentLoaded fired.\'); monitorUrlChanges(); });' +
+                'console.log(\'CLIENT: [Event] Adding DOMContentLoaded listener.\');' +
+                'document.addEventListener(\'DOMContentLoaded\', () => { console.log(\'CLIENT: [Event] DOMContentLoaded fired.\'); monitorUrlChanges(); });' +
                 'window.addEventListener(\'popstate\', monitorUrlChanges);' +
                 'const originalPushState = history.pushState;' +
-                'history.pushState = function() { originalPushState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.pushState detected.\'); monitorUrlChanges(); };' +
+                'history.pushState = function() { originalPushState.apply(this, arguments); console.log(\'CLIENT: [Event] history.pushState detected.\'); monitorUrlChanges(); };' +
                 'const originalReplaceState = history.replaceState;' +
-                'history.replaceState = function() { originalReplaceState.apply(this, arguments); console.log(\'CLIENT: INJECTED SCRIPT: history.replaceState detected.\'); monitorUrlChanges(); };' +
+                'history.replaceState = function() { originalReplaceState.apply(this, arguments); console.log(\'CLIENT: [Event] history.replaceState detected.\'); monitorUrlChanges(); };' +
                 '})();' +
                 '</script>';
 

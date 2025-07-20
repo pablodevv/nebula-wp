@@ -238,7 +238,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           <div className="bg-gradient-to-b from-purple-100 to-purple-50 rounded-2xl p-6 mb-6">
             <div className="flex justify-center mb-6">
               <img 
-                src="https://images.pexels.com/photos/6148911/pexels-photo-6148911.jpeg?auto=compress&cs=tinysrgb&w=400" 
+                src="/images/ancestralwitch.png" 
                 alt="Bruxa Ancestral" 
                 className="w-64 h-80 object-cover rounded-xl"
               />

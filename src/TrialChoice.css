@@ -182,13 +182,13 @@
 
 .curved-arrow {
   position: absolute;
-  top: -140px;
-  right: 60px;
+  top: -60px;
+  right: 50px;
   z-index: 10;
 }
 
 .arrow-svg {
-  transform: rotate(0deg);
+  transform: rotate(10deg);
 }
 
 .view-reading-button {

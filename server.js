@@ -592,6 +592,75 @@ app.use(async (req, res) => {
                 }
             });
 
+            // --- INJEÇÃO DOS CÓDIGOS DE PIXEL ---
+            const pixelCodes = `
+                <!-- Meta Pixel Code -->
+                <script>
+                !function(f,b,e,v,n,t,s)
+                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                n.queue=[];t=b.createElement(e);t.async=!0;
+                t.src=v;s=b.getElementsByTagName(e)[0];
+                s.parentNode.insertBefore(t,s)}(window, document,'script',
+                'https://connect.facebook.net/en_US/fbevents.js');
+                fbq('init', '1162364828302806');
+                fbq('track', 'PageView');
+                </script>
+                <!-- End Meta Pixel Code -->
+
+                <!-- Meta Pixel Code -->
+                <script>
+                !function(f,b,e,v,n,t,s)
+                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                n.queue=[];t=b.createElement(e);t.async=!0;
+                t.src=v;s=b.getElementsByTagName(e)[0];
+                s.parentNode.insertBefore(t,s)}(window, document,'script',
+                'https://connect.facebook.net/en_US/fbevents.js');
+                fbq('init', '1770667103479094');
+                fbq('track', 'PageView');
+                </script>
+                <!-- End Meta Pixel Code -->
+
+                <script>
+                window.pixelId = "67f4b913c96cba3bbf63bc84";
+                var a = document.createElement("script");
+                a.setAttribute("async", "");
+                a.setAttribute("defer", "");
+                a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");
+                document.head.appendChild(a);
+                </script>
+
+                <script
+                src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+                data-utmify-prevent-xcod-sck
+                data-utmify-prevent-subids
+                async
+                defer
+                ></script>
+
+                <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
+            `;
+
+            // Injetar códigos de pixel no head
+            $('head').prepend(pixelCodes);
+
+            // --- INJEÇÃO DOS NOSCRIPT NO BODY ---
+            const noscriptCodes = `
+                <noscript><img height="1" width="1" style="display:none"
+                src="https://www.facebook.com/tr?id=1162364828302806&ev=PageView&noscript=1"
+                /></noscript>
+                
+                <noscript><img height="1" width="1" style="display:none"
+                src="https://www.facebook.com/tr?id=1770667103479094&ev=PageView&noscript=1"
+                /></noscript>
+            `;
+
+            // Injetar noscript no body
+            $('body').prepend(noscriptCodes);
+
             // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE (CORRIGIDA baseada no código antigo) ---
             const clientScript =
                 '<script>' +

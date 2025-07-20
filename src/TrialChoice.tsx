@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './TrialChoice.css';
 
 interface TrialChoiceProps {
   capturedText?: string;
@@ -147,7 +148,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
                         <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
                       </marker>
                     </defs>
-                    <path d="M 10 70 Q 60 20 110 45" stroke="#666" strokeWidth="2" 
+                    <path d="M 10 70 Q 60 20 110 10" stroke="#666" strokeWidth="2" 
                           fill="none" markerEnd="url(#arrowhead)" />
                   </svg>
                 </div>

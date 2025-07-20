@@ -114,7 +114,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
             <div className="economy-section">
               <h2 className="section-title">SUA ECONOMIA, NOSSA PRIORIDADE</h2>
               <p className="description">
-                Apesar do nosso custo real ser de R$ 18,67*, por favor selecione um valor que você considere justo.
+                Apesar do nosso custo real ser de R$ 18,68*, por favor selecione um valor que você considere justo.
                </p>
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mt-2">

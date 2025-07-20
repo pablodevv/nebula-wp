@@ -87,7 +87,7 @@ function Date() {
       </div>
 
       {/* Continue Button */}
-      <div className="p-6">
+      <div className="p-6" style="padding-bottom: 100px;">
         <button 
           onClick={handleContinue}
           className="w-full bg-purple-500 text-white py-4 rounded-2xl text-lg font-medium hover:bg-purple-600 transition-colors"

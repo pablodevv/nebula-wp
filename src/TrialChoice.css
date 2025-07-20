@@ -127,88 +127,64 @@
 }
 
 .price-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
   margin-bottom: 20px;
-  flex-wrap: nowrap;
 }
 
 .price-button {
-  background: #f0f0f0;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  padding: 20px 30px;
-  font-size: 18px;
-  font-weight: 600;
-  color: rgb(51, 51, 51);
+  padding: 20px;
+  height: 60px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
   cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 70px;
-  flex: 1;
-  max-width: 90px;
-  font-family: 'Open Sans', sans-serif;
-}
-
-.price-button:hover {
-  background: #e5e5e5;
-}
-
-.price-button.selected {
-  background: linear-gradient(0deg, rgb(64, 0, 120) 9.74%, rgb(115, 43, 255) 87.02%);
-  color: white;
-  border-color: rgb(115, 43, 255);
-}
-
-.help-text {
+  transition: all 0.2s ease;
+  font-size: 18px;
+  font-weight: 700;
+  color: #374151;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
+}
+
+.price-button:hover {
+  border-color: #9333ea;
+  background: #f3f4f6;
+}
+
+.price-button.selected {
+  background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+  border-color: #9333ea;
+  color: white;
+}
+
+.help-text-container {
   position: relative;
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.help-text p {
+.help-text {
   font-size: 14px;
-  color: rgb(51, 51, 51);
-  max-width: 400px;
-  margin: 0;
+  color: #666;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  max-width: 280px;
 }
 
-.arrow-pointer {
+.curved-arrow {
   position: absolute;
-  top: -40px;
-  right: 20px;
-  width: 60px;
-  height: 40px;
-  pointer-events: none;
+  top: 40px;
+  right: -20px;
+  z-index: 10;
 }
 
-.arrow-pointer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 15px;
-  width: 30px;
-  height: 30px;
-  border: 2px solid rgb(51, 51, 51);
-  border-left: none;
-  border-bottom: none;
-  transform: rotate(45deg);
-  border-radius: 0 4px 0 0;
-}
-
-.arrow-pointer::after {
-  content: '';
-  position: absolute;
-  top: 15px;
-  right: 0;
-  width: 20px;
-  height: 2px;
-  background: rgb(51, 51, 51);
-  transform: rotate(45deg);
-  border-radius: 1px;
+.arrow-svg {
+  transform: rotate(-10deg);
 }
 
 .view-reading-button {
@@ -258,15 +234,12 @@
   
   .price-buttons {
     gap: 8px;
-    flex-wrap: nowrap;
   }
   
   .price-button {
     padding: 15px 8px;
     font-size: 16px;
-    min-width: 60px;
-    flex: 1;
-    max-width: 80px;
+    height: 50px;
   }
   
   .view-reading-button {
@@ -274,23 +247,14 @@
     font-size: 16px;
   }
   
-  .arrow-pointer {
-    top: -35px;
-    right: 10px;
-    width: 50px;
-    height: 35px;
+  .curved-arrow {
+    top: 35px;
+    right: -15px;
   }
   
-  .arrow-pointer::before {
-    width: 25px;
-    height: 25px;
-    right: 10px;
-  }
-  
-  .arrow-pointer::after {
-    width: 15px;
-    right: -2px;
-    top: 12px;
+  .arrow-svg {
+    width: 100px;
+    height: 70px;
   }
 }
 
@@ -298,30 +262,21 @@
   .price-button {
     padding: 12px 6px;
     font-size: 14px;
-    min-width: 55px;
-    max-width: 75px;
+    height: 45px;
   }
   
-  .help-text p {
+  .help-text {
     font-size: 13px;
+    max-width: 250px;
   }
   
-  .arrow-pointer {
-    top: -30px;
-    right: 5px;
-    width: 45px;
-    height: 30px;
+  .curved-arrow {
+    top: 30px;
+    right: -10px;
   }
   
-  .arrow-pointer::before {
-    width: 20px;
-    height: 20px;
-    right: 8px;
-  }
-  
-  .arrow-pointer::after {
-    width: 12px;
-    right: 0px;
-    top: 10px;
+  .arrow-svg {
+    width: 90px;
+    height: 60px;
   }
 }

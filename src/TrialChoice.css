@@ -163,6 +163,7 @@
 }
 
 .help-text-container {
+  position: relative;
   margin-bottom: 30px;
   display: flex;
   flex-direction: column;
@@ -180,17 +181,16 @@
 }
 
 .curved-arrow {
-  position: relative;
-  margin-top: 10px;
-  z-index: 0;
-  pointer-events: none;
+  position: absolute;
+  top: 100px;
+  right: 15px;
+  z-index: 10;
+  pointer-events: none; /* ← ESSENCIAL: seta visível mas não bloqueia clique */
 }
 
 .arrow-svg {
   transform: rotate(43deg);
-  width: 90px;
-  height: 60px;
-  margin: 0 auto;
+  pointer-events: none;
 }
 
 .view-reading-button {
@@ -253,9 +253,14 @@
     font-size: 16px;
   }
 
+  .curved-arrow {
+    top: -120px;
+    right: 50px;
+  }
+
   .arrow-svg {
-    width: 80px;
-    height: 50px;
+    width: 100px;
+    height: 70px;
   }
 }
 
@@ -271,8 +276,14 @@
     max-width: 250px;
   }
 
+  .curved-arrow {
+    top: -100px;
+    right: 40px;
+  }
+
   .arrow-svg {
-    width: 70px;
-    height: 45px;
+    width: 90px;
+    height: 60px;
+    margin-top: 73px;
   }
 }

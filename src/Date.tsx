@@ -37,21 +37,7 @@ function Date() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col max-w-sm mx-auto relative overflow-hidden">
-      {/* Status Bar */}
-      <div className="flex justify-between items-center px-6 py-2 text-black text-lg font-medium">
-        <span>10:47</span>
-        <div className="flex items-center space-x-1">
-          <div className="flex space-x-1">
-            <div className="w-1 h-3 bg-black rounded-sm"></div>
-            <div className="w-1 h-3 bg-black rounded-sm"></div>
-            <div className="w-1 h-3 bg-black rounded-sm"></div>
-          </div>
-          <svg width="18" height="12" viewBox="0 0 18 12" className="ml-2">
-            <path d="M2 2L9 9L16 2" stroke="black" strokeWidth="2" fill="none"/>
-          </svg>
-          <div className="bg-gray-400 rounded-md px-2 py-1 text-xs text-white font-medium">62</div>
-        </div>
-      </div>
+     
 
       {/* Header */}
       <div className="flex justify-between items-center px-6 py-4">
@@ -109,7 +95,7 @@ function Date() {
           Continuar
         </button>
       </div>
-
+</div>
      
     </div>
   );

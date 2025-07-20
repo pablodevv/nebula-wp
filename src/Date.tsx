@@ -21,6 +21,11 @@ function Date() {
   const handleContinue = () => {
     if (birthDate.length === 10) {
       console.log('📅 Date.tsx: Redirecionando para scanPreview com data:', birthDate);
+      
+      // Salva a data no localStorage para usar em outras páginas
+      localStorage.setItem('selectedBirthDate', birthDate);
+      console.log('💾 Date.tsx: Data salva no localStorage:', birthDate);
+      
       // Redireciona para scanPreview mantendo no proxy (URL absoluta)
       window.location.href = `${window.location.origin}/pt/witch-power/scanPreview`;
     } else {

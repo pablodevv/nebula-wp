@@ -32,9 +32,7 @@ const agent = new https.Agent({
     rejectUnauthorized: false,
 });
 
-// Middleware para servir arquivos estáticos da build do React (se existirem na raiz do projeto)
-app.use(express.static(path.join(__dirname, 'dist')));
-
+// CORREÇÃO: Configurar fileUpload ANTES de outros middlewares que podem interferir
 app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 },
     createParentPath: true,
@@ -42,9 +40,24 @@ app.use(fileUpload({
     preserveExtension: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware para servir arquivos estáticos da build do React (se existirem na raiz do projeto)
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// CORREÇÃO: Configurar CORS antes de outros middlewares
 app.use(cors());
+
+// CORREÇÃO: express.json e express.urlencoded podem interferir com uploads
+// Vamos configurá-los apenas para rotas específicas ou condicionalmente
+app.use((req, res, next) => {
+    // Só aplicar JSON parsing se não for upload de arquivo
+    if (!req.files || Object.keys(req.files).length === 0) {
+        express.json()(req, res, () => {
+            express.urlencoded({ extended: true })(req, res, next);
+        });
+    } else {
+        next();
+    }
+});
 
 // --- PARTE NOVA/ATUALIZADA: Endpoints para captura e definição da escolha ---
 // API endpoint para obter o texto capturado (para o React App)
@@ -204,15 +217,12 @@ async function captureTextDirectly() {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-                // Removendo 'Accept-Encoding' para que o Axios não tente decodificar automaticamente,
-                // vamos fazer isso manualmente para evitar problemas.
-                // 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
             },
-            responseType: 'arraybuffer', // Receber como buffer para descompressão manual
+            responseType: 'arraybuffer',
             timeout: 30000,
             httpsAgent: agent,
         });
@@ -229,7 +239,7 @@ async function captureTextDirectly() {
             responseData = zlib.inflateSync(responseData);
         } else if (contentEncoding === 'br') {
             console.log('📦 Descomprimindo resposta brotli...');
-            responseData = zlib.brotliDecompressSync(responseData); // Requires Node.js 11.7.0+
+            responseData = zlib.brotliDecompressSync(responseData);
         }
 
         const html = responseData.toString('utf8');
@@ -394,7 +404,10 @@ app.use(async (req, res) => {
     delete requestHeaders['host'];
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
-    delete requestHeaders['accept-encoding']; // Removido para forçar descompressão manual
+    // CORREÇÃO: Não remover accept-encoding para uploads de arquivo
+    if (!req.files || Object.keys(req.files).length === 0) {
+        delete requestHeaders['accept-encoding'];
+    }
 
     // Lógica para Proxeamento do Subdomínio de Leitura (Mão) - CORRIGIDA
     if (req.url.startsWith('/reading/')) {
@@ -423,10 +436,12 @@ app.use(async (req, res) => {
     try {
         let requestData = req.body;
 
-        // LÓGICA CORRIGIDA PARA UPLOAD DE ARQUIVOS (DA PALMA)
+        // CORREÇÃO: Lógica de upload baseada no código antigo que funcionava
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
             if (photoFile) {
+                console.log('[UPLOAD] Processando upload de arquivo:', photoFile.name);
+                // CORREÇÃO: Usar a forma que funcionava no código antigo
                 const formData = new FormData();
                 formData.append('photo', photoFile.data, {
                     filename: photoFile.name,
@@ -436,6 +451,7 @@ app.use(async (req, res) => {
                 delete requestHeaders['content-type'];
                 delete requestHeaders['content-length'];
                 Object.assign(requestHeaders, formData.getHeaders());
+                console.log('[UPLOAD] FormData configurado com headers:', formData.getHeaders());
             }
         }
 
@@ -444,7 +460,7 @@ app.use(async (req, res) => {
             url: targetUrl,
             headers: requestHeaders,
             data: requestData,
-            responseType: 'arraybuffer', // Receber como buffer para descompressão manual
+            responseType: 'arraybuffer',
             timeout: 30000,
             maxRedirects: 0,
             validateStatus: function (status) {
@@ -536,7 +552,7 @@ app.use(async (req, res) => {
         }
 
         // Lógica de Modificação de Conteúdo (Apenas para HTML)
-        if (htmlContent) { // Usar o htmlContent já processado
+        if (htmlContent) {
             let html = htmlContent;
 
             if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing && !capturedBoldText) {
@@ -565,15 +581,8 @@ app.use(async (req, res) => {
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
                     if (originalUrl) {
-                        if (originalUrl.startsWith('/')) { // Simplificado para todas as URLs relativas
-                            // No proxy, URLs relativas já serão tratadas pelo próprio proxy.
-                            // Mas para garantir, podemos reescrever as que apontam para o domínio principal.
-                            if (originalUrl.startsWith('/pt/witch-power/')) {
-                                // Deixa essas como estão, o proxy já as manipula.
-                            } else {
-                                // Se for uma URL raiz que não é do quiz, pode precisar de tratamento mais genérico.
-                                // Por agora, se for apenas '/', '/' ou '/favicon.ico' etc., deixamos.
-                            }
+                        if (originalUrl.startsWith('/')) {
+                            // URLs relativas já são tratadas pelo proxy
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
                             element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
                         } else if (originalUrl.startsWith(READING_SUBDOMAIN_TARGET)) {
@@ -583,7 +592,7 @@ app.use(async (req, res) => {
                 }
             });
 
-            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE ---
+            // --- INJEÇÃO DE SCRIPTS CLIENT-SIDE (CORRIGIDA baseada no código antigo) ---
             const clientScript =
                 '<script>' +
                 '(function() {' +
@@ -595,7 +604,7 @@ app.use(async (req, res) => {
                 'const currentProxyHost = \'' + currentProxyHost + '\';' +
                 'const targetPagePath = \'/pt/witch-power/wpGoal\';' +
 
-                // Interceptação de Fetch, XHR, PostMessage (sem alterações aqui, mantendo a lógica de reescrita de URLs)
+                // CORREÇÃO: Usar a mesma lógica do código antigo para interceptação
                 'const originalFetch = window.fetch;' +
                 'window.fetch = function(input, init) {' +
                 'let url = input;' +
@@ -627,7 +636,7 @@ app.use(async (req, res) => {
                 'originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);' +
                 '};\n' +
 
-                // --- Lógica de Botões Invisíveis (CORRIGIDA com base na versão antiga) ---
+                // --- Lógica de Botões Invisíveis (CORRIGIDA) ---
                 'let buttonsInjected = false;' +
                 'const invisibleButtonsConfig = [' +
                 '{ id: \'btn-choice-1\', top: \'206px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Entender meu mapa astral\' },' +
@@ -638,7 +647,6 @@ app.use(async (req, res) => {
                 '{ id: \'btn-choice-6\', top: \'628px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Descobrir meus poderes ocultos\' }' +
                 '];' +
 
-                // FUNÇÃO CORRIGIDA baseada na versão antiga
                 'function manageInvisibleButtons() {' +
                 'const currentPagePath = window.location.pathname;' +
                 'const isTargetPage = currentPagePath === targetPagePath;' +
@@ -662,7 +670,6 @@ app.use(async (req, res) => {
                 'document.body.appendChild(button);' +
                 'console.log(\'✅ Botão invisível \\\'\' + config.id + \'\\\' injetado na página wpGoal!\');' +
 
-                // EVENT LISTENER CORRIGIDO da versão antiga
                 'button.addEventListener(\'click\', (event) => {' +
                 'console.log(\'🎉 Botão invisível \\\'\' + config.id + \'\\\' clicado na wpGoal!\');' +
                 'button.style.pointerEvents = \'none\';' + 
@@ -683,13 +690,11 @@ app.use(async (req, res) => {
                 'targetElement.dispatchEvent(clickEvent);' +
                 'console.log(\'Cliques simulados em:\', targetElement);' +
 
-                // 1. Enviar escolha para o servidor
                 'try {' +
                 'fetch(\'/api/set-selected-choice\', { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: JSON.stringify({ selectedText: config.text }) });' +
                 'console.log(`CLIENT: INJECTED SCRIPT: Escolha \'${config.text}\' enviada para o servidor.`);' +
                 '} catch (error) { console.error(\'CLIENT: INJECTED SCRIPT: Erro ao enviar escolha para o servidor:\', error); }' +
 
-                // 2. Enviar dados para o React
                 'window.postMessage({' +
                 'type: \'QUIZ_CHOICE_SELECTED\',' +
                 'text: config.text' +
@@ -717,7 +722,6 @@ app.use(async (req, res) => {
                 '}' +
                 '}' +
 
-                // INICIALIZAÇÃO CORRIGIDA da versão antiga
                 'document.addEventListener(\'DOMContentLoaded\', function() {' +
                 'console.log(\'Script de injeção de proxy carregado no cliente.\');' +
                 'manageInvisibleButtons();' +
@@ -728,7 +732,7 @@ app.use(async (req, res) => {
 
             $('head').prepend(clientScript);
 
-            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/email (da versão antiga) ---
+            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/email ---
             $('head').append(
                 '<script>' +
                 'console.log(\'CLIENT-SIDE REDIRECT SCRIPT: Initializing.\');' +
@@ -755,7 +759,7 @@ app.use(async (req, res) => {
                 '</script>'
             );
 
-            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice (da versão antiga) ---
+            // --- REDIRECIONAMENTO CLIENT-SIDE PARA /pt/witch-power/trialChoice ---
             $('head').append(
                 '<script>' +
                 'console.log(\'CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.\');' +
@@ -834,7 +838,8 @@ app.use(async (req, res) => {
                 'handleDateRedirect();' +
                 '</script>'
             );
-            console.log('SERVER: Script de cliente injetado no <head>.'); // Log no servidor
+
+            console.log('SERVER: Script de cliente injetado no <head>.');
 
             html = $.html().replace(CONVERSION_PATTERN, (match, p1) => {
                 const usdValue = parseFloat(p1);
@@ -845,14 +850,13 @@ app.use(async (req, res) => {
             res.status(response.status).send(html);
         } else {
             // Se não for HTML, envia os dados como estão
-            res.status(response.status).send(responseData); // Enviar responseData diretamente (buffer)
+            res.status(response.status).send(responseData);
         }
 
     } catch (error) {
         console.error(`❌ SERVER: ERRO no proxy para ${targetUrl}:`, error.message);
         if (error.response) {
             console.error('SERVER: Status do destino:', error.response.status);
-            // Tenta enviar a data original se houver, caso contrário, mensagem de erro
             res.status(error.response.status).send(error.response.data || 'Erro ao processar a requisição de proxy.');
         } else {
             res.status(500).send('Erro ao processar a requisição de proxy.');
@@ -864,6 +868,4 @@ app.use(async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor proxy rodando na porta ${PORT}`);
     console.log(`Acessível em: http://localhost:${PORT}`);
-    // Opcional: Iniciar a captura de texto automaticamente ao iniciar o servidor
-    // captureTextDirectly();
 });

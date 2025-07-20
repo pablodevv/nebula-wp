@@ -72,10 +72,10 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
   };
 
   const prices = [
-    { value: '$1', link: 'https://example.com/payment-1' },
-    { value: '$5', link: 'https://example.com/payment-5' },
-    { value: '$9', link: 'https://example.com/payment-9' },
-    { value: '$13.67', link: 'https://example.com/payment-13' }
+    { value: 'R$ 5', link: 'https://example.com/payment-1' },
+    { value: 'R$ 10', link: 'https://example.com/payment-5' },
+    { value: 'R$ 14', link: 'https://example.com/payment-9' },
+    { value: 'R$ 18,67', link: 'https://example.com/payment-13' }
   ];
 
   return (
@@ -113,8 +113,8 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
             <div className="economy-section">
               <h2 className="section-title">SUA ECONOMIA, NOSSA PRIORIDADE</h2>
               <p className="description">
-                Ajudamos milhões de pessoas a <b>{displayText}</b>, e queremos ajudar você também.
-              </p>
+                Apesar do nosso custo real ser de R$ 18,67*, por favor selecione um valor que você considere justo.
+               </p>
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mt-2">
                   Debug: "{displayText}" (prop: "{capturedText}")
@@ -136,7 +136,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
               </div>
 
               <div className="help-text">
-                <p>Esta opção nos ajudará a financiar aqueles que precisam escolher os menores preços de teste!</p>
+                <h6>Esta opção nos ajudará a financiar aqueles que precisam escolher os menores preços de teste!</h6>
                 <div className="arrow-pointer">→</div>
               </div>
             </div>
@@ -149,7 +149,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
               Ver minha leitura
             </button>
 
-            <p className="disclaimer">*Custo do teste em fevereiro de 2025</p>
+            <p className="disclaimer">*Custo do teste em julho de 2025</p>
           </div>
         </div>
       </div>

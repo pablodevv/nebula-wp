@@ -72,10 +72,10 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
   };
 
   const prices = [
-    { value: 'R$ 5', link: 'https://example.com/payment-1' },
-    { value: 'R$ 10', link: 'https://example.com/payment-5' },
-    { value: 'R$ 14', link: 'https://example.com/payment-9' },
-    { value: 'R$ 18,67', link: 'https://example.com/payment-13' }
+    { value: 'R$ 5', link: 'https://app.pushinpay.com.br/service/pay/9f6fa72b-9850-41ff-92b4-bce11cefef81' },
+    { value: 'R$ 10', link: 'https://app.pushinpay.com.br/service/pay/9f6fa6a5-bd70-481e-b73d-67674871106c' },
+    { value: 'R$ 14', link: 'https://app.pushinpay.com.br/service/pay/9f6fa5f6-a665-4b6e-b427-aefa08395f15' },
+    { value: 'R$ 18,68', link: 'https://app.pushinpay.com.br/service/pay/9f6fa3bb-1b37-4edf-9939-3e0121abd723' }
   ];
 
   return (

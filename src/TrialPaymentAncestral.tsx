@@ -253,7 +253,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-purple-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Flife_line.png&w=64&q=75"
+                    src="life_line.png"
                     alt="Linha da vida"
                     className="w-8 h-8"
                   />
@@ -270,7 +270,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Fhead_line.png&w=64&q=75"
+                    src="head_line.png"
                     alt="Linha da cabeça"
                     className="w-8 h-8"
                   />
@@ -287,7 +287,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Fmarriage_line.png&w=64&q=75"
+                    src="marriage_line.png"
                     alt="Linha do casamento"
                     className="w-8 h-8"
                   />
@@ -306,7 +306,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 <div className="bg-purple-50 rounded-xl p-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-3">
                     <img 
-                      src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Flove_line.png&w=64&q=75"
+                      src="love_line.png"
                       alt="Linha do amor"
                       className="w-6 h-6"
                     />
@@ -322,7 +322,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 <div className="bg-purple-50 rounded-xl p-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-3">
                     <img 
-                      src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Ffate_line.png&w=64&q=75"
+                      src="fate_line.png"
                       alt="Linha do dinheiro"
                       className="w-6 h-6"
                     />
@@ -340,7 +340,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Ffingers.png&w=64&q=75"
+                    src="fingers.png"
                     alt="Dedos da mão"
                     className="w-8 h-8"
                   />

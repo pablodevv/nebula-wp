@@ -639,12 +639,12 @@ app.use(async (req, res) => {
                 // --- Lógica de Botões Invisíveis (CORRIGIDA) ---
                 'let buttonsInjected = false;' +
                 'const invisibleButtonsConfig = [' +
-                '{ id: \'btn-choice-1\', top: \'206px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Entender meu mapa astral\' },' +
-                '{ id: \'btn-choice-2\', top: \'292px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Identificar meu arquétipo de bruxa\' },' +
-                '{ id: \'btn-choice-3\', top: \'377px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Explorar minhas vidas passadas\' },' +
-                '{ id: \'btn-choice-4\', top: \'460px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Revelar minha aura de bruxa\' },' +
-                '{ id: \'btn-choice-5\', top: \'543px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Desvendar meu destino e propósito\' },' +
-                '{ id: \'btn-choice-6\', top: \'628px\', left: \'40px\', width: \'330px\', height: \'66px\', text: \'Descobrir meus poderes ocultos\' }' +
+                '{ id: \'btn-choice-1\', top: \'207px\', left: \'50px\', width: \'330px\', height: \'66px\', text: \'descobrir seus poderes ocultos\' },' +
+                '{ id: \'btn-choice-2\', top: \'292px\', left: \'50px\', width: \'330px\', height: \'66px\', text: \'identificar seu arquétipo de bruxa\' },' +
+                '{ id: \'btn-choice-3\', top: \'377px\', left: \'50px\', width: \'330px\', height: \'66px\', text: \'explorar suas vidas passadas\' },' +
+                '{ id: \'btn-choice-4\', top: \'460px\', left: \'50px\', width: \'330px\', height: \'66px\', text: \'revelar sua aura de bruxa\' },' +
+                '{ id: \'btn-choice-5\', top: \'543px\', left: \'50px\', width: \'330px\', height: \'66px\', text: \'desvendar seu destino e propósito\' },' +
+                '{ id: \'btn-choice-6\', top: \'628px\', left: \'50px\', width: \'330px\', height: \'66px\', text: \'encontrar marcas, símbolos que os guiem\' }' +
                 '];' +
 
                 'function manageInvisibleButtons() {' +

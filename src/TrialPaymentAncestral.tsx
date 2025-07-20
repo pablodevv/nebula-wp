@@ -14,6 +14,22 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 }) => {
   const [timeLeft, setTimeLeft] = useState({ minutes: 9, seconds: 40 });
 
+  // Função para converter data para formato brasileiro
+  const formatBrazilianDate = (dateStr: string) => {
+    // Se a data já está no formato brasileiro, retorna como está
+    if (dateStr.includes('/')) {
+      return dateStr;
+    }
+    
+    // Converte de DD-MM-YYYY para DD/MM/YYYY
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[0]}/${parts[1]}/${parts[2]}`;
+    }
+    
+    return dateStr;
+  };
+
   // Determina o preço a ser exibido
   const displayPrice = selectedPrice?.value || '$13.67';
   const paymentLink = selectedPrice?.link || 'https://example.com/payment-13';
@@ -41,7 +57,21 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-     
+      {/* CSS personalizado para animação pulsante */}
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+        }
+        
+        .pulse-button {
+          animation: pulse 2s infinite;
+        }
+      `}</style>
 
       {/* Timer Section */}
       <div className="flex justify-between items-center px-4 py-3 bg-white">
@@ -58,7 +88,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           </div>
         </div>
         <button 
-          className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg font-medium text-sm"
+          className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg font-medium text-sm pulse-button"
           onClick={handlePayment}
         >
           OBTER MINHA<br />LEITURA
@@ -72,14 +102,9 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           <div className="text-2xl font-light tracking-widest text-black">
             NEBULA
           </div>
-          <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
-            <div className="flex text-purple-600">
-              🌟
-            </div>
+          <div className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
+            <Star className="w-4 h-4 text-purple-600 fill-current" />
             <span className="font-bold text-lg">4.8</span>
-            <div className="flex text-purple-600">
-              🌟
-            </div>
           </div>
         </div>
 
@@ -142,13 +167,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
         {/* CTA Button */}
         <button 
-          className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-4 rounded-xl font-bold text-lg"
+          className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-4 rounded-xl font-bold text-lg pulse-button"
           onClick={handlePayment}
         >
           OBTER MINHA LEITURA
         </button>
-
-       
 
         {/* Personalization Section */}
         <div className="pt-8">
@@ -173,7 +196,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               </div>
               <div>
                 <p className="text-gray-600 text-sm">Data de nascimento</p>
-                <p className="text-black font-bold text-lg">{selectedBirthDate}</p>
+                <p className="text-black font-bold text-lg">{formatBrazilianDate(selectedBirthDate)}</p>
               </div>
             </div>
 
@@ -229,7 +252,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             <div className="space-y-4">
               <div className="bg-purple-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🖐️</span>
+                  <img 
+                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Flife_line.png&w=64&q=75"
+                    alt="Linha da vida"
+                    className="w-8 h-8"
+                  />
                 </div>
                 <div>
                   <h4 className="font-bold text-purple-700 mb-1">Linha da vida</h4>
@@ -242,7 +269,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🖐️</span>
+                  <img 
+                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Fhead_line.png&w=64&q=75"
+                    alt="Linha da cabeça"
+                    className="w-8 h-8"
+                  />
                 </div>
                 <div>
                   <h4 className="font-bold text-purple-700 mb-1">Linha da cabeça</h4>
@@ -255,7 +286,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🖐️</span>
+                  <img 
+                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Fmarriage_line.png&w=64&q=75"
+                    alt="Linha do casamento"
+                    className="w-8 h-8"
+                  />
                 </div>
                 <div>
                   <h4 className="font-bold text-purple-700 mb-1">Linha do casamento</h4>
@@ -270,7 +305,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-purple-50 rounded-xl p-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-3">
-                    <span className="text-xl">🖐️</span>
+                    <img 
+                      src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Flove_line.png&w=64&q=75"
+                      alt="Linha do amor"
+                      className="w-6 h-6"
+                    />
                   </div>
                   <h4 className="font-bold text-purple-700 mb-1 text-sm">Linha do amor</h4>
                   <p className="text-gray-700 text-xs">
@@ -282,7 +321,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
                 <div className="bg-purple-50 rounded-xl p-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-3">
-                    <span className="text-xl">🖐️</span>
+                    <img 
+                      src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Ffate_line.png&w=64&q=75"
+                      alt="Linha do dinheiro"
+                      className="w-6 h-6"
+                    />
                   </div>
                   <h4 className="font-bold text-purple-700 mb-1 text-sm">Linha do dinheiro</h4>
                   <p className="text-gray-700 text-xs">
@@ -296,7 +339,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🖐️</span>
+                  <img 
+                    src="https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2FtrialPayment%2Fpalmistry%2Ffingers.png&w=64&q=75"
+                    alt="Dedos da mão"
+                    className="w-8 h-8"
+                  />
                 </div>
                 <div>
                   <p className="text-gray-700 text-sm">
@@ -501,16 +548,12 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 relatório não trouxe valor algum.
               </p>
             </div>
-
-            {/* Address */}
-           
           </div>
         </div>
       </div>
 
       {/* Footer */}
       <div className="text-center py-6 text-gray-500 text-sm">
-        
         {onBack && (
           <button 
             onClick={onBack}

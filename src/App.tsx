@@ -15,6 +15,19 @@ function App() {
   const [error, setError] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<'trial' | 'payment' | 'date'>('trial');
   const [selectedPrice, setSelectedPrice] = useState<PriceOption | null>(null);
+  const [selectedBirthDate, setSelectedBirthDate] = useState('1990-01-01');
+
+  // Carregar data de nascimento do localStorage
+  useEffect(() => {
+    const savedDate = localStorage.getItem('selectedBirthDate');
+    if (savedDate) {
+      // Converter formato DD/MM/AAAA para AAAA-MM-DD
+      const [day, month, year] = savedDate.split('/');
+      const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      setSelectedBirthDate(formattedDate);
+      console.log('📅 App.tsx: Data carregada do localStorage:', savedDate, '-> formatada:', formattedDate);
+    }
+  }, []);
 
   // Detectar se estamos na rota /date
   useEffect(() => {
@@ -122,6 +135,7 @@ function App() {
       ) : (
         <TrialPaymentAncestral 
           selectedPrice={selectedPrice}
+          selectedBirthDate={selectedBirthDate}
           onBack={handleBackToTrial}
         />
       )}

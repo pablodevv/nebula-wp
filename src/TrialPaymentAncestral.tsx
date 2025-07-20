@@ -7,6 +7,14 @@ interface TrialPaymentAncestralProps {
   onBack?: () => void;
 }
 
+// Declaração de tipos para o Facebook Pixel
+declare global {
+  interface Window {
+    fbq: any;
+    utmify: any;
+  }
+}
+
 const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({ 
   selectedPrice, 
   selectedBirthDate = '01-01-1990',
@@ -50,9 +58,56 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  // Função para disparar eventos de pixel
+  const firePixelEvents = () => {
+    try {
+      // Dispara evento InitiateCheckout para ambos os pixels do Facebook
+      if (window.fbq) {
+        // Pixel 1: 1162364828302806
+        window.fbq('trackSingle', '1162364828302806', 'InitiateCheckout', {
+          value: displayPrice.replace('R$ ', '').replace('$', ''),
+          currency: displayPrice.includes('R$') ? 'BRL' : 'USD',
+          content_name: 'Leitura Personalizada Nebula',
+          content_category: 'Spiritual Reading'
+        });
+
+        // Pixel 2: 1770667103479094
+        window.fbq('trackSingle', '1770667103479094', 'InitiateCheckout', {
+          value: displayPrice.replace('R$ ', '').replace('$', ''),
+          currency: displayPrice.includes('R$') ? 'BRL' : 'USD',
+          content_name: 'Leitura Personalizada Nebula',
+          content_category: 'Spiritual Reading'
+        });
+
+        console.log('✅ Facebook Pixel - InitiateCheckout disparado para ambos os pixels');
+      } else {
+        console.warn('⚠️ Facebook Pixel não encontrado');
+      }
+
+      // Dispara evento para o pixel Utmify se disponível
+      if (window.utmify) {
+        window.utmify.track('InitiateCheckout', {
+          value: displayPrice.replace('R$ ', '').replace('$', ''),
+          currency: displayPrice.includes('R$') ? 'BRL' : 'USD',
+          content_name: 'Leitura Personalizada Nebula'
+        });
+        console.log('✅ Utmify Pixel - InitiateCheckout disparado');
+      }
+
+    } catch (error) {
+      console.error('❌ Erro ao disparar eventos de pixel:', error);
+    }
+  };
+
   const handlePayment = () => {
-    // Redireciona para o link externo específico do preço selecionado
-    window.location.href = paymentLink;
+    // Dispara os eventos de pixel antes do redirecionamento
+    firePixelEvents();
+
+    // Pequeno delay para garantir que os eventos sejam enviados antes do redirecionamento
+    setTimeout(() => {
+      // Redireciona para o link externo específico do preço selecionado
+      window.location.href = paymentLink;
+    }, 100);
   };
 
   return (

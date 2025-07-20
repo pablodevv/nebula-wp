@@ -253,7 +253,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-purple-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="life_line.png"
+                    src="/images/life_line.png"
                     alt="Linha da vida"
                     className="w-8 h-8"
                   />
@@ -270,7 +270,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="head_line.png"
+                    src="/images/head_line.png"
                     alt="Linha da cabeça"
                     className="w-8 h-8"
                   />
@@ -287,7 +287,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="marriage_line.png"
+                    src="/images/marriage_line.png"
                     alt="Linha do casamento"
                     className="w-8 h-8"
                   />
@@ -306,7 +306,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 <div className="bg-purple-50 rounded-xl p-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-3">
                     <img 
-                      src="love_line.png"
+                      src="/images/love_line.png"
                       alt="Linha do amor"
                       className="w-6 h-6"
                     />
@@ -322,7 +322,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 <div className="bg-purple-50 rounded-xl p-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-3">
                     <img 
-                      src="fate_line.png"
+                      src="/images/fate_line.png"
                       alt="Linha do dinheiro"
                       className="w-6 h-6"
                     />
@@ -340,7 +340,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="fingers.png"
+                    src="/images/fingers.png"
                     alt="Dedos da mão"
                     className="w-8 h-8"
                   />

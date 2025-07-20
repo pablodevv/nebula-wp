@@ -396,12 +396,24 @@ app.use(async (req, res) => {
     delete requestHeaders['x-forwarded-for'];
     delete requestHeaders['accept-encoding']; // Removido para forçar descompressão manual
 
+    // Lógica para Proxeamento do Subdomínio de Leitura (Mão) - CORRIGIDA
     if (req.url.startsWith('/reading/')) {
         targetDomain = READING_SUBDOMAIN_TARGET;
         requestPath = req.url.substring('/reading'.length);
         if (requestPath === '') requestPath = '/';
         console.log(`[READING PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
         console.log(`[READING PROXY] Método: ${req.method}`);
+
+        // LOG DETALHADO PARA UPLOAD DE ARQUIVOS
+        if (req.files && Object.keys(req.files).length > 0) {
+            console.log(`[READING PROXY] Arquivos recebidos: ${JSON.stringify(Object.keys(req.files))}`);
+            const photoFile = req.files.photo;
+            if (photoFile) {
+                console.log(`[READING PROXY] Arquivo 'photo': name=${photoFile.name}, size=${photoFile.size}, mimetype=${photoFile.mimetype}`);
+            }
+        } else {
+            console.log(`[READING PROXY] Corpo recebido (tipo): ${typeof req.body}`);
+        }
     } else {
         console.log(`[MAIN PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
     }
@@ -410,6 +422,8 @@ app.use(async (req, res) => {
 
     try {
         let requestData = req.body;
+
+        // LÓGICA CORRIGIDA PARA UPLOAD DE ARQUIVOS (DA PALMA)
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
             if (photoFile) {

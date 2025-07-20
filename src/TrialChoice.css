@@ -135,14 +135,14 @@
 }
 
 .price-button {
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   background: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #374151;
   display: flex;
@@ -176,19 +176,19 @@
   color: #666;
   line-height: 1.4;
   margin-bottom: 10px;
-  max-width: 280px;
+  max-width: 320px;
   text-align: center;
 }
 
 .curved-arrow {
   position: absolute;
-  top: -50px;
-  right: 25%;
+  top: -140px;
+  right: 60px;
   z-index: 10;
 }
 
 .arrow-svg {
-  transform: rotate(25deg);
+  transform: rotate(0deg);
 }
 
 .view-reading-button {
@@ -241,9 +241,9 @@
   }
   
   .price-button {
-    width: 70px;
-    height: 70px;
-    font-size: 14px;
+    width: 100px;
+    height: 100px;
+    font-size: 16px;
   }
   
   .view-reading-button {
@@ -252,8 +252,8 @@
   }
   
   .curved-arrow {
-    top: -45px;
-    right: 20%;
+    top: -120px;
+    right: 50px;
   }
   
   .arrow-svg {
@@ -264,9 +264,9 @@
 
 @media (max-width: 480px) {
   .price-button {
-    width: 60px;
-    height: 60px;
-    font-size: 12px;
+    width: 80px;
+    height: 80px;
+    font-size: 14px;
   }
   
   .help-text {
@@ -275,8 +275,8 @@
   }
   
   .curved-arrow {
-    top: -40px;
-    right: 15%;
+    top: -100px;
+    right: 40px;
   }
   
   .arrow-svg {

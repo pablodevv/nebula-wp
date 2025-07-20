@@ -95,7 +95,6 @@ function Date() {
           Continuar
         </button>
       </div>
-</div>
      
     </div>
   );

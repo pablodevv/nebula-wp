@@ -3,11 +3,13 @@ import { Star, Book, MessageCircle, Shield, Lock } from 'lucide-react';
 
 interface TrialPaymentAncestralProps {
   selectedPrice?: { value: string; link: string } | null;
+  selectedBirthDate?: string;
   onBack?: () => void;
 }
 
 const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({ 
   selectedPrice, 
+  selectedBirthDate = '1990-01-01',
   onBack 
 }) => {
   const [timeLeft, setTimeLeft] = useState({ minutes: 0, seconds: 11 });
@@ -183,7 +185,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               </div>
               <div>
                 <p className="text-gray-600 text-sm">Data de nascimento</p>
-                <p className="text-black font-bold text-lg">1990-01-01</p>
+                <p className="text-black font-bold text-lg">{selectedBirthDate}</p>
               </div>
             </div>
 

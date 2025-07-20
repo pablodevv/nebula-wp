@@ -9,7 +9,7 @@ interface TrialPaymentAncestralProps {
 
 const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({ 
   selectedPrice, 
-  selectedBirthDate = '1990-01-01',
+  selectedBirthDate = '01-01-1990',
   onBack 
 }) => {
   const [timeLeft, setTimeLeft] = useState({ minutes: 9, seconds: 40 });

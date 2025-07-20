@@ -141,7 +141,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
                   Esta opção nos ajudará a financiar aqueles que precisam escolher os menores preços de teste!
                 </div>
                 <div className="curved-arrow">
-                  <svg width="120" height="80" viewBox="0 0 120 80" className="arrow-svg">
+  <svg viewBox="0 0 120 80" className="arrow-svg">
                     <defs>
                       <marker id="arrowhead" markerWidth="10" markerHeight="7" 
                               refX="9" refY="3.5" orient="auto">

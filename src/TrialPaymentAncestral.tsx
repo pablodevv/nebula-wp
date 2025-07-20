@@ -12,7 +12,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
   selectedBirthDate = '1990-01-01',
   onBack 
 }) => {
-  const [timeLeft, setTimeLeft] = useState({ minutes: 0, seconds: 11 });
+  const [timeLeft, setTimeLeft] = useState({ minutes: 9, seconds: 40 });
 
   // Determina o preço a ser exibido
   const displayPrice = selectedPrice?.value || '$13.67';
@@ -41,15 +41,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Status Bar */}
-      <div className="flex justify-between items-center px-4 py-2 bg-white text-black text-sm font-medium">
-        <span>10:50</span>
-        <div className="flex items-center gap-1">
-          <span className="text-xs">●●● ◐</span>
-          <span className="text-xs">📶</span>
-          <span className="text-xs bg-black text-white px-1 rounded">62</span>
-        </div>
-      </div>
+     
 
       {/* Timer Section */}
       <div className="flex justify-between items-center px-4 py-3 bg-white">
@@ -93,7 +85,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
         {/* Main Title */}
         <h1 className="text-3xl font-bold text-black leading-tight">
-          Conheça sua bruxa interior com a Nebula
+          Conheça sua bruxa interior com o Nebula
         </h1>
 
         {/* Features */}
@@ -132,7 +124,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           </div>
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-xl font-bold text-black">Leitura personalizada para</span>
+              <span className="text-xl font-bold text-black">Leitura personalizada por</span>
               <span className="text-2xl font-bold text-purple-600">{displayPrice}</span>
             </div>
             <div className="flex justify-between items-center text-lg">
@@ -156,11 +148,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           OBTER MINHA LEITURA
         </button>
 
-        {/* Legal Text */}
-        <div className="text-center text-xs text-gray-600 leading-relaxed">
-          You are enrolling in monthly subscription to NEBULA service. By continuing you agree that if you don't cancel prior to the end of the 7-day trial for the {displayPrice} you will automatically be charged $45 every 30 days until you cancel in settings. The charge will appear on your bill as appnebula.co. Learn more about cancellation and refund policy in{' '}
-          <a href="#" className="text-purple-600 underline">Subscription policy</a>.
-        </div>
+       
 
         {/* Personalization Section */}
         <div className="pt-8">
@@ -332,13 +320,13 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-purple-50 rounded-xl p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center text-white font-bold">
-                    KM
+                    LR
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-black">ki_matte</p>
-                        <p className="text-gray-500 text-xs">02/24/2024</p>
+                        <p className="font-bold text-black">Lucas Ramos</p>
+                        <p className="text-gray-500 text-xs">24/02/2024</p>
                       </div>
                       <div className="flex text-yellow-400">
                         <Star className="w-4 h-4 fill-current" />
@@ -372,7 +360,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-black">jp63</p>
+                        <p className="font-bold text-black">João Pedro</p>
                         <p className="text-gray-500 text-xs">03/04/2024</p>
                       </div>
                       <div className="flex text-yellow-400">
@@ -400,13 +388,13 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div className="bg-purple-50 rounded-xl p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center text-white font-bold">
-                    TH
+                    TS
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-black">therealslimmazi</p>
-                        <p className="text-gray-500 text-xs">03/17/2024</p>
+                        <p className="font-bold text-black">Thamires Souza</p>
+                        <p className="text-gray-500 text-xs">17/03/2024</p>
                       </div>
                       <div className="flex text-yellow-400">
                         <Star className="w-4 h-4 fill-current" />
@@ -421,7 +409,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 <div className="flex gap-3">
                   <div className="text-4xl text-gray-400 leading-none">"</div>
                   <p className="text-gray-700 text-sm leading-relaxed">
-                    Obrigado, Nebula! Esta experiência me deixou 
+                    Obrigada, Nebula! Essa experiência me deixou 
                     mais otimista sobre alcançar meus objetivos, com 
                     uma visão mais clara do que quero conquistar.
                   </p>
@@ -515,16 +503,14 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             </div>
 
             {/* Address */}
-            <div className="text-center text-gray-600 text-sm mb-6">
-              500 N RAINBOW BLVD LAS VEGAS, NV 89107
-            </div>
+           
           </div>
         </div>
       </div>
 
       {/* Footer */}
       <div className="text-center py-6 text-gray-500 text-sm">
-        🔒 appnebula.co
+        
         {onBack && (
           <button 
             onClick={onBack}

@@ -50,7 +50,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa ancestral",
           profile: "Especializada em conectar-se e honrar seus ancestrais; habilidosa em tecer conhecimento e sabedoria ancestral em sua prática mágica.",
           strengths: "Empática, introspectiva e profundamente ligada às suas raízes; valoriza tradição, herança e as lições passadas através das gerações.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_ancestral%20witch.png&w=1600&q=75"
+          image: "/images/ancestral.png"
         };
       
       case 2: // Fevereiro
@@ -58,7 +58,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa do lar",
           profile: "Especialista em magia doméstica, proteção do lar e lareira, e no uso de objetos do dia a dia para fins mágicos; imprime magia nos aspectos comuns da vida.",
           strengths: "Acolhedora, hospitaleira e prática; encontra alegria nos momentos cotidianos e abraça a magia nas coisas simples da vida.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_kitchen%20witch.png&w=1600&q=75"
+          image: "/images/lar.png"
         };
       
       case 3: // Março
@@ -66,7 +66,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa dos cristais",
           profile: "Hábil no trabalho com cristais, pedras preciosas e minerais para adivinhação e trabalho energético; conhece as propriedades únicas de várias pedras e suas aplicações mágicas.",
           strengths: "Sensível, introspectiva e autoconsciente; valoriza o crescimento interior, o desenvolvimento pessoal e o aproveitamento das energias da Terra.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_crystal%20witch.png&w=1600&q=75"
+          image: "/images/crystal.png"
         };
       
       case 4: // Abril
@@ -74,7 +74,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa cósmica",
           profile: "Conhecedora de astrologia, alinhamentos planetários e energias celestiais; usa padrões cósmicos para guiar e fortalecer sua prática mágica.",
           strengths: "Perspicaz, visionária e conectada ao cosmos; valoriza a interconexão de todas as coisas e vê o quadro geral.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_cosmic%20witch.png&w=1600&q=75"
+          image: "/images/cosmic.png"
         };
       
       case 5: // Maio
@@ -82,7 +82,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa verde",
           profile: "Hábil em trabalhar com a natureza, ervas e plantas; excelente em cura, magia da fertilidade e conexão com os ciclos da Terra.",
           strengths: "Conectada, cuidadosa, paciente e ligada à natureza; frequentemente empática e sintonizada com as emoções dos outros.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_green%20witch.png&w=1600&q=75"
+          image: "/images/verde.png"
         };
       
       case 6: // Junho
@@ -90,7 +90,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa eclética",
           profile: "Versátil em várias práticas e tradições mágicas; habilidosa em combinar elementos diferentes para criar um caminho mágico único e personalizado.",
           strengths: "Mente aberta, curiosa e versátil; gosta de explorar diversas tradições e práticas para criar um caminho mágico único.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_eclectic%20witch.png&w=1600&q=75"
+          image: "/images/eclectic.png"
         };
       
       case 7: // Julho
@@ -98,7 +98,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa cósmica",
           profile: "Conhecedora de astrologia, alinhamentos planetários e energias celestiais; usa padrões cósmicos para guiar e fortalecer sua prática mágica.",
           strengths: "Perspicaz, visionária e conectada ao cosmos; valoriza a interconexão de todas as coisas e vê o quadro geral.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_cosmic%20witch.png&w=1600&q=75"
+          image: "/images/cosmic.png"
         };
       
       case 8: // Agosto
@@ -106,7 +106,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa do lar",
           profile: "Especialista em magia doméstica, proteção do lar e lareira, e no uso de objetos do dia a dia para fins mágicos; imprime magia nos aspectos comuns da vida.",
           strengths: "Acolhedora, hospitaleira e prática; encontra alegria nos momentos cotidianos e abraça a magia nas coisas simples da vida.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_kitchen%20witch.png&w=1600&q=75"
+          image: "/images/lar.png"
         };
       
       case 9: // Setembro
@@ -114,7 +114,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa solitária",
           profile: "Independente e autodidata; confia na intuição e orientação interior para desenvolver uma prática mágica pessoal, sem estar preso a tradições específicas ou influências de grupos.",
           strengths: "Independente, autossuficiente e introspectiva; confia na intuição e orientação interior para desenvolver sua prática mágica.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_solitary%20witch.png&w=1600&q=75"
+          image: "/images/solitary.png"
         };
       
       case 10: // Outubro
@@ -122,7 +122,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa verde",
           profile: "Hábil em trabalhar com a natureza, ervas e plantas; excelente em cura, magia da fertilidade e conexão com os ciclos da Terra.",
           strengths: "Conectada, cuidadosa, paciente e ligada à natureza; frequentemente empática e sintonizada com as emoções dos outros.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_green%20witch.png&w=1600&q=75"
+          image: "/images/verde.png"
         };
       
       case 11: // Novembro
@@ -130,7 +130,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa solitária",
           profile: "Independente e autodidata; confia na intuição e orientação interior para desenvolver uma prática mágica pessoal, sem estar preso a tradições específicas ou influências de grupos.",
           strengths: "Independente, autossuficiente e introspectiva; confia na intuição e orientação interior para desenvolver sua prática mágica.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_solitary%20witch.png&w=1600&q=75"
+          image: "/images/solitary.png"
         };
       
       case 12: // Dezembro
@@ -138,7 +138,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa eclética",
           profile: "Versátil em várias práticas e tradições mágicas; habilidosa em combinar elementos diferentes para criar um caminho mágico único e personalizado.",
           strengths: "Mente aberta, curiosa e versátil; gosta de explorar diversas tradições e práticas para criar um caminho mágico único.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_eclectic%20witch.png&w=1600&q=75"
+          image: "/images/eclectic.png"
         };
       
       default:
@@ -147,7 +147,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           type: "Bruxa ancestral",
           profile: "Especializada em conectar-se e honrar seus ancestrais; habilidosa em tecer conhecimento e sabedoria ancestral em sua prática mágica.",
           strengths: "Empática, introspectiva e profundamente ligada às suas raízes; valoriza tradição, herança e as lições passadas através das gerações.",
-          image: "https://appnebula.co/_next/image?url=https%3A%2F%2Fmedia.appnebula.co%2Fwitch_power%2Fpaywall_witches%2FImage_ancestral%20witch.png&w=1600&q=75"
+          image: "/images/ancestral.png"
         };
     }
   };

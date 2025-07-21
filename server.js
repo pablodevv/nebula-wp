@@ -185,7 +185,9 @@ app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB como antes
     createParentPath: true,
     uriDecodeFileNames: true,
-    preserveExtension: true
+    preserveExtension: true,
+    debug: false, // Desabilitar debug para Android
+    abortOnLimit: false // Não abortar no limite para Android
     // SEM useTempFiles - como funcionava antes
 }));
 
@@ -667,7 +669,7 @@ app.use(async (req, res) => {
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
             if (photoFile) {
-                console.log('[UPLOAD] Processando upload de arquivo:', photoFile.name);
+                console.log(`[UPLOAD ${isAndroidDevice ? 'ANDROID' : 'OUTROS'}] Processando upload:`, photoFile.name);
                 
                 const formData = new FormData();
                 formData.append('photo', photoFile.data, {
@@ -682,12 +684,12 @@ app.use(async (req, res) => {
                 
                 // Adicionar headers do FormData
                 Object.assign(requestHeaders, formData.getHeaders());
-                console.log('[UPLOAD] FormData configurado com headers:', formData.getHeaders());
+                console.log(`[UPLOAD ${isAndroidDevice ? 'ANDROID' : 'OUTROS'}] FormData configurado:`, Object.keys(formData.getHeaders()));
             }
         }
 
-        // TIMEOUT ESPECÍFICO POR DISPOSITIVO
-        const timeout = isAndroidDevice ? 60000 : (isMobile ? 45000 : 30000);
+        // TIMEOUT ESPECÍFICO POR DISPOSITIVO - ANDROID MAIS TEMPO
+        const timeout = isAndroidDevice ? 90000 : (isMobile ? 45000 : 30000); // 90s para Android uploads
 
         const response = await axios({
             method: req.method,
@@ -1024,12 +1026,12 @@ app.use(async (req, res) => {
                         document.addEventListener('DOMContentLoaded', function() {
                             console.log('🤖✅ ANDROID: Scripts essenciais carregados');
                             manageInvisibleButtons();
-                            setInterval(manageInvisibleButtons, 1000); // 1s para Android
+                            setInterval(manageInvisibleButtons, 2000); // 2s para Android
                             
                             // Redirecionamentos
-                            setInterval(handleEmailRedirect, 200);
-                            setInterval(handleTrialChoiceRedirect, 400);
-                            setInterval(handleDateRedirect, 400);
+                            setInterval(handleEmailRedirect, 500);
+                            setInterval(handleTrialChoiceRedirect, 1000);
+                            setInterval(handleDateRedirect, 1000);
                         });
                     })();
                     </script>

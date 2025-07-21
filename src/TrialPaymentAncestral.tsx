@@ -15,12 +15,142 @@ declare global {
   }
 }
 
+interface WitchProfile {
+  type: string;
+  profile: string;
+  strengths: string;
+  image: string;
+}
+
 const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({ 
   selectedPrice, 
   selectedBirthDate = '01-01-1990',
   onBack 
 }) => {
   const [timeLeft, setTimeLeft] = useState({ minutes: 9, seconds: 40 });
+
+  // Função para obter informações da bruxa baseado no mês
+  const getWitchProfile = (dateStr: string): WitchProfile => {
+    let month: number;
+    
+    // Determinar o mês da data
+    if (dateStr.includes('/')) {
+      // Formato DD/MM/YYYY
+      const parts = dateStr.split('/');
+      month = parseInt(parts[1], 10);
+    } else {
+      // Formato YYYY-MM-DD
+      const parts = dateStr.split('-');
+      month = parseInt(parts[1], 10);
+    }
+
+    switch (month) {
+      case 1: // Janeiro
+        return {
+          type: "Bruxa ancestral",
+          profile: "Especializada em conectar-se e honrar seus ancestrais; habilidosa em tecer conhecimento e sabedoria ancestral em sua prática mágica.",
+          strengths: "Empática, introspectiva e profundamente ligada às suas raízes; valoriza tradição, herança e as lições passadas através das gerações.",
+          image: "/images/ancestralwitch.png"
+        };
+      
+      case 2: // Fevereiro
+        return {
+          type: "Bruxa do lar",
+          profile: "Especialista em magia doméstica, proteção do lar e lareira, e no uso de objetos do dia a dia para fins mágicos; imprime magia nos aspectos comuns da vida.",
+          strengths: "Acolhedora, hospitaleira e prática; encontra alegria nos momentos cotidianos e abraça a magia nas coisas simples da vida.",
+          image: "/images/domesticwitch.png"
+        };
+      
+      case 3: // Março
+        return {
+          type: "Bruxa dos cristais",
+          profile: "Hábil no trabalho com cristais, pedras preciosas e minerais para adivinhação e trabalho energético; conhece as propriedades únicas de várias pedras e suas aplicações mágicas.",
+          strengths: "Sensível, introspectiva e autoconsciente; valoriza o crescimento interior, o desenvolvimento pessoal e o aproveitamento das energias da Terra.",
+          image: "/images/crystalwitch.png"
+        };
+      
+      case 4: // Abril
+        return {
+          type: "Bruxa cósmica",
+          profile: "Conhecedora de astrologia, alinhamentos planetários e energias celestiais; usa padrões cósmicos para guiar e fortalecer sua prática mágica.",
+          strengths: "Perspicaz, visionária e conectada ao cosmos; valoriza a interconexão de todas as coisas e vê o quadro geral.",
+          image: "/images/cosmicwitch.png"
+        };
+      
+      case 5: // Maio
+        return {
+          type: "Bruxa verde",
+          profile: "Hábil em trabalhar com a natureza, ervas e plantas; excelente em cura, magia da fertilidade e conexão com os ciclos da Terra.",
+          strengths: "Conectada, cuidadosa, paciente e ligada à natureza; frequentemente empática e sintonizada com as emoções dos outros.",
+          image: "/images/greenwitch.png"
+        };
+      
+      case 6: // Junho
+        return {
+          type: "Bruxa eclética",
+          profile: "Versátil em várias práticas e tradições mágicas; habilidosa em combinar elementos diferentes para criar um caminho mágico único e personalizado.",
+          strengths: "Mente aberta, curiosa e versátil; gosta de explorar diversas tradições e práticas para criar um caminho mágico único.",
+          image: "/images/eclecticwitch.png"
+        };
+      
+      case 7: // Julho
+        return {
+          type: "Bruxa cósmica",
+          profile: "Conhecedora de astrologia, alinhamentos planetários e energias celestiais; usa padrões cósmicos para guiar e fortalecer sua prática mágica.",
+          strengths: "Perspicaz, visionária e conectada ao cosmos; valoriza a interconexão de todas as coisas e vê o quadro geral.",
+          image: "/images/cosmicwitch.png"
+        };
+      
+      case 8: // Agosto
+        return {
+          type: "Bruxa do lar",
+          profile: "Especialista em magia doméstica, proteção do lar e lareira, e no uso de objetos do dia a dia para fins mágicos; imprime magia nos aspectos comuns da vida.",
+          strengths: "Acolhedora, hospitaleira e prática; encontra alegria nos momentos cotidianos e abraça a magia nas coisas simples da vida.",
+          image: "/images/domesticwitch.png"
+        };
+      
+      case 9: // Setembro
+        return {
+          type: "Bruxa solitária",
+          profile: "Independente e autodidata; confia na intuição e orientação interior para desenvolver uma prática mágica pessoal, sem estar preso a tradições específicas ou influências de grupos.",
+          strengths: "Independente, autossuficiente e introspectiva; confia na intuição e orientação interior para desenvolver sua prática mágica.",
+          image: "/images/solitarywitch.png"
+        };
+      
+      case 10: // Outubro
+        return {
+          type: "Bruxa verde",
+          profile: "Hábil em trabalhar com a natureza, ervas e plantas; excelente em cura, magia da fertilidade e conexão com os ciclos da Terra.",
+          strengths: "Conectada, cuidadosa, paciente e ligada à natureza; frequentemente empática e sintonizada com as emoções dos outros.",
+          image: "/images/greenwitch.png"
+        };
+      
+      case 11: // Novembro
+        return {
+          type: "Bruxa solitária",
+          profile: "Independente e autodidata; confia na intuição e orientação interior para desenvolver uma prática mágica pessoal, sem estar preso a tradições específicas ou influências de grupos.",
+          strengths: "Independente, autossuficiente e introspectiva; confia na intuição e orientação interior para desenvolver sua prática mágica.",
+          image: "/images/solitarywitch.png"
+        };
+      
+      case 12: // Dezembro
+        return {
+          type: "Bruxa eclética",
+          profile: "Versátil em várias práticas e tradições mágicas; habilidosa em combinar elementos diferentes para criar um caminho mágico único e personalizado.",
+          strengths: "Mente aberta, curiosa e versátil; gosta de explorar diversas tradições e práticas para criar um caminho mágico único.",
+          image: "/images/eclecticwitch.png"
+        };
+      
+      default:
+        // Fallback para bruxa ancestral
+        return {
+          type: "Bruxa ancestral",
+          profile: "Especializada em conectar-se e honrar seus ancestrais; habilidosa em tecer conhecimento e sabedoria ancestral em sua prática mágica.",
+          strengths: "Empática, introspectiva e profundamente ligada às suas raízes; valoriza tradição, herança e as lições passadas através das gerações.",
+          image: "/images/ancestralwitch.png"
+        };
+    }
+  };
 
   // Função para converter data para formato brasileiro
   const formatBrazilianDate = (dateStr: string) => {
@@ -37,6 +167,9 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
     
     return dateStr;
   };
+
+  // Obter perfil da bruxa baseado na data de nascimento
+  const witchProfile = getWitchProfile(selectedBirthDate);
 
   // Determina o preço a ser exibido
   const displayPrice = selectedPrice?.value || '$13.67';
@@ -238,8 +371,8 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           <div className="bg-gradient-to-b from-purple-100 to-purple-50 rounded-2xl p-6 mb-6">
             <div className="flex justify-center mb-6">
               <img 
-                src="/images/ancestralwitch.png" 
-                alt="Bruxa Ancestral" 
+                src={witchProfile.image}
+                alt={witchProfile.type}
                 className="w-64 h-80 object-cover rounded-xl"
               />
             </div>
@@ -247,7 +380,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <p className="text-gray-600 text-sm">Tipo de bruxa</p>
-                <p className="text-black font-bold text-lg">Bruxa ancestral</p>
+                <p className="text-black font-bold text-lg">{witchProfile.type}</p>
               </div>
               <div>
                 <p className="text-gray-600 text-sm">Data de nascimento</p>
@@ -259,18 +392,14 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               <div>
                 <h4 className="font-bold text-black mb-2">Perfil de bruxa</h4>
                 <p className="text-gray-700 text-sm leading-relaxed">
-                  Especializada em conectar-se e honrar seus ancestrais; 
-                  habilidosa em tecer conhecimento e sabedoria 
-                  ancestral em sua prática mágica.
+                  {witchProfile.profile}
                 </p>
               </div>
               
               <div>
                 <h4 className="font-bold text-black mb-2">Forças pessoais</h4>
                 <p className="text-gray-700 text-sm leading-relaxed">
-                  Empática, introspectiva e profundamente ligada às suas 
-                  raízes; valoriza tradição, herança e as lições passadas 
-                  através das gerações.
+                  {witchProfile.strengths}
                 </p>
               </div>
 

@@ -95,7 +95,7 @@ app.use(compression({
 // Bloqueio TOTAL de source maps
 app.use((req, res, next) => {
     if (SOURCE_MAP_BLACKLIST.has(req.url) || req.url.endsWith('.js.map') || req.url.endsWith('.css.map')) {
-        console.log(`🚫 Source map bloqueado: ${req.url}`);
+        console.log(`Source map bloqueado: ${req.url}`);
         return res.status(404).end();
     }
     next();
@@ -204,13 +204,13 @@ app.get('/api/captured-text', async (req, res) => {
     console.log('📡 API /api/captured-text chamada');
 
     if (!capturedBoldText || capturedBoldText === 'identificar seu arquétipo de bruxa' || (Date.now() - lastCaptureTime > 3600000 && !isCapturing)) {
-        console.log('🔄 Texto capturado ausente/antigo. Tentando recapturar do site original...');
+        console.log('Texto capturado ausente/antigo. Tentando recapturar do site original...');
         await captureTextDirectly();
     }
 
-    console.log('📝 Texto atual na variável:', `"${capturedBoldText}"`);
-    console.log('🕐 Último tempo de captura:', new Date(lastCaptureTime).toISOString());
-    console.log('🔄 Está capturando:', isCapturing);
+    console.log('Texto atual na variável:', `"${capturedBoldText}"`);
+    console.log('Último tempo de captura:', new Date(lastCaptureTime).toISOString());
+    console.log('Está capturando:', isCapturing);
 
     const responseData = {
         capturedText: capturedBoldText,
@@ -232,9 +232,9 @@ app.post('/api/set-selected-choice', (req, res) => {
         capturedBoldText = selectedText;
         lastCaptureTime = Date.now();
         
-        console.log(`🎯 DADOS CRÍTICOS DO QUIZ RECEBIDOS: ${capturedBoldText}`);
-        console.log(`✅ Texto selecionado pelo usuário recebido e atualizado: "${capturedBoldText}"`);
-        console.log('🔒 DADOS PROTEGIDOS - Não serão cacheados ou perdidos');
+        console.log(`DADOS CRÍTICOS DO QUIZ RECEBIDOS: ${capturedBoldText}`);
+        console.log(`Texto selecionado pelo usuário recebido e atualizado: "${capturedBoldText}"`);
+        console.log('DADOS PROTEGIDOS - Não serão cacheados ou perdidos');
         
         res.status(200).json({ message: 'Texto atualizado com sucesso.', capturedText: capturedBoldText });
     } else {
@@ -244,7 +244,7 @@ app.post('/api/set-selected-choice', (req, res) => {
 
 // === FUNÇÕES DE EXTRAÇÃO - MANTIDAS 100% INTACTAS ===
 function extractTextFromHTML(html) {
-    console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
+    console.log('\n EXTRAINDO TEXTO DO HTML');
 
     try {
         const $ = cheerio.load(html);
@@ -253,7 +253,7 @@ function extractTextFromHTML(html) {
         const endPhrase = ', e queremos ajudar você também.';
 
         const fullText = $('body').text();
-        console.log('📄 Tamanho do texto completo:', fullText.length);
+        console.log('Tamanho do texto completo:', fullText.length);
 
         if (fullText.includes(startPhrase) && fullText.includes(endPhrase)) {
             const startIndex = fullText.indexOf(startPhrase) + startPhrase.length;
@@ -263,7 +263,7 @@ function extractTextFromHTML(html) {
                 const extractedContent = fullText.substring(startIndex, endIndex).trim();
 
                 if (extractedContent.length > 5) {
-                    console.log('✅ ESTRATÉGIA 1: Texto extraído do HTML completo:', `"${extractedContent}"`);
+                    console.log('ESTRATÉGIA 1: Texto extraído do HTML completo:', `"${extractedContent}"`);
                     return extractedContent;
                 }
             }
@@ -288,7 +288,7 @@ function extractTextFromHTML(html) {
                     !text.includes('$') &&
                     !text.includes('SATISFAÇÃO') &&
                     !text.includes('ECONOMIA')) {
-                    console.log(`✅ ESTRATÉGIA 2: Texto encontrado com padrão "${pattern}":`, `"${text}"`);
+                    console.log(`ESTRATÉGIA 2: Texto encontrado com padrão "${pattern}":`, `"${text}"`);
                     return text;
                 }
             }
@@ -316,10 +316,10 @@ function extractTextFromHTML(html) {
             }
         });
 
-        console.log('📝 Todos os <b> relevantes encontrados:', relevantTexts);
+        console.log('Todos os <b> relevantes encontrados:', relevantTexts);
 
         if (relevantTexts.length > 0) {
-            console.log('✅ ESTRATÉGIA 3: Usando primeiro <b> relevante:', `"${relevantTexts[0]}"`);
+            console.log('ESTRATÉGIA 3: Usando primeiro <b> relevante:', `"${relevantTexts[0]}"`);
             return relevantTexts[0];
         }
 
@@ -330,31 +330,31 @@ function extractTextFromHTML(html) {
             const boldMatch = match[0].match(/<b[^>]*>([^<]+)<\/b>/i);
             if (boldMatch && boldMatch[1]) {
                 const text = boldMatch[1].trim();
-                console.log('✅ ESTRATÉGIA 4: Texto extraído via regex:', `"${text}"`);
+                console.log('ESTRATÉGIA 4: Texto extraído via regex:', `"${text}"`);
                 return text;
             }
         }
 
-        console.log('❌ Nenhuma estratégia funcionou');
+        console.log('Nenhuma estratégia funcionou');
         return null;
 
     } catch (error) {
-        console.log('❌ Erro ao extrair texto do HTML:', error.message);
+        console.log('Erro ao extrair texto do HTML:', error.message);
         return null;
     }
 }
 
 async function captureTextDirectly() {
     if (isCapturing) {
-        console.log('⏳ Captura já em andamento...');
+        console.log('Captura já em andamento...');
         return capturedBoldText;
     }
 
     isCapturing = true;
 
     try {
-        console.log('\n🎯 FAZENDO REQUISIÇÃO DIRETA PARA CAPTURAR TEXTO');
-        console.log('🌐 URL:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
+        console.log('\n FAZENDO REQUISIÇÃO DIRETA PARA CAPTURAR TEXTO');
+        console.log('URL:', `${MAIN_TARGET_URL}/pt/witch-power/trialChoice`);
 
         const response = await axios.get(`${MAIN_TARGET_URL}/pt/witch-power/trialChoice`, {
             headers: {
@@ -372,44 +372,44 @@ async function captureTextDirectly() {
             maxRedirects: 5
         });
 
-        console.log('✅ Resposta recebida! Status:', response.status);
+        console.log('Resposta recebida! Status:', response.status);
 
         let responseData = response.data;
         const contentEncoding = response.headers['content-encoding'];
         if (contentEncoding === 'gzip') {
-            console.log('📦 Descomprimindo resposta gzip...');
+            console.log('Descomprimindo resposta gzip...');
             responseData = zlib.gunzipSync(responseData);
         } else if (contentEncoding === 'deflate') {
-            console.log('📦 Descomprimindo resposta deflate...');
+            console.log('Descomprimindo resposta deflate...');
             responseData = zlib.inflateSync(responseData);
         } else if (contentEncoding === 'br') {
-            console.log('📦 Descomprimindo resposta brotli...');
+            console.log('Descomprimindo resposta brotli...');
             responseData = zlib.brotliDecompressSync(responseData);
         }
 
         const html = responseData.toString('utf8');
-        console.log('📊 Tamanho do HTML (após descompressão):', html.length);
+        console.log('Tamanho do HTML (após descompressão):', html.length);
 
         if (html.includes('Ajudamos milhões de pessoas a')) {
-            console.log('🎉 HTML contém o padrão "Ajudamos milhões de pessoas a"!');
+            console.log('HTML contém o padrão "Ajudamos milhões de pessoas a"!');
 
             const extractedText = extractTextFromHTML(html);
 
             if (extractedText && extractedText.length > 5) {
                 capturedBoldText = extractedText;
                 lastCaptureTime = Date.now();
-                console.log('🎉 SUCESSO! Texto capturado:', `"${capturedBoldText}"`);
+                console.log('SUCESSO! Texto capturado:', `"${capturedBoldText}"`);
                 return capturedBoldText;
             } else {
-                console.log('⚠️ Padrão encontrado mas não conseguiu extrair texto');
+                console.log('Padrão encontrado mas não conseguiu extrair texto');
             }
         } else {
-            console.log('⚠️ HTML não contém o padrão esperado');
-            console.log('📝 Primeiros 500 caracteres do HTML:');
+            console.log('HTML não contém o padrão esperado');
+            console.log('Primeiros 500 caracteres do HTML:');
             console.log(html.substring(0, 500));
         }
 
-        console.log('❌ Não foi possível capturar o texto');
+        console.log('Não foi possível capturar o texto');
 
         const knownTexts = [
             'identificar seu arquétipo de bruxa',
@@ -425,29 +425,29 @@ async function captureTextDirectly() {
             if (htmlLower.includes(text.toLowerCase())) {
                 capturedBoldText = text;
                 lastCaptureTime = Date.now();
-                console.log('✅ Texto encontrado no HTML:', `"${capturedBoldText}"`);
+                console.log('Texto encontrado no HTML:', `"${capturedBoldText}"`);
                 return capturedBoldText;
             }
         }
 
         capturedBoldText = 'identificar seu arquétipo de bruxa';
         lastCaptureTime = Date.now();
-        console.log('⚠️ Usando fallback:', `"${capturedBoldText}"`);
+        console.log('Usando fallback:', `"${capturedBoldText}"`);
 
         return capturedBoldText;
 
     } catch (error) {
-        console.error('❌ ERRO na requisição direta:', error.message);
+        console.error('ERRO na requisição direta:', error.message);
         errorCount++;
 
         capturedBoldText = 'identificar seu arquétipo de bruxa';
         lastCaptureTime = Date.now();
-        console.log('⚠️ Usando fallback de erro:', `"${capturedBoldText}"`);
+        console.log('Usando fallback de erro:', `"${capturedBoldText}"`);
 
         return capturedBoldText;
     } finally {
         isCapturing = false;
-        console.log('🏁 Captura finalizada\n');
+        console.log('Captura finalizada\n');
     }
 }
 
@@ -458,12 +458,12 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('URL acessada:', req.url);
 
     try {
-        console.log('✅ Servindo página React customizada (trialChoice)...\n');
+        console.log('Servindo página React customizada (trialChoice)...\n');
         res.setHeader('Cache-Control', 'no-cache');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 
     } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO ao servir trialChoice:', error.message);
+        console.error('\n ERRO CRÍTICO ao servir trialChoice:', error.message);
         res.status(500).send('Erro ao carregar a página customizada.');
     }
 });
@@ -474,12 +474,12 @@ app.get('/pt/witch-power/date', async (req, res) => {
     console.log('URL acessada:', req.url);
 
     try {
-        console.log('✅ Servindo página React customizada (Date)...\n');
+        console.log('Servindo página React customizada (Date)...\n');
         res.setHeader('Cache-Control', 'no-cache');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 
     } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO ao servir date:', error.message);
+        console.error('\n ERRO CRÍTICO ao servir date:', error.message);
         res.status(500).send('Erro ao carregar a página de data.');
     }
 });
@@ -493,7 +493,7 @@ app.use('/api-proxy', async (req, res) => {
         const cached = apiCache.get(cacheKey);
         if (cached && (Date.now() - cached.timestamp < CACHE_SETTINGS.API)) {
             cacheHits++;
-            console.log(`🎯 API Cache HIT: ${req.url}`);
+            console.log(` API Cache HIT: ${req.url}`);
             return res.status(cached.status).set(cached.headers).send(cached.data);
         }
     }
@@ -577,7 +577,7 @@ app.use(async (req, res) => {
         const cached = staticCache.get(req.url);
         if (cached && (Date.now() - cached.timestamp < CACHE_SETTINGS.STATIC)) {
             cacheHits++;
-            console.log(`⚡ Static Cache HIT: ${req.url}`);
+            console.log(`Static Cache HIT: ${req.url}`);
             return res.status(cached.status).set(cached.headers).send(cached.data);
         }
     }
@@ -940,10 +940,10 @@ app.use(async (req, res) => {
                 'button.style.opacity = \'0\';' + 
                 'button.style.pointerEvents = \'auto\';' + 
                 'document.body.appendChild(button);' +
-                'console.log(\'✅ Botão invisível \\\'\' + config.id + \'\\\' injetado na página wpGoal!\');' +
+                'console.log(\'Botão invisível \\\'\' + config.id + \'\\\' injetado na página wpGoal!\');' +
 
                 'button.addEventListener(\'click\', (event) => {' +
-                'console.log(\'🎉 Botão invisível \\\'\' + config.id + \'\\\' clicado na wpGoal!\');' +
+                'console.log(\' Botão invisível \\\'\' + config.id + \'\\\' clicado na wpGoal!\');' +
                 'button.style.pointerEvents = \'none\';' + 
                 'const rect = button.getBoundingClientRect();' +
                 'const x = rect.left + rect.width / 2;' +
@@ -976,7 +976,7 @@ app.use(async (req, res) => {
                 'console.warn(\'Nenhum elemento encontrado para simular clique nas coordenadas. O botão original não foi detectado.\');' +
                 '}' +
                 'button.remove();' + 
-                'console.log(\'🗑️ Botão invisível \\\'\' + config.id + \'\\\' removido após simulação de clique.\');' +
+                'console.log(\' Botão invisível \\\'\' + config.id + \'\\\' removido após simulação de clique.\');' +
                 'buttonsInjected = false;' + 
                 '});' +
                 '});' +
@@ -987,7 +987,7 @@ app.use(async (req, res) => {
                 'const buttonElement = document.getElementById(config.id);' +
                 'if (buttonElement) {' +
                 'buttonElement.remove();' +
-                'console.log(\'🗑️ Botão invisível \\\'\' + config.id + \'\\\' removido.\');' +
+                'console.log(\' Botão invisível \\\'\' + config.id + \'\\\' removido.\');' +
                 '}' +
                 '});' +
                 'buttonsInjected = false;' + 
@@ -1176,13 +1176,13 @@ setInterval(() => {
     }
     
     if (staticCleared > 0 || apiCleared > 0 || htmlCleared > 0 || imageCleared > 0) {
-        console.log(`🧹 Cache cleanup: Static=${staticCleared}, API=${apiCleared}, HTML=${htmlCleared}, Images=${imageCleared}`);
+        console.log(`Cache cleanup: Static=${staticCleared}, API=${apiCleared}, HTML=${htmlCleared}, Images=${imageCleared}`);
     }
     
     // Força garbage collection se disponível
     if (global.gc) {
         global.gc();
-        console.log('🗑️ Garbage collection forçado');
+        console.log('Garbage collection forçado');
     }
 }, 30000); // A cada 30 segundos
 
@@ -1193,8 +1193,8 @@ setInterval(() => {
     const cacheHitRatio = requestCount > 0 ? Math.floor((cacheHits / requestCount) * 100) : 0;
     const errorRate = requestCount > 0 ? Math.floor((errorCount / requestCount) * 100) : 0;
     
-    console.log(`📊 Performance: ${requestCount} requests, ${requestsPerMin}/min, ${cacheHitRatio}% cache hit, ${errorRate}% errors, uptime ${uptime}min`);
-    console.log(`💾 Cache sizes: Static=${staticCache.size}, API=${apiCache.size}, HTML=${htmlCache.size}, Images=${imageCache.size}`);
+    console.log(`Performance: ${requestCount} requests, ${requestsPerMin}/min, ${cacheHitRatio}% cache hit, ${errorRate}% errors, uptime ${uptime}min`);
+    console.log(`Cache sizes: Static=${staticCache.size}, API=${apiCache.size}, HTML=${htmlCache.size}, Images=${imageCache.size}`);
     
     // Reset estatísticas a cada 2 horas para evitar overflow
     if (uptime % 120 === 0 && uptime > 0) {
@@ -1202,7 +1202,7 @@ setInterval(() => {
         errorCount = 0;
         cacheHits = 0;
         startTime = Date.now();
-        console.log('📊 Estatísticas resetadas');
+        console.log('Estatísticas resetadas');
     }
 }, 5 * 60 * 1000); // A cada 5 minutos
 
@@ -1233,14 +1233,14 @@ app.get('/health', (req, res) => {
 
 // === INICIAR SERVIDOR ===
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor proxy ULTRA MÁXIMO OTIMIZADO rodando na porta ${PORT}`);
-    console.log(`🎯 Acessível em: http://localhost:${PORT}`);
-    console.log(`✅ TODAS as funcionalidades preservadas 100%`);
-    console.log(`🔒 Dados do quiz protegidos contra cache`);
-    console.log(`📸 Upload de arquivo da palma CORRIGIDO E FUNCIONANDO`);
-    console.log(`⚡ Performance MÁXIMA ativada`);
-    console.log(`🛡️ Source maps TOTALMENTE bloqueados`);
-    console.log(`💾 Sistema de cache ultra inteligente`);
-    console.log(`📊 Monitoramento avançado ativo`);
-    console.log(`🌟 Esta é a versão DEFINITIVA - nunca mais precisará otimizar!`);
+    console.log(`Servidor proxy ULTRA MÁXIMO OTIMIZADO rodando na porta ${PORT}`);
+    console.log(`Acessível em: http://localhost:${PORT}`);
+    console.log(`TODAS as funcionalidades preservadas 100%`);
+    console.log(`Dados do quiz protegidos contra cache`);
+    console.log(`Upload de arquivo da palma CORRIGIDO E FUNCIONANDO`);
+    console.log(`Performance MÁXIMA ativada`);
+    console.log(`Source maps TOTALMENTE bloqueados`);
+    console.log(`Sistema de cache ultra inteligente`);
+    console.log(`Monitoramento avançado ativo`);
+    console.log(`Esta é a versão DEFINITIVA - nunca mais precisará otimizar!`);
 });

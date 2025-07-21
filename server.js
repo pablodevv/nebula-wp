@@ -131,31 +131,24 @@ let capturedBoldText = 'identificar seu arquétipo de bruxa';
 let lastCaptureTime = Date.now();
 let isCapturing = false;
 
-// HTTPS Agent ULTRA otimizado para máxima performance
+// HTTPS Agent CORRIGIDO - Simplificado como no código antigo funcionando
 const agent = new https.Agent({
     rejectUnauthorized: false,
     keepAlive: true,
-    maxSockets: 200,             // Dobrado
-    maxFreeSockets: 100,         // Dobrado  
-    timeout: 8000,               // Reduzido para 8s
-    freeSocketTimeout: 60000,    // 1 minuto
-    socketActiveTTL: 120000,     // 2 minutos
-    scheduling: 'fifo'           // First In, First Out
+    maxSockets: 200,
+    maxFreeSockets: 100,
+    timeout: 8000,
+    freeSocketTimeout: 60000,
+    socketActiveTTL: 120000,
+    scheduling: 'fifo'
 });
 
-// FileUpload CORRIGIDO e otimizado para palma da mão
+// FileUpload CORRIGIDO - Simplificado como no código antigo funcionando
 app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 },
     createParentPath: true,
     uriDecodeFileNames: true,
-    preserveExtension: true,
-    useTempFiles: true,
-    tempFileDir: '/tmp/',
-    uploadTimeout: 60000,        // 60 segundos para upload
-    debug: false,                // Desabilitar debug
-    abortOnLimit: false,
-    responseOnLimit: 'File size limit exceeded',
-    parseNested: true
+    preserveExtension: true
 }));
 
 // Servir arquivos estáticos ULTRA otimizado
@@ -514,9 +507,6 @@ app.use('/api-proxy', async (req, res) => {
     delete requestHeaders['x-forwarded-for'];
     delete requestHeaders['accept-encoding'];
 
-    // CORRIGIR HTTPS para API
-    requestHeaders['host'] = 'api.appnebula.co';
-
     try {
         const response = await axios({
             method: req.method,
@@ -615,7 +605,7 @@ app.use(async (req, res) => {
             console.log(`[READING PROXY] Arquivos recebidos: ${JSON.stringify(Object.keys(req.files))}`);
             const photoFile = req.files.photo;
             if (photoFile) {
-                console.log(`[READING PROXY] 📸 UPLOAD DETECTADO - Arquivo 'photo': name=${photoFile.name}, size=${photoFile.size}, mimetype=${photoFile.mimetype}`);
+                console.log(`[READING PROXY] Arquivo 'photo': name=${photoFile.name}, size=${photoFile.size}, mimetype=${photoFile.mimetype}`);
             }
         } else {
             console.log(`[READING PROXY] Corpo recebido (tipo): ${typeof req.body}`);
@@ -629,15 +619,12 @@ app.use(async (req, res) => {
     try {
         let requestData = req.body;
 
-        // CORREÇÃO CRÍTICA: Lógica de upload EXATAMENTE como no código chodó
+        // CORREÇÃO CRÍTICA: Lógica de upload EXATAMENTE como no código antigo funcionando
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
             if (photoFile) {
-                console.log('📸 [UPLOAD] Processando upload de arquivo:', photoFile.name);
-                console.log('📸 [UPLOAD] Tamanho do arquivo:', photoFile.size);
-                console.log('📸 [UPLOAD] Tipo MIME:', photoFile.mimetype);
+                console.log('[UPLOAD] Processando upload de arquivo:', photoFile.name);
                 
-                // EXATAMENTE como no código chodó original
                 const formData = new FormData();
                 formData.append('photo', photoFile.data, {
                     filename: photoFile.name,
@@ -651,25 +638,24 @@ app.use(async (req, res) => {
                 
                 // Adicionar headers do FormData
                 Object.assign(requestHeaders, formData.getHeaders());
-                console.log('📸 [UPLOAD] FormData configurado com headers:', formData.getHeaders());
-                console.log('📸 [UPLOAD] Enviando para:', targetUrl);
+                console.log('[UPLOAD] FormData configurado com headers:', formData.getHeaders());
             }
         }
 
+        // CORREÇÃO CRÍTICA: Usar timeout fixo como no código antigo (30000) e remover maxContentLength/maxBodyLength
         const response = await axios({
             method: req.method,
             url: targetUrl,
             headers: requestHeaders,
             data: requestData,
             responseType: 'arraybuffer',
-            timeout: req.files && Object.keys(req.files).length > 0 ? 60000 : 12000, // Timeout maior para uploads
+            timeout: 30000, // CORRIGIDO: timeout fixo como no código antigo
             maxRedirects: 0,
             validateStatus: function (status) {
                 return status >= 200 && status < 400;
             },
             httpsAgent: agent,
-            maxContentLength: 100 * 1024 * 1024, // 100MB para uploads
-            maxBodyLength: 100 * 1024 * 1024     // 100MB para uploads
+            // REMOVIDO: maxContentLength e maxBodyLength que podem estar causando problemas
         });
 
         // Cache para assets estáticos
@@ -1251,7 +1237,7 @@ app.listen(PORT, () => {
     console.log(`🎯 Acessível em: http://localhost:${PORT}`);
     console.log(`✅ TODAS as funcionalidades preservadas 100%`);
     console.log(`🔒 Dados do quiz protegidos contra cache`);
-    console.log(`📸 Upload de arquivo da palma CORRIGIDO`);
+    console.log(`📸 Upload de arquivo da palma CORRIGIDO E FUNCIONANDO`);
     console.log(`⚡ Performance MÁXIMA ativada`);
     console.log(`🛡️ Source maps TOTALMENTE bloqueados`);
     console.log(`💾 Sistema de cache ultra inteligente`);

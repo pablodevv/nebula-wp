@@ -491,21 +491,6 @@ app.get('/pt/witch-power/email', async (req, res) => {
     }
 });
 
-app.get('/pt/witch-power/email', async (req, res) => {
-    console.log('\n=== INTERCEPTANDO EMAIL - REDIRECIONANDO PARA ONBOARDING ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('URL acessada:', req.url);
-
-    try {
-        console.log('🔄 Redirecionando /email para /onboarding...\n');
-        res.redirect(302, '/pt/witch-power/onboarding');
-
-    } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO ao redirecionar email:', error.message);
-        res.status(500).send('Erro ao redirecionar email.');
-    }
-});
-
 // === PROXY DA API - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use('/api-proxy', async (req, res) => {
     const cacheKey = `api-${req.method}-${req.url}`;
@@ -1395,20 +1380,16 @@ app.use(async (req, res) => {
                 'let redirectCheckInterval;' +
                 'function handleEmailRedirect() {' +
                 'const currentPath = window.location.pathname;' +
-                'if (currentPath.startsWith(\'/pt/witch-power/email\')) {' +
+                'if (currentPath.includes(\'/pt/witch-power/email\')) {' +
                 'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. FORÇANDO MÚLTIPLOS redirecionamentos para /pt/witch-power/onboarding\');' +
                 'if (redirectCheckInterval) {' +
                 'clearInterval(redirectCheckInterval);' +
                 '}' +
-                'window.location.href = \'/pt/witch-power/onboarding\';' +
-                'setTimeout(() => window.location.href = \'/pt/witch-power/onboarding\', 50);' +
-                'setTimeout(() => window.location.href = \'/pt/witch-power/onboarding\', 100);' +
-                'setTimeout(() => window.location.replace(\'/pt/witch-power/onboarding\'), 200);' +
-                '}' +
+                'window.location.replace(\'/pt/witch-power/onboarding\');' +
                 '}' +
                 'document.addEventListener(\'DOMContentLoaded\', handleEmailRedirect);' +
                 'window.addEventListener(\'popstate\', handleEmailRedirect);' +
-                'redirectCheckInterval = setInterval(handleEmailRedirect, 50);' +
+                'redirectCheckInterval = setInterval(handleEmailRedirect, 100);' +
                 'if (window.MutationObserver && document.body) {' +
                 'const observer = new MutationObserver(function(mutations) {' +
                 'mutations.forEach(function(mutation) {' +

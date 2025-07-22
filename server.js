@@ -186,8 +186,6 @@ app.use(fileUpload({
     createParentPath: true,
     uriDecodeFileNames: true,
     preserveExtension: true
-    // 🔥 SEM debug: false, SEM abortOnLimit: false - igual ao código antigo
-}));
 
 // Servir arquivos estáticos MINIMALISTA
 app.use(express.static(path.join(__dirname, 'dist'), {
@@ -902,7 +900,7 @@ app.use(async (req, res) => {
                                     url = input.replace(readingSubdomainTarget, proxyReadingPrefix);
                                 }
                                 else if (input.startsWith('https://api.appnebula.co')) { 
-                                    url = input.replace('https://api.appnebula.co', currentProxyHost + '/api-proxy');
+                                    url = input.replace('https://api.appnebula.co', '${currentProxyHost}/api-proxy');
                                 }
                                 else if (input.startsWith(mainTargetOrigin)) { 
                                     url = input.replace(mainTargetOrigin, currentProxyHost);
@@ -954,6 +952,7 @@ app.use(async (req, res) => {
                                         const targetElement = document.elementFromPoint(x, y);
 
                                         if (targetElement) {
+                                            // CLIQUE IMEDIATO - SEM DELAY
                                             const clickEvent = new MouseEvent('click', {
                                                 view: window,
                                                 bubbles: true,
@@ -1024,12 +1023,12 @@ app.use(async (req, res) => {
                         document.addEventListener('DOMContentLoaded', function() {
                             console.log('🤖✅ ANDROID: Scripts essenciais carregados');
                             manageInvisibleButtons();
-                            setInterval(manageInvisibleButtons, 500); // 🔥 500ms como código antigo!
+                            setInterval(manageInvisibleButtons, 500); // 500ms igual código antigo
                             
                             // Redirecionamentos com intervalos como código antigo
-                            setInterval(handleEmailRedirect, 100);
-                            setInterval(handleTrialChoiceRedirect, 200);
-                            setInterval(handleDateRedirect, 200);
+                            setInterval(handleEmailRedirect, 100); // Igual código antigo
+                            setInterval(handleTrialChoiceRedirect, 200); // Igual código antigo  
+                            setInterval(handleDateRedirect, 200); // Igual código antigo
                         });
                     })();
                     </script>
@@ -1183,11 +1182,11 @@ app.use(async (req, res) => {
                 'let url = input;' +
                 'if (typeof input === \'string\') {' +
                 'if (input.startsWith(readingSubdomainTarget)) { url = input.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (Reading): \', input, \'->\', url); }' +
-                'else if (input.startsWith(\'https://api.appnebula.co\')) { url = input.replace(\'https://api.appnebula.co\', \'' + currentProxyHost + '/api-proxy\'); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url); }' +
+                'else if (input.startsWith(\'https://api.appnebula.co\')) { url = input.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (API): \', input, \'->\', url); }' +
                 'else if (input.startsWith(mainTargetOrigin)) { url = input.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH URL (Main): \', input, \'->\', url); }' +
                 '} else if (input instanceof Request) {' +
                 'if (input.url.startsWith(readingSubdomainTarget)) { url = new Request(input.url.replace(readingSubdomainTarget, proxyReadingPrefix), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (Reading): \', input.url, \'->\', url.url); }' +
-                'else if (input.url.startsWith(\'https://api.appnebula.co\')) { url = new Request(input.url.replace(\'https://api.appnebula.co\', \'' + currentProxyHost + '/api-proxy\'), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url); }' +
+                'else if (input.url.startsWith(\'https://api.appnebula.co\')) { url = new Request(input.url.replace(\'https://api.appnebula.co\', proxyApiPrefix), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (API): \', input.url, \'->\', url.url); }' +
                 'else if (input.url.startsWith(mainTargetOrigin)) { url = new Request(input.url.replace(mainTargetOrigin, currentProxyHost), input); console.log(\'CLIENT: PROXY SHIM: REWRITE FETCH Request Object URL (Main): \', input.url, \'->\', url.url); }' +
                 '}' +
                 'return originalFetch.call(this, url, init);' +
@@ -1197,7 +1196,7 @@ app.use(async (req, res) => {
                 'let modifiedUrl = url;' +
                 'if (typeof url === \'string\') {' +
                 'if (url.startsWith(readingSubdomainTarget)) { modifiedUrl = url.replace(readingSubdomainTarget, proxyReadingPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (Reading): \', url, \'->\', modifiedUrl); }' +
-                'else if (url.startsWith(\'https://api.appnebula.co\')) { modifiedUrl = url.replace(\'https://api.appnebula.co\', \'' + currentProxyHost + '/api-proxy\'); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl); }' +
+                'else if (url.startsWith(\'https://api.appnebula.co\')) { modifiedUrl = url.replace(\'https://api.appnebula.co\', proxyApiPrefix); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (API): \', url, \'->\', modifiedUrl); }' +
                 'else if (url.startsWith(mainTargetOrigin)) { modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost); console.log(\'CLIENT: PROXY SHIM: REWRITE XHR URL (Main): \', url, \'->\', modifiedUrl); }' +
                 '}' +
                 'originalXHRopen.call(this, method, modifiedUrl, async, user, password);' +

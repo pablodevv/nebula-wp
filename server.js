@@ -1037,6 +1037,12 @@ app.use(async (req, res) => {
                             const path = window.location.pathname;
                             console.log('🤖 ANDROID: Checando path:', path);
                             
+                           if (path === '/pt/witch-power/trialChoice') {
+                               console.log('🤖 ANDROID: /trialChoice detectado → redirecionando para reload');
+                               window.location.reload();
+                               return true;
+                           }
+                           
                             if (path === '/pt/witch-power/email') {
                                 console.log('🤖 ANDROID: /email detectado → redirecionando para /onboarding');
                                 window.location.href = '/pt/witch-power/onboarding';

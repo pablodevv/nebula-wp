@@ -1003,9 +1003,9 @@ app.use(async (req, res) => {
                         // REDIRECIONAMENTOS ANDROID - EXATAMENTE COMO CÓDIGO ANTIGO COM INTERVALOS QUE FUNCIONAVAM
                         function handleEmailRedirect() {
                             const currentPath = window.location.pathname;
-                            if (currentPath === '/pt/witch-power/email') {
+                            if (currentPath.startsWith('/pt/witch-power/email')) {
                                 console.log('🤖🔄 ANDROID: Redirecionamento /email -> /onboarding');
-                                window.location.replace('/pt/witch-power/onboarding');
+                                window.location.href = '/pt/witch-power/onboarding';
                             }
                         }
 

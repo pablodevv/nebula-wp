@@ -506,6 +506,20 @@ app.get('/pt/witch-power/email', async (req, res) => {
     }
 });
 
+// Proxy direto para arquivos SVG da media.appnebula.co
+app.get('/quiz/:filename.svg', async (req, res) => {
+    const svgUrl = `https://media.appnebula.co/quiz/${req.params.filename}.svg`;
+    try {
+        const response = await axios.get(svgUrl, { responseType: 'stream' });
+        res.setHeader('Content-Type', 'image/svg+xml');
+        response.data.pipe(res);
+    } catch (error) {
+        console.error('Erro ao buscar SVG:', svgUrl, error.message);
+        res.status(404).send('SVG não encontrado');
+    }
+});
+
+
 // === PROXY DA API - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use('/api-proxy', async (req, res) => {
     const cacheKey = `api-${req.method}-${req.url}`;
@@ -1426,25 +1440,36 @@ app.use(async (req, res) => {
 
 
 
-$('head').append(`
+            $('head').append(`
 <script>
-console.log('CLIENT-SIDE REDIRECT SCRIPT: Inicializando tratamento para /date e /email');
-document.addEventListener('DOMContentLoaded', () => {
-  const currentPath = window.location.pathname;
-  if (currentPath === '/pt/witch-power/date') {
-    console.log('CLIENT: Forçando RELOAD em /date (comportamento igual ao /trialChoice)');
+console.log('✅ UNIVERSAL REDIRECT SCRIPT ATIVO');
+
+(function() {
+  const path = window.location.pathname;
+
+  // === RELOAD para /date ===
+  if (path === '/pt/witch-power/date') {
+    console.log('🔄 Redirecionamento automático para DATE');
     window.location.reload();
+    return;
   }
-  if (currentPath === '/pt/witch-power/email') {
-    console.log('CLIENT: Redirecionando de /email para /onboarding ANTES DE RENDERIZAR!');
-    window.location.replace('/pt/witch-power/onboarding');
+
+  // === REDIRECT para /onboarding ===
+  if (path === '/pt/witch-power/email') {
+    console.log('➡️ Redirecionamento automático para ONBOARDING');
+    window.location.href = '/pt/witch-power/onboarding';
+    return;
   }
-});
+})();
 </script>
 `);
 
 
 
+
+
+
+            
 
 
 

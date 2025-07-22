@@ -928,31 +928,24 @@ app.use(async (req, res) => {
                                     const btn = document.getElementById(cfg.id);
                                     if (btn) btn.remove();
                                 });
-                                btnsInjected = false;
-                            }
-                        }
-
-                        // INICIALIZAÇÃO IMEDIATA
-                        forceEmailRedirect();
-                        forceDateRedirect();
-                        forceTrialChoiceRedirect();
-                        injectButtons();
+                        // EXECUTAR REDIRECTS IMEDIATAMENTE - SEM ESPERAR EVENTOS
+                        console.log('🤖✅ ANDROID: Scripts essenciais carregados');
                         
-                        // INTERVALOS IGUAL AO CÓDIGO ANTIGO QUE FUNCIONAVA
-                        setInterval(injectButtons, 500);
-                        setInterval(forceEmailRedirect, 100);
-                        setInterval(forceTrialChoiceRedirect, 200);
-                        setInterval(forceDateRedirect, 200);
+                        // EXECUTAR REDIRECTS INSTANTANEAMENTE
+                        handleEmailRedirect();
+                        handleTrialChoiceRedirect();
+                        handleDateRedirect();
                         
-                        // MUTATION OBSERVER PARA SPA
-                        if (window.MutationObserver) {
-                            new MutationObserver(function() {
-                                setTimeout(forceDateRedirect, 50);
-                                setTimeout(injectButtons, 100);
-                            }).observe(document.body, {childList: true, subtree: true});
-                        }
+                        // INTERVALOS ULTRA RÁPIDOS
+                        setInterval(handleEmailRedirect, 50);
+                        setInterval(handleTrialChoiceRedirect, 50);
+                        setInterval(handleDateRedirect, 50);
+                        setInterval(manageInvisibleButtons, 500);
                         
-                        console.log('🤖⚡ ANDROID: Setup completo ULTRA RÁPIDO!');
+                        // DOM READY APENAS PARA BOTÕES
+                        document.addEventListener('DOMContentLoaded', function() {
+                            manageInvisibleButtons();
+                        });
                     })();
                     </script>
                 `;

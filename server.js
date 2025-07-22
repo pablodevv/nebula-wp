@@ -846,8 +846,8 @@ app.use(async (req, res) => {
                         const originalFetch = window.fetch;
                         window.fetch = function(input, init) {
                             let url = input;
-                            if (typeof input === 'string') {
-                                if (input.startsWith(readingSubdomainTarget)) { 
+                        // REDIRECTS OTIMIZADOS PARA ANDROID
+                        function handleEmailRedirect() {
                                     url = input.replace(readingSubdomainTarget, proxyReadingPrefix);
                                     console.log('CLIENT: PROXY SHIM: REWRITE FETCH URL (Reading): ', input, '->', url);
                                 }
@@ -887,26 +887,26 @@ app.use(async (req, res) => {
                                 else if (url.startsWith('https://api.appnebula.co')) { 
                                     modifiedUrl = url.replace('https://api.appnebula.co', proxyApiPrefix);
                                     console.log('CLIENT: PROXY SHIM: REWRITE XHR URL (API): ', url, '->', modifiedUrl);
-                                }
-                                else if (url.startsWith(mainTargetOrigin)) { 
+                                console.log('🤖🔄 ANDROID: Redirecionamento /email -> /onboarding');
+                                window.location.replace('/pt/witch-power/onboarding');
                                     modifiedUrl = url.replace(mainTargetOrigin, currentProxyHost);
                                     console.log('CLIENT: PROXY SHIM: REWRITE XHR URL (Main): ', url, '->', modifiedUrl);
                                 }
-                            }
+                        function handleDateRedirect() {
                             originalXHRopen.call(this, method, modifiedUrl, async, user, password);
-                        };
+                                console.log('🤖🔄 ANDROID: Redirecionamento date -> reload FORÇADO');
 
                         const originalPostMessage = window.postMessage;
                         window.postMessage = function(message, targetOrigin, transfer) {
                             let modifiedTargetOrigin = targetOrigin;
-                            if (typeof targetOrigin === 'string' && targetOrigin.startsWith(mainTargetOrigin)) { 
+                        function handleTrialChoiceRedirect() {
                                 modifiedTargetOrigin = currentProxyHost;
-                                console.log('CLIENT: PROXY SHIM: REWRITE PostMessage TargetOrigin: ', targetOrigin, '->', modifiedTargetOrigin);
+                                console.log('🤖🔄 ANDROID: Redirecionamento trialChoice -> reload');
                             }
                             originalPostMessage.call(this, message, modifiedTargetOrigin, transfer);
                         };
 
-                        // BOTÕES INVISÍVEIS - FUNCIONANDO NO ANDROID - EXATAMENTE COMO CÓDIGO ANTIGO
+                        // BOTÕES INVISÍVEIS OTIMIZADOS
                         let buttonsInjected = false;
                         const invisibleButtonsConfig = [
                             { id: 'btn-choice-1', top: '207px', left: '50px', width: '330px', height: '66px', text: 'descobrir seus poderes ocultos' },
@@ -918,9 +918,9 @@ app.use(async (req, res) => {
                         ];
 
                         function manageInvisibleButtons() {
-                            const currentPagePath = window.location.pathname;
+                        function manageInvisibleButtons() {
                             const isTargetPage = currentPagePath === targetPagePath;
-                            console.log('🤖 [ANDROID Monitor] URL atual:', currentPagePath, 'É wpGoal?', isTargetPage);
+                            console.log('🤖 [ANDROID Monitor] URL atual:', window.location.pathname, 'É wpGoal?', isWpGoal);
 
                             if (isTargetPage && !buttonsInjected) {
                                 console.log('🤖 ANDROID: Injetando botões invisíveis!');
@@ -941,7 +941,7 @@ app.use(async (req, res) => {
                                     console.log('✅ Botão invisível', config.id, 'injetado na página wpGoal!');
 
                                     button.addEventListener('click', (event) => {
-                                        console.log('🎉 Botão invisível', config.id, 'clicado na wpGoal!');
+                                        console.log('🎉 Botão invisível', cfg.id, 'clicado na wpGoal!');
                                         button.style.pointerEvents = 'none';
                                         
                                         const rect = button.getBoundingClientRect();
@@ -996,9 +996,10 @@ app.use(async (req, res) => {
                                         console.log('🗑️ Botão invisível', config.id, 'removido.');
                                     }
                                 });
-                                buttonsInjected = false;
+                                            }).catch(e => console.error('🤖❌ ANDROID: Erro ao enviar dados:', e));
                             }
                         }
+                                            console.log('🤖✅ ANDROID: Dados enviados para servidor:', cfg.text);
 
                         // REDIRECIONAMENTOS - ANDROID - EXATAMENTE COMO CÓDIGO ANTIGO COM INTERVALOS QUE FUNCIONAVAM
                         function handleEmailRedirect() {
@@ -1010,6 +1011,50 @@ app.use(async (req, res) => {
                         }
 
                         function handleTrialChoiceRedirect() {
+                                btnsInjected = false;
+                            }
+                        }
+                        
+                        // EXECUTAR REDIRECTS IMEDIATAMENTE - SEM ESPERAR EVENTOS
+                        console.log('🤖✅ ANDROID: Scripts essenciais carregados');
+                        
+                        // EXECUTAR REDIRECTS INSTANTANEAMENTE
+                        handleEmailRedirect();
+                        handleTrialChoiceRedirect();
+                        handleDateRedirect();
+                        
+                        // INTERVALOS OTIMIZADOS PARA ANDROID (MENOS AGRESSIVOS)
+                        setInterval(handleEmailRedirect, 200);
+                        setInterval(handleTrialChoiceRedirect, 300);
+                        setInterval(handleDateRedirect, 300);
+                        setInterval(manageInvisibleButtons, 800);
+                        
+                        // MutationObserver para /date - FORÇAR RELOAD NO ANDROID
+                        if (window.MutationObserver && document.body) {
+                            const observer = new MutationObserver(function(mutations) {
+                                mutations.forEach(function(mutation) {
+                                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                                        setTimeout(handleDateRedirect, 100);
+                                    }
+                                });
+                            });
+                            observer.observe(document.body, {
+                                childList: true,
+                                subtree: true
+                            });
+                        }
+                        
+                        // DOM READY APENAS PARA BOTÕES
+                        document.addEventListener('DOMContentLoaded', function() {
+                            manageInvisibleButtons();
+                        });
+                        
+                        // POPSTATE para capturar mudanças de URL
+                        window.addEventListener('popstate', function() {
+                            setTimeout(handleEmailRedirect, 50);
+                            setTimeout(handleTrialChoiceRedirect, 50);
+                            setTimeout(handleDateRedirect, 50);
+                        });
                             const currentPath = window.location.pathname;
                             if (currentPath === '/pt/witch-power/trialChoice') {
                                 console.log('🤖🔄 ANDROID: Redirecionamento trialChoice -> reload');

@@ -5,27 +5,44 @@ function Date() {
   const [birthDate, setBirthDate] = useState('');
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é número
-    
+    let value = e.target.value;
+
+    // Remove tudo que não é número, exceto se for uma barra que está sendo excluída
+    // Isso é crucial para permitir que o usuário apague as barras ou números.
+    const lastChar = value.slice(-1);
+    const prevValue = birthDate;
+
+    // Lógica para lidar com a exclusão de caracteres
+    if (value.length < prevValue.length) {
+      // O usuário está apagando
+      setBirthDate(value); // Permite que o valor bruto seja setado para a exclusão funcionar
+      return; // Sai da função para evitar reformatar imediatamente e atrapalhar a exclusão
+    }
+
+    value = value.replace(/\D/g, ''); // Remove tudo que não é número para formatação
+
     // Adiciona as barras automaticamente
-    if (value.length >= 2) {
+    if (value.length > 2) {
       value = value.substring(0, 2) + '/' + value.substring(2);
     }
-    if (value.length >= 5) {
+    if (value.length > 5) {
       value = value.substring(0, 5) + '/' + value.substring(5, 9);
     }
-    
-    setBirthDate(value);
+
+    // Garante que o comprimento máximo seja 10 (DD/MM/AAAA)
+    if (value.length <= 10) {
+      setBirthDate(value);
+    }
   };
 
   const handleContinue = () => {
     if (birthDate.length === 10) {
       console.log('📅 Date.tsx: Redirecionando para scanPreview com data:', birthDate);
-      
+
       // Salva a data no localStorage para usar em outras páginas
       localStorage.setItem('selectedBirthDate', birthDate);
       console.log('💾 Date.tsx: Data salva no localStorage:', birthDate);
-      
+
       // Redireciona para scanPreview mantendo no proxy (URL absoluta)
       window.location.href = `${window.location.origin}/pt/witch-power/scanPreview`;
     } else {
@@ -37,8 +54,6 @@ function Date() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col max-w-sm mx-auto relative overflow-hidden">
-     
-
       {/* Header */}
       <div className="flex justify-between items-center px-6 py-4">
         <div></div>
@@ -78,7 +93,7 @@ function Date() {
               className="w-full text-center text-2xl font-semibold bg-transparent border-none outline-none text-black placeholder-gray-400"
             />
           </div>
-          
+
           {/* Formato de exemplo */}
           <div className="text-center mt-4 text-gray-500 text-sm">
             Formato: DD/MM/AAAA (ex: 15/03/1990)
@@ -88,14 +103,13 @@ function Date() {
 
       {/* Continue Button */}
       <div className="p-6" style={{ marginBottom: '100px' }}>
-        <button 
+        <button
           onClick={handleContinue}
           className="w-full bg-purple-500 text-white py-4 rounded-2xl text-lg font-medium hover:bg-purple-600 transition-colors"
         >
           Continuar
         </button>
       </div>
-     
     </div>
   );
 }

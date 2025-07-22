@@ -1388,62 +1388,38 @@ app.use(async (req, res) => {
 
             $('head').prepend(clientScript);
 
-            // === REDIRECIONAMENTOS CLIENT-SIDE - EXATAMENTE COMO CÓDIGO ANTIGO ===
-            $('head').append(
-                '<script>' +
-                'console.log(\'CLIENT-SIDE REDIRECT SCRIPT: Initializing.\');' +
-                'let redirectCheckInterval;' +
-                'function handleEmailRedirect() {' +
-                'const currentPath = window.location.pathname;' +
-                'if (currentPath.startsWith(\'/pt/witch-power/email\')) {' +
-                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. FORÇANDO MÚLTIPLOS redirecionamentos para /pt/witch-power/onboarding\');' +
-                'if (redirectCheckInterval) {' +
-                'clearInterval(redirectCheckInterval);' +
-                '}' +
-                'window.location.href = \'/pt/witch-power/onboarding\';' +
-                'setTimeout(() => window.location.href = \'/pt/witch-power/onboarding\', 50);' +
-                'setTimeout(() => window.location.href = \'/pt/witch-power/onboarding\', 100);' +
-                'setTimeout(() => window.location.replace(\'/pt/witch-power/onboarding\'), 200);' +
-                '}' +
-                '}' +
-                'document.addEventListener(\'DOMContentLoaded\', handleEmailRedirect);' +
-                'window.addEventListener(\'popstate\', handleEmailRedirect);' +
-                'redirectCheckInterval = setInterval(handleEmailRedirect, 50);' +
-                'if (window.MutationObserver && document.body) {' +
-                'const observer = new MutationObserver(function(mutations) {' +
-                'mutations.forEach(function(mutation) {' +
-                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
-                'setTimeout(handleEmailRedirect, 25);' +
-                '}' +
-                '});' +
-                '});' +
-                'observer.observe(document.body, {' +
-                'childList: true,' +
-                'subtree: true' +
-                '});' +
-                '}' +
-                'if (window.MutationObserver && document.body) {' +
-                'const observer = new MutationObserver(function(mutations) {' +
-                'mutations.forEach(function(mutation) {' +
-                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
-                'setTimeout(handleEmailRedirect, 50);' +
-                '}' +
-                '});' +
-                '});' +
-                'observer.observe(document.body, {' +
-                'childList: true,' +
-                'subtree: true' +
-                '});' +
-                '}' +
-                'window.addEventListener(\'beforeunload\', () => {' +
-                'if (redirectCheckInterval) {' +
-                'clearInterval(redirectCheckInterval);' +
-                '}' +
-                '});' +
-                'handleEmailRedirect();' +
-                '</script>'
-            );
 
+
+            
+
+            $('head').append(`
+  <script>
+    console.log('📲 CLIENT-SIDE REDIRECT SCRIPT /email: Initializing.');
+    function redirectFromEmail() {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/pt/witch-power/email') {
+        console.log('📲 REDIRECT /email → /onboarding disparado!');
+        window.location.href = '/pt/witch-power/onboarding';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', redirectFromEmail);
+    window.addEventListener('load', redirectFromEmail);
+    window.addEventListener('popstate', redirectFromEmail);
+    let observer = new MutationObserver(redirectFromEmail);
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(redirectFromEmail, 100);
+    setTimeout(redirectFromEmail, 300);
+    setInterval(redirectFromEmail, 500);
+  </script>
+`);
+
+
+
+
+
+
+            
             $('head').append(
                 '<script>' +
                 'console.log(\'CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.\');' +
@@ -1483,44 +1459,38 @@ app.use(async (req, res) => {
                 '</script>'
             );
 
-            $('head').append(
-                '<script>' +
-                'console.log(\'CLIENT-SIDE DATE REDIRECT SCRIPT: Initializing.\');' +
-                'let dateRedirectInterval;' +
-                'function handleDateRedirect() {' +
-                'const currentPath = window.location.pathname;' +
-                'if (currentPath === \'/pt/witch-power/date\') {' +
-                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/date detectada. Forçando reload para interceptação do servidor.\');' +
-                'if (dateRedirectInterval) {' +
-                'clearInterval(dateRedirectInterval);' +
-                '}' +
-                'window.location.reload();' +
-                '}' +
-                '}' +
-                'document.addEventListener(\'DOMContentLoaded\', handleDateRedirect);' +
-                'window.addEventListener(\'popstate\', handleDateRedirect);' +
-                'dateRedirectInterval = setInterval(handleDateRedirect, 200);' +
-                'if (window.MutationObserver && document.body) {' +
-                'const observer = new MutationObserver(function(mutations) {' +
-                'mutations.forEach(function(mutation) {' +
-                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
-                'setTimeout(handleDateRedirect, 50);' +
-                '}' +
-                '});' +
-                '});' +
-                'observer.observe(document.body, {' +
-                'childList: true,' +
-                'subtree: true' +
-                '});' +
-                '}' +
-                'window.addEventListener(\'beforeunload\', () => {' +
-                'if (dateRedirectInterval) {' +
-                'clearInterval(dateRedirectInterval);' +
-                '}' +
-                '});' +
-                'handleDateRedirect();' +
-                '</script>'
-            );
+
+
+
+
+
+
+            $('head').append(`
+  <script>
+    console.log('📅 CLIENT-SIDE REDIRECT SCRIPT /date: Initializing.');
+    function reloadDatePage() {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/pt/witch-power/date') {
+        console.log('📅 Página /date detectada! Forçando reload...');
+        window.location.reload();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', reloadDatePage);
+    window.addEventListener('load', reloadDatePage);
+    window.addEventListener('popstate', reloadDatePage);
+    new MutationObserver(reloadDatePage).observe(document.body, { childList: true, subtree: true });
+    setTimeout(reloadDatePage, 100);
+    setTimeout(reloadDatePage, 300);
+    setInterval(reloadDatePage, 500);
+  </script>
+`);
+
+
+
+
+
+            
 
             console.log('SERVER: Script de cliente injetado no <head>.');
 

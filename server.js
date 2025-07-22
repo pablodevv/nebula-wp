@@ -1165,7 +1165,11 @@ app.use(async (req, res) => {
                     attrName = 'src';
                 } else if (element.is('form')) {
                     attrName = 'action';
-                }
+                }else if (originalUrl.startsWith('https://media.appnebula.co')) {
+    // Redirecionar via proxy
+    element.attr(attrName, originalUrl.replace('https://media.appnebula.co', `${currentProxyHost}/media-proxy`));
+}
+
 
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
@@ -1419,45 +1423,25 @@ app.use(async (req, res) => {
 
 
 
-            
-            $('head').append(
-                '<script>' +
-                'console.log(\'CLIENT-SIDE TRIALCHOICE REDIRECT SCRIPT: Initializing.\');' +
-                'let trialChoiceRedirectInterval;' +
-                'function handleTrialChoiceRedirect() {' +
-                'const currentPath = window.location.pathname;' +
-                'if (currentPath === \'/pt/witch-power/trialChoice\') {' +
-                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/trialChoice detectada. Forçando reload para interceptação do servidor.\');' +
-                'if (trialChoiceRedirectInterval) {' +
-                'clearInterval(trialChoiceRedirectInterval);' +
-                '}' +
-                'window.location.reload();' +
-                '}' +
-                '}' +
-                'document.addEventListener(\'DOMContentLoaded\', handleTrialChoiceRedirect);' +
-                'window.addEventListener(\'popstate\', handleTrialChoiceRedirect);' +
-                'trialChoiceRedirectInterval = setInterval(handleTrialChoiceRedirect, 200);' +
-                'if (window.MutationObserver && document.body) {' +
-                'const observer = new MutationObserver(function(mutations) {' +
-                'mutations.forEach(function(mutation) {' +
-                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
-                'setTimeout(handleTrialChoiceRedirect, 50);' +
-                '}' +
-                '});' +
-                '});' +
-                'observer.observe(document.body, {' +
-                'childList: true,' +
-                'subtree: true' +
-                '});' +
-                '}' +
-                'window.addEventListener(\'beforeunload\', () => {' +
-                'if (trialChoiceRedirectInterval) {' +
-                'clearInterval(trialChoiceRedirectInterval);' +
-                '}' +
-                '});' +
-                'handleTrialChoiceRedirect();' +
-                '</script>'
-            );
+
+
+
+$('head').append(`
+<script>
+console.log('CLIENT-SIDE REDIRECT SCRIPT: Inicializando tratamento para /date e /email');
+document.addEventListener('DOMContentLoaded', () => {
+  const currentPath = window.location.pathname;
+  if (currentPath === '/pt/witch-power/date') {
+    console.log('CLIENT: Forçando RELOAD em /date (comportamento igual ao /trialChoice)');
+    window.location.reload();
+  }
+  if (currentPath === '/pt/witch-power/email') {
+    console.log('CLIENT: Redirecionando de /email para /onboarding ANTES DE RENDERIZAR!');
+    window.location.replace('/pt/witch-power/onboarding');
+  }
+});
+</script>
+`);
 
 
 
@@ -1616,6 +1600,20 @@ app.get('/health', (req, res) => {
         }
     });
 });
+
+app.get('/media-proxy/*', async (req, res) => {
+    const targetUrl = 'https://media.appnebula.co' + req.originalUrl.replace('/media-proxy', '');
+    try {
+        const response = await axios.get(targetUrl, { responseType: 'arraybuffer' });
+        const contentType = response.headers['content-type'] || 'application/octet-stream';
+        res.set('Content-Type', contentType);
+        res.send(response.data);
+    } catch (err) {
+        console.error('Erro ao servir imagem do media.appnebula.co:', err.message);
+        res.status(500).send('Erro ao carregar mídia.');
+    }
+});
+
 
 // === INICIAR SERVIDOR ===
 app.listen(PORT, () => {

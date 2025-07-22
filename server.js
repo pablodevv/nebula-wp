@@ -1132,7 +1132,61 @@ app.use(async (req, res) => {
                         window.addEventListener('popstate', executeImmediateChecks);
                         window.addEventListener('pushstate', executeImmediateChecks);
                         window.addEventListener('replacestate', executeImmediateChecks);
+
+
+
+
+
+
+// --- BEGIN ROUTE MONITOR (date & email) ---
+function handleRouteChange() {
+    const p = location.pathname;
+    if (p === '/pt/witch-power/date') {
+        console.log('[ANDROID ROUTER] /date detected → hard reload');
+        location.reload();
+    } else if (p === '/pt/witch-power/email') {
+        console.log('[ANDROID ROUTER] /email detected → redirect to /onboarding');
+        location.href = '/pt/witch-power/onboarding';
+    }
+}
+handleRouteChange();                     // roda na carga atual
+
+// intercepta TODAS as navegações SPA (Next.js usa isso)
+['pushState','replaceState'].forEach(fn=>{
+    const orig = history[fn];
+    history[fn] = function(){
+        const out = orig.apply(this, arguments);
+        handleRouteChange();
+        return out;
+    };
+});
+window.addEventListener('popstate', handleRouteChange);
+// --- END ROUTE MONITOR ---
+
+
+
+
+
+
+
+
+
+
+                        
                     })();
+
+
+
+
+
+
+
+
+
+
+
+
+                    
                     </script>
                 `;
 

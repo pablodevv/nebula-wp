@@ -476,6 +476,21 @@ app.get('/pt/witch-power/date', async (req, res) => {
     }
 });
 
+app.get('/pt/witch-power/email', async (req, res) => {
+    console.log('\n=== INTERCEPTANDO EMAIL - REDIRECIONANDO PARA ONBOARDING ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('URL acessada:', req.url);
+
+    try {
+        console.log('🔄 Redirecionando /email para /onboarding...\n');
+        res.redirect(302, '/pt/witch-power/onboarding');
+
+    } catch (error) {
+        console.error('\n❌ ERRO CRÍTICO ao redirecionar email:', error.message);
+        res.status(500).send('Erro ao redirecionar email.');
+    }
+});
+
 // === PROXY DA API - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use('/api-proxy', async (req, res) => {
     const cacheKey = `api-${req.method}-${req.url}`;

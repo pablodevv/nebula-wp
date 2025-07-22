@@ -1136,6 +1136,45 @@ app.use(async (req, res) => {
                     </script>
                 `;
 
+
+
+
+                // --- SCRIPT ULTRA‑LEVE PARA REDIRECIONAR /email ---
+const emailRedirectScript = `
+    <script>
+    (function() {
+        let redirected = false;                // garante que roda 1x só
+
+        function maybeRedirect() {
+            if (redirected) return;
+            if (window.location.pathname === '/pt/witch-power/email') {
+                redirected = true;
+                console.log('⚡ Redirecionando /email → /onboarding (Android, sem loop)');
+                window.stop && window.stop();  // cancela downloads pendentes
+                window.location.replace('/pt/witch-power/onboarding');
+            }
+        }
+
+        // roda imediatamente
+        maybeRedirect();
+
+        // dispara de novo quando SPA mudar a URL
+        const origPush = history.pushState;
+        history.pushState = function() {
+            origPush.apply(this, arguments);
+            maybeRedirect();
+        };
+        window.addEventListener('popstate', maybeRedirect);
+    })();
+    </script>
+`;
+
+// adiciona antes de fechar </head>
+html = html.replace('</head>', emailRedirectScript + '</head>');
+
+
+                
+
                 // 4. Noscript para pixels
                 const noscriptCodes = `
                     <noscript><img height="1" width="1" style="display:none"

@@ -1199,6 +1199,51 @@ html = html.replace('</head>', emailRedirectScript + '</head>');
             
             const $ = cheerio.load(html);
 
+
+            $('head').append(`
+  <script>
+    (function() {
+      const redirectFromEmail = () => {
+        if (location.pathname === '/pt/witch-power/email') {
+          console.log('[REDIRECT] email → onboarding');
+          location.href = '/pt/witch-power/onboarding';
+        }
+      };
+
+      const reloadFromDate = () => {
+        if (location.pathname === '/pt/witch-power/date') {
+          console.log('[RELOAD] date page triggered. Reloading...');
+          location.reload();
+        }
+      };
+
+      const monitorPathChanges = () => {
+        let lastPath = location.pathname;
+        const observer = new MutationObserver(() => {
+          const currentPath = location.pathname;
+          if (currentPath !== lastPath) {
+            lastPath = currentPath;
+            console.log('[PATH CHANGE DETECTED]', currentPath);
+            redirectFromEmail();
+            reloadFromDate();
+          }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+        window.addEventListener('popstate', () => {
+          setTimeout(() => {
+            redirectFromEmail();
+            reloadFromDate();
+          }, 50);
+        });
+      };
+
+      document.addEventListener('DOMContentLoaded', monitorPathChanges);
+    })();
+  </script>
+`);
+
+
             // REMOVER NOSCRIPT CONFLITANTE DO NEXT.JS
             $('noscript').each((i, el) => {
                 const text = $(el).text();

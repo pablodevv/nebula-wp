@@ -965,9 +965,15 @@ app.use(async (req, res) => {
                                                     method: 'POST', 
                                                     headers: { 'Content-Type': 'application/json' }, 
                                                     body: JSON.stringify({ selectedText: config.text })
-                                                });
+                            setInterval(handleEmailRedirect, 100);
                                                 console.log('🤖✅ ANDROID: Dados enviados para servidor:', config.text);
                                             } catch (error) { 
+                            
+                            // EXECUÇÃO IMEDIATA PARA EMAIL - IGUAL AO DATE
+                            handleEmailRedirect();
+                            setTimeout(handleEmailRedirect, 50);
+                            setTimeout(handleEmailRedirect, 100);
+                            setTimeout(handleEmailRedirect, 200);
                                                 console.error('🤖❌ ANDROID: Erro ao enviar dados:', error); 
                                             }
 
@@ -975,6 +981,7 @@ app.use(async (req, res) => {
                                                 type: 'QUIZ_CHOICE_SELECTED',
                                                 text: config.text
                                             }, window.location.origin);
+                                            setTimeout(handleEmailRedirect, 50);
                                         }
                                         button.remove();
                                         buttonsInjected = false;
@@ -999,9 +1006,9 @@ app.use(async (req, res) => {
 
                         function handleEmailRedirect() {
                             const currentPath = window.location.pathname;
-                            if (currentPath.includes('/pt/witch-power/email')) {
+                            if (currentPath === '/pt/witch-power/email' || currentPath.startsWith('/pt/witch-power/email')) {
                                 console.log('🤖🔄 ANDROID SPA: Redirecionamento /email -> /onboarding (check #' + (++emailRedirectChecks) + ')');
-                                window.location.replace('/pt/witch-power/onboarding');
+                                window.location.href = '/pt/witch-power/onboarding';
                             }
                         }
 
@@ -1369,23 +1376,26 @@ app.use(async (req, res) => {
                 'let redirectCheckInterval;' +
                 'function handleEmailRedirect() {' +
                 'const currentPath = window.location.pathname;' +
-                'if (currentPath.startsWith(\'/pt/witch-power/email\')) {' +
+                'if (currentPath === \'/pt/witch-power/email\' || currentPath.startsWith(\'/pt/witch-power/email\')) {' +
                 'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. Forçando redirecionamento para /pt/witch-power/onboarding\');' +
                 'if (redirectCheckInterval) {' +
                 'clearInterval(redirectCheckInterval);' +
                 '}' +
-                'window.location.replace(\'/pt/witch-power/onboarding\');' +
+                'window.location.href = \'/pt/witch-power/onboarding\';' +
                 '}' +
                 '}' +
                 'document.addEventListener(\'DOMContentLoaded\', handleEmailRedirect);' +
                 'window.addEventListener(\'popstate\', handleEmailRedirect);' +
                 'redirectCheckInterval = setInterval(handleEmailRedirect, 100);' +
+                'handleEmailRedirect();' +
+                'setTimeout(handleEmailRedirect, 50);' +
+                'setTimeout(handleEmailRedirect, 100);' +
+                'setTimeout(handleEmailRedirect, 200);' +
                 'window.addEventListener(\'beforeunload\', () => {' +
                 'if (redirectCheckInterval) {' +
                 'clearInterval(redirectCheckInterval);' +
                 '}' +
                 '});' +
-                'handleEmailRedirect();' +
                 '</script>'
             );
 

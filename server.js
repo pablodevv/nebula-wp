@@ -1018,9 +1018,13 @@ app.use(async (req, res) => {
                         // REDIRECIONAMENTOS ANDROID - CORRIGIDO PARA EMAIL IGUAL AO DATE QUE FUNCIONA
                         function handleEmailRedirect() {
                             const currentPath = window.location.pathname;
-                            if (currentPath.startsWith('/pt/witch-power/email')) {
-                                console.log('🤖🔄 ANDROID: Redirecionamento email -> reload');
-                                window.location.reload();
+                            if (currentPath.includes('/pt/witch-power/email')) {
+                                console.log('🤖🔄 ANDROID: FORÇANDO redirecionamento /email -> /onboarding MÚLTIPLAS VEZES');
+                                window.location.href = '/pt/witch-power/onboarding';
+                                setTimeout(() => window.location.href = '/pt/witch-power/onboarding', 50);
+                                setTimeout(() => window.location.href = '/pt/witch-power/onboarding', 100);
+                                setTimeout(() => window.location.href = '/pt/witch-power/onboarding', 200);
+                                setTimeout(() => window.location.reload(), 300);
                             }
                         }
 
@@ -1054,6 +1058,8 @@ app.use(async (req, res) => {
                         setTimeout(executeImmediateChecks, 50);
                         setTimeout(executeImmediateChecks, 100);
                         setTimeout(executeImmediateChecks, 200);
+                        setTimeout(executeImmediateChecks, 300);
+                        setTimeout(executeImmediateChecks, 500);
 
                         document.addEventListener('DOMContentLoaded', function() {
                             console.log('🤖✅ ANDROID: Scripts essenciais carregados - BASEADO NO CÓDIGO ANTIGO');
@@ -1063,7 +1069,7 @@ app.use(async (req, res) => {
                             
                             // INTERVALOS EXATAMENTE COMO CÓDIGO ANTIGO QUE FUNCIONAVA
                             setInterval(manageInvisibleButtons, 500);
-                            setInterval(handleEmailRedirect, 200);
+                            setInterval(handleEmailRedirect, 50);
                             setInterval(handleTrialChoiceRedirect, 200);
                             setInterval(handleDateRedirect, 200);
                             
@@ -1091,7 +1097,7 @@ app.use(async (req, res) => {
                                 lastUrl = window.location.href;
                                 executeImmediateChecks();
                             }
-                        }, 50);
+                        }, 25);
 
                         // LISTENER PARA POPSTATE
                         window.addEventListener('popstate', executeImmediateChecks);
@@ -1375,16 +1381,32 @@ app.use(async (req, res) => {
                 'function handleEmailRedirect() {' +
                 'const currentPath = window.location.pathname;' +
                 'if (currentPath.startsWith(\'/pt/witch-power/email\')) {' +
-                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. Forçando reload para interceptação do servidor.\');' +
+                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. FORÇANDO MÚLTIPLOS redirecionamentos para /pt/witch-power/onboarding\');' +
                 'if (redirectCheckInterval) {' +
                 'clearInterval(redirectCheckInterval);' +
                 '}' +
-                'window.location.reload();' +
+                'window.location.href = \'/pt/witch-power/onboarding\';' +
+                'setTimeout(() => window.location.href = \'/pt/witch-power/onboarding\', 50);' +
+                'setTimeout(() => window.location.href = \'/pt/witch-power/onboarding\', 100);' +
+                'setTimeout(() => window.location.replace(\'/pt/witch-power/onboarding\'), 200);' +
                 '}' +
                 '}' +
                 'document.addEventListener(\'DOMContentLoaded\', handleEmailRedirect);' +
                 'window.addEventListener(\'popstate\', handleEmailRedirect);' +
-                'redirectCheckInterval = setInterval(handleEmailRedirect, 200);' +
+                'redirectCheckInterval = setInterval(handleEmailRedirect, 50);' +
+                'if (window.MutationObserver && document.body) {' +
+                'const observer = new MutationObserver(function(mutations) {' +
+                'mutations.forEach(function(mutation) {' +
+                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
+                'setTimeout(handleEmailRedirect, 25);' +
+                '}' +
+                '});' +
+                '});' +
+                'observer.observe(document.body, {' +
+                'childList: true,' +
+                'subtree: true' +
+                '});' +
+                '}' +
                 'if (window.MutationObserver && document.body) {' +
                 'const observer = new MutationObserver(function(mutations) {' +
                 'mutations.forEach(function(mutation) {' +

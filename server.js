@@ -1410,59 +1410,7 @@ app.use(async (req, res) => {
 
             
 
-            $('head').append(`
-  <script>
-    console.log('📲 CLIENT-SIDE REDIRECT SCRIPT /email: Initializing.');
-    function redirectFromEmail() {
-      const currentPath = window.location.pathname;
-      if (currentPath === '/pt/witch-power/email') {
-        console.log('📲 REDIRECT /email → /onboarding disparado!');
-        window.location.href = '/pt/witch-power/onboarding';
-      }
-    }
 
-    document.addEventListener('DOMContentLoaded', redirectFromEmail);
-    window.addEventListener('load', redirectFromEmail);
-    window.addEventListener('popstate', redirectFromEmail);
-    let observer = new MutationObserver(redirectFromEmail);
-    observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(redirectFromEmail, 100);
-    setTimeout(redirectFromEmail, 300);
-    setInterval(redirectFromEmail, 500);
-  </script>
-`);
-
-
-
-
-
-
-
-
-
-            $('head').append(`
-<script>
-console.log('✅ UNIVERSAL REDIRECT SCRIPT ATIVO');
-
-(function() {
-  const path = window.location.pathname;
-
-  // === RELOAD para /date ===
-  if (path === '/pt/witch-power/date') {
-    console.log('🔄 Redirecionamento automático para DATE');
-    window.location.reload();
-    return;
-  }
-
-  // === REDIRECT para /onboarding ===
-  if (path === '/pt/witch-power/email') {
-    console.log('➡️ Redirecionamento automático para ONBOARDING');
-    window.location.href = '/pt/witch-power/onboarding';
-    return;
-  }
-})();
-</script>
-`);
 
 
 
@@ -1470,32 +1418,6 @@ console.log('✅ UNIVERSAL REDIRECT SCRIPT ATIVO');
 
 
             
-
-
-
-
-            $('head').append(`
-  <script>
-    console.log('📅 CLIENT-SIDE REDIRECT SCRIPT /date: Initializing.');
-    function reloadDatePage() {
-      const currentPath = window.location.pathname;
-      if (currentPath === '/pt/witch-power/date') {
-        console.log('📅 Página /date detectada! Forçando reload...');
-        window.location.reload();
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', reloadDatePage);
-    window.addEventListener('load', reloadDatePage);
-    window.addEventListener('popstate', reloadDatePage);
-    new MutationObserver(reloadDatePage).observe(document.body, { childList: true, subtree: true });
-    setTimeout(reloadDatePage, 100);
-    setTimeout(reloadDatePage, 300);
-    setInterval(reloadDatePage, 500);
-  </script>
-`);
-
-
 
 
 
@@ -1637,6 +1559,30 @@ app.get('/media-proxy/*', async (req, res) => {
         console.error('Erro ao servir imagem do media.appnebula.co:', err.message);
         res.status(500).send('Erro ao carregar mídia.');
     }
+});
+
+// Redirecionamento servidor: /email → /onboarding
+app.get('/pt/witch-power/email', (req, res) => {
+  console.log('🚀 Redirecionamento SERVER-SIDE de /email para /onboarding');
+  res.redirect(302, '/pt/witch-power/onboarding');
+});
+
+// Redirecionamento servidor: Forçar reload do /date
+app.get('/pt/witch-power/date', async (req, res, next) => {
+  try {
+    // Buscar a página original
+    const targetUrl = `https://appnebula.co${req.originalUrl}`;
+    const response = await axios.get(targetUrl);
+    let html = response.data;
+
+    // Aqui pode fazer um pequeno patch se quiser, mas nesse caso:
+    // Não faz nenhuma substituição, só manda como está.
+
+    res.send(html);
+  } catch (err) {
+    console.error('Erro no reload forçado de /date:', err.message);
+    next(err);
+  }
 });
 
 

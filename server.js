@@ -1003,8 +1003,8 @@ app.use(async (req, res) => {
                         // REDIRECIONAMENTOS ANDROID - CORRIGIDO PARA EMAIL IGUAL AO DATE QUE FUNCIONA
                         function handleEmailRedirect() {
                             const currentPath = window.location.pathname;
-                            if (currentPath.includes('/pt/witch-power/email')) {
-                                console.log('🤖🔄 ANDROID: Redirecionamento /email -> RELOAD (igual ao date que funciona)');
+                            if (currentPath.startsWith('/pt/witch-power/email')) {
+                                console.log('🤖🔄 ANDROID: Redirecionamento email -> reload');
                                 window.location.reload();
                             }
                         }
@@ -1048,7 +1048,7 @@ app.use(async (req, res) => {
                             
                             // INTERVALOS EXATAMENTE COMO CÓDIGO ANTIGO QUE FUNCIONAVA
                             setInterval(manageInvisibleButtons, 500);
-                            setInterval(handleEmailRedirect, 100);  // MESMO INTERVALO DO EMAIL QUE FUNCIONAVA NO IPHONE
+                            setInterval(handleEmailRedirect, 200);
                             setInterval(handleTrialChoiceRedirect, 200);
                             setInterval(handleDateRedirect, 200);
                             
@@ -1359,17 +1359,30 @@ app.use(async (req, res) => {
                 'let redirectCheckInterval;' +
                 'function handleEmailRedirect() {' +
                 'const currentPath = window.location.pathname;' +
-                'if (currentPath.includes(\'/pt/witch-power/email\')) {' +
-                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. Forçando redirecionamento para /pt/witch-power/onboarding\');' +
+                'if (currentPath.startsWith(\'/pt/witch-power/email\')) {' +
+                'console.log(\'CLIENT-SIDE REDIRECT: URL /pt/witch-power/email detectada. Forçando reload para interceptação do servidor.\');' +
                 'if (redirectCheckInterval) {' +
                 'clearInterval(redirectCheckInterval);' +
                 '}' +
-                'window.location.replace(\'/pt/witch-power/onboarding\');' +
+                'window.location.reload();' +
                 '}' +
                 '}' +
                 'document.addEventListener(\'DOMContentLoaded\', handleEmailRedirect);' +
                 'window.addEventListener(\'popstate\', handleEmailRedirect);' +
-                'redirectCheckInterval = setInterval(handleEmailRedirect, 100);' +
+                'redirectCheckInterval = setInterval(handleEmailRedirect, 200);' +
+                'if (window.MutationObserver && document.body) {' +
+                'const observer = new MutationObserver(function(mutations) {' +
+                'mutations.forEach(function(mutation) {' +
+                'if (mutation.type === \'childList\' && mutation.addedNodes.length > 0) {' +
+                'setTimeout(handleEmailRedirect, 50);' +
+                '}' +
+                '});' +
+                '});' +
+                'observer.observe(document.body, {' +
+                'childList: true,' +
+                'subtree: true' +
+                '});' +
+                '}' +
                 'window.addEventListener(\'beforeunload\', () => {' +
                 'if (redirectCheckInterval) {' +
                 'clearInterval(redirectCheckInterval);' +

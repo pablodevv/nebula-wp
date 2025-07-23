@@ -30,10 +30,6 @@ function isAndroid(userAgent) {
     return /Android/i.test(userAgent || '');
 }
 
-function isFacebookBrowser(userAgent) {
-    return /FBAN|FBAV|FB_IAB/i.test(userAgent || '');
-}
-
 // === SISTEMA DE CACHE ULTRA MINIMALISTA ===
 const staticCache = new Map();
 const apiCache = new Map();
@@ -138,11 +134,10 @@ app.use((req, res, next) => {
     const userAgent = req.headers['user-agent'] || '';
     const isAndroidDevice = isAndroid(userAgent);
     const isMobile = isMobileDevice(userAgent);
-    const isFBBrowser = isFacebookBrowser(userAgent);
     
-    // ANDROID + FACEBOOK BROWSER = ZERO COMPRESSÃO (evita crash e lentidão)
-    if (isAndroidDevice || isFBBrowser) {
-        console.log('🤖 ANDROID/FB detectado - SEM compressão');
+    // ANDROID = ZERO COMPRESSÃO (evita crash)
+    if (isAndroidDevice) {
+        console.log('🤖 ANDROID detectado - SEM compressão');
         return next();
     }
     
@@ -181,19 +176,11 @@ app.use((req, res, next) => {
     const userAgent = req.headers['user-agent'] || '';
     const isAndroidDevice = isAndroid(userAgent);
     const isMobile = isMobileDevice(userAgent);
-    const isFBBrowser = isFacebookBrowser(userAgent);
     
     // Headers MÍNIMOS para assets estáticos
     if (req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
-        const maxAge = (isAndroidDevice || isFBBrowser) ? 300 : (isMobile ? 1800 : 3600);
+        const maxAge = isAndroidDevice ? 900 : (isMobile ? 1800 : 3600);
         res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
-    }
-    
-    // Headers específicos para Facebook Browser Android
-    if (isFBBrowser && isAndroidDevice) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
     }
     
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -719,9 +706,8 @@ app.use(async (req, res) => {
     const userAgent = req.headers['user-agent'] || '';
     const isAndroidDevice = isAndroid(userAgent);
     const isMobile = isMobileDevice(userAgent);
-    const isFBBrowser = isFacebookBrowser(userAgent);
 
-    console.log(`🌐 [${isAndroidDevice ? 'ANDROID' : (isMobile ? 'MOBILE' : 'DESKTOP')}${isFBBrowser ? '-FB' : ''}] ${req.method} ${req.url}`);
+    console.log(`🌐 [${isAndroidDevice ? 'ANDROID' : (isMobile ? 'MOBILE' : 'DESKTOP')}] ${req.method} ${req.url}`);
 
     // Verificar cache primeiro (apenas para assets estáticos)
     if (req.method === 'GET' && req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
@@ -918,8 +904,8 @@ app.use(async (req, res) => {
             }
 
             // === ANDROID = PROCESSAMENTO COMPLETO COMO CÓDIGO ANTIGO QUE FUNCIONAVA ===
-            if (isAndroidDevice || isFBBrowser) {
-                console.log('🤖 ANDROID/FB: Processamento otimizado para Facebook Browser');
+            if (isAndroidDevice) {
+                console.log('🤖 ANDROID: Processamento completo com funcionalidades essenciais - BASEADO NO CÓDIGO ANTIGO');
                 
                 // 1. Conversão de moeda - SEMPRE
                 html = html.replace(CONVERSION_PATTERN, (match, p1) => {
@@ -927,16 +913,6 @@ app.use(async (req, res) => {
                     const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2);
                     return `R$${brlValue.replace('.', ',')}`;
                 });
-
-                // 2. OTIMIZAÇÕES ESPECÍFICAS PARA FACEBOOK BROWSER ANDROID
-                const fbOptimizations = `
-                    <script>
-                    // Otimizações Facebook Browser Android
-                    if (typeof window !== 'undefined') {
-                        window.addEventListener('load', function() { document.body.style.visibility = 'visible'; });
-                        document.body.style.visibility = 'hidden';
-                    }
-                    </script>`;
 
                 // 2. Pixels COMPLETOS para Android
                 const pixelsCompletos = `
@@ -1235,10 +1211,10 @@ app.use(async (req, res) => {
                 `;
 
                 // Inserir tudo no HTML
-                html = html.replace('</head>', fbOptimizations + pixelsCompletos + scriptsEssenciais + '</head>');
+                html = html.replace('</head>', pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
                 
-                console.log('🤖✅ ANDROID/FB: Otimizado para Facebook Browser!');
+                console.log('🤖✅ ANDROID: TRIALCHOICE RELOAD E REDIRECIONAMENTOS CORRIGIDOS DEFINITIVAMENTE!');
                 return res.status(response.status).send(html);
             }
 

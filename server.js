@@ -594,6 +594,20 @@ app.get('/media-proxy/*', async (req, res) => {
     }
 });
 
+// Proxy para imagens da palma (palmistry-media.appnebula.co)
+app.get('/palmistry-proxy/*', async (req, res) => {
+    const targetUrl = 'https://palmistry-media.appnebula.co' + req.originalUrl.replace('/palmistry-proxy', '');
+    try {
+        const response = await axios.get(targetUrl, { responseType: 'arraybuffer' });
+        const contentType = response.headers['content-type'] || 'image/jpeg';
+        res.set('Content-Type', contentType);
+        res.send(response.data);
+    } catch (err) {
+        console.error('Erro ao servir imagem da palma:', err.message);
+        res.status(500).send('Erro ao carregar imagem da palma.');
+    }
+});
+
 // === PROXY DA API - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use('/api-proxy', async (req, res) => {
     const cacheKey = `api-${req.method}-${req.url}`;
@@ -1293,6 +1307,9 @@ app.use(async (req, res) => {
                             element.attr(attrName, originalUrl.replace(READING_SUBDOMAIN_TARGET, '/reading'));
                         } else if (originalUrl.startsWith('https://media.appnebula.co')) {
                             element.attr(attrName, originalUrl.replace('https://media.appnebula.co', `${currentProxyHost}/media-proxy`));
+                        } else if (originalUrl.startsWith('https://palmistry-media.appnebula.co')) {
+                            // Redirecionar imagens da palma via proxy
+                            element.attr(attrName, originalUrl.replace('https://palmistry-media.appnebula.co', `${currentProxyHost}/palmistry-proxy`));
                         }
                     }
                 }

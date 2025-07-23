@@ -1236,6 +1236,12 @@ app.use(async (req, res) => {
                             return true;
                         }
                         
+                        if (path === '/pt/witch-power/trialChoice') {
+                            console.log('📱 iOS: /trialChoice → reload');
+                            window.location.reload();
+                            return true;
+                        }
+                        
                         if (path === '/pt/witch-power/date') {
                             console.log('📱 iOS: /date → reload');
                             window.location.reload();

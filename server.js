@@ -1299,17 +1299,21 @@ app.use(async (req, res) => {
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
                     if (originalUrl) {
+                        // Primeiro: URLs do palmistry-media.appnebula.co
+                        if (originalUrl.includes('palmistry-media.appnebula.co')) {
+                            element.attr(attrName, originalUrl.replace('https://palmistry-media.appnebula.co', '/palmistry-proxy'));
+                        }
+                        // Segundo: URLs do media.appnebula.co
+                        else if (originalUrl.includes('media.appnebula.co')) {
+                            element.attr(attrName, originalUrl.replace('https://media.appnebula.co', '/media-proxy'));
+                        }
+                        // Terceiro: URLs relativas já são tratadas pelo proxy
                         if (originalUrl.startsWith('/')) {
                             // URLs relativas já são tratadas pelo proxy
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
                             element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
                         } else if (originalUrl.startsWith(READING_SUBDOMAIN_TARGET)) {
                             element.attr(attrName, originalUrl.replace(READING_SUBDOMAIN_TARGET, '/reading'));
-                        } else if (originalUrl.startsWith('https://media.appnebula.co')) {
-                            element.attr(attrName, originalUrl.replace('https://media.appnebula.co', `${currentProxyHost}/media-proxy`));
-                        } else if (originalUrl.startsWith('https://palmistry-media.appnebula.co')) {
-                            // Redirecionar imagens da palma via proxy
-                            element.attr(attrName, originalUrl.replace('https://palmistry-media.appnebula.co', `${currentProxyHost}/palmistry-proxy`));
                         }
                     }
                 }

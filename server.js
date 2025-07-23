@@ -505,6 +505,82 @@ app.get('/quiz/:filename.svg', async (req, res) => {
     }
 });
 
+// Proxy para imagens otimizadas do Next.js
+app.get('/_next/image', async (req, res) => {
+    try {
+        const imageUrl = req.query.url;
+        if (!imageUrl) {
+            return res.status(400).send('URL da imagem não fornecida');
+        }
+        
+        // Decodificar a URL
+        const decodedUrl = decodeURIComponent(imageUrl);
+        console.log('🖼️ Proxy Next.js Image:', decodedUrl);
+        
+        let targetUrl;
+        if (decodedUrl.startsWith('https://media.appnebula.co')) {
+            // URL externa completa
+            targetUrl = decodedUrl;
+        } else if (decodedUrl.startsWith('/_next/static/')) {
+            // Asset estático do Next.js
+            targetUrl = `https://appnebula.co${decodedUrl}`;
+        } else {
+            // Outras URLs relativas
+            targetUrl = `https://appnebula.co${decodedUrl}`;
+        }
+        
+        const response = await axios.get(targetUrl, { 
+            responseType: 'arraybuffer',
+            headers: {
+                'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0'
+            }
+        });
+        
+        const contentType = response.headers['content-type'] || 'image/jpeg';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.send(response.data);
+        
+    } catch (error) {
+        console.error('Erro ao buscar imagem Next.js:', error.message);
+        res.status(404).send('Imagem não encontrada');
+    }
+});
+
+// Proxy para assets estáticos do Next.js
+app.get('/_next/static/*', async (req, res) => {
+    try {
+        const targetUrl = `https://appnebula.co${req.originalUrl}`;
+        console.log('📁 Proxy Next.js Static:', targetUrl);
+        
+        const response = await axios.get(targetUrl, { 
+            responseType: 'arraybuffer',
+            headers: {
+                'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0'
+            }
+        });
+        
+        // Definir content-type baseado na extensão
+        let contentType = response.headers['content-type'];
+        if (!contentType) {
+            if (req.originalUrl.endsWith('.png')) contentType = 'image/png';
+            else if (req.originalUrl.endsWith('.jpg') || req.originalUrl.endsWith('.jpeg')) contentType = 'image/jpeg';
+            else if (req.originalUrl.endsWith('.svg')) contentType = 'image/svg+xml';
+            else if (req.originalUrl.endsWith('.js')) contentType = 'application/javascript';
+            else if (req.originalUrl.endsWith('.css')) contentType = 'text/css';
+            else contentType = 'application/octet-stream';
+        }
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.send(response.data);
+        
+    } catch (error) {
+        console.error('Erro ao buscar asset Next.js:', error.message);
+        res.status(404).send('Asset não encontrado');
+    }
+});
+
 app.get('/media-proxy/*', async (req, res) => {
     const targetUrl = 'https://media.appnebula.co' + req.originalUrl.replace('/media-proxy', '');
     try {

@@ -1223,6 +1223,28 @@ app.use(async (req, res) => {
             
             const $ = cheerio.load(html);
 
+            // Injetar o evento do Pixel para garantir que 'InitiateCheckout' sempre dispare
+if (pathname.includes('/pt/witch-power/trialChoice')) {
+  $('body').append(`
+    <script>
+      (function() {
+        function fireIC() {
+          if (typeof fbq === "function") {
+            fbq('track', 'InitiateCheckout');
+          }
+        }
+
+        // Dispara quando a página carregar normalmente
+        document.addEventListener("DOMContentLoaded", fireIC);
+
+        // Dispara também caso a navegação seja via Turbo/SPA
+        document.addEventListener("turbo:load", fireIC);
+      })();
+    </script>
+  `);
+}
+
+
             // Script para iOS/Desktop - SIMPLES E FUNCIONAL
             $('head').append(`
                 <script>

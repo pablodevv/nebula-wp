@@ -445,42 +445,7 @@ async function captureTextDirectly() {
     }
 }
 
-// === ROTAS ESPECÍFICAS - CORRIGIDA APENAS A TRIALCHOICE PARA PRESERVAR UTMs ===
-app.get('/pt/witch-power/trialChoice', async (req, res) => {
-    console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('URL acessada:', req.url);
-    console.log('Query parameters:', req.query);
-
-    try {
-        // CAPTURAR UTMs DA REQUISIÇÃO ORIGINAL
-        const utmParams = {};
-        Object.keys(req.query).forEach(key => {
-            if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp') {
-                utmParams[key] = req.query[key];
-            }
-        });
-
-        // SE TEM UTMs NA URL, REDIRECIONAR PRESERVANDO-OS
-        if (Object.keys(utmParams).length > 0) {
-            const utmString = new URLSearchParams(utmParams).toString();
-            const redirectUrl = `/pt/witch-power/trialChoice?${utmString}`;
-            console.log('🎯 UTMs detectados - redirecionando para preservar:', redirectUrl);
-            
-            // Servir o arquivo React COM os UTMs na URL via redirecionamento interno
-            res.redirect(302, redirectUrl);
-            return;
-        }
-
-        console.log('✅ Servindo página React customizada (trialChoice)...\n');
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-
-    } catch (error) {
-        console.error('\n❌ ERRO CRÍTICO ao servir trialChoice:', error.message);
-        res.status(500).send('Erro ao carregar a página customizada.');
-    }
-});
-
+// === ROTAS ESPECÍFICAS - VOLTOU EXATAMENTE COMO ESTAVA ANTES ===
 app.get('/pt/witch-power/date', async (req, res) => {
     console.log('\n=== INTERCEPTANDO DATE ===');
     console.log('Timestamp:', new Date().toISOString());
@@ -718,13 +683,13 @@ app.use('/api-proxy', async (req, res) => {
     }
 });
 
-// === SCRIPT DE PERSISTÊNCIA DE UTMs - CORRIGIDO PARA EVITAR CORRUPÇÃO ===
+// === SCRIPT DE PERSISTÊNCIA DE UTMs - DEFINITIVO ANTI-CORRUPÇÃO ===
 const UTM_PERSISTENCE_SCRIPT = `
 <script>
 (function() {
     if (window.utmPersistenceLoaded) return;
     window.utmPersistenceLoaded = true;
-    console.log('🎯 UTM ANTI-CORRUPTION Script carregado - VERSÃO LIMPA');
+    console.log('🎯 UTM ANTI-CORRUPTION Script carregado - VERSÃO DEFINITIVA');
     
     // === CONFIGURAÇÃO PARA EVITAR CORRUPÇÃO ===
     let utmData = null;
@@ -1308,13 +1273,13 @@ app.use(async (req, res) => {
                     <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
                 `;
 
-                // 3. SCRIPTS ESSENCIAIS PARA ANDROID - SIMPLIFICADOS E FUNCIONAIS
+                // 3. SCRIPTS ESSENCIAIS PARA ANDROID - COM RELOAD DO TRIALCHOICE DE VOLTA!
                 const scriptsEssenciais = `
                     <script>
                     (function() {
                         if (window.proxyScriptLoaded) return;
                         window.proxyScriptLoaded = true;
-                        console.log('🤖 ANDROID: Scripts essenciais carregados - VERSÃO CORRIGIDA');
+                        console.log('🤖 ANDROID: Scripts essenciais carregados - VERSÃO CORRIGIDA COM RELOAD TRIALCHOICE');
                         
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
@@ -1471,13 +1436,19 @@ app.use(async (req, res) => {
                             }
                         }
 
-                        // REDIRECIONAMENTOS ANDROID - REMOVIDO O RELOAD DO TRIALCHOICE PARA PRESERVAR UTMs
+                        // REDIRECIONAMENTOS ANDROID - COM RELOAD DO TRIALCHOICE DE VOLTA!
                         function executeRedirects() {
                             const path = window.location.pathname;
                             
                             if (path === '/pt/witch-power/email') {
                                 console.log('🤖 ANDROID: /email → /onboarding');
                                 window.location.href = '/pt/witch-power/onboarding';
+                                return true;
+                            }
+                            
+                            if (path === '/pt/witch-power/trialChoice') {
+                                console.log('🤖✅ ANDROID: /trialChoice → reload COM UTMs preservadas!');
+                                window.location.reload();
                                 return true;
                             }
                             
@@ -1545,11 +1516,11 @@ app.use(async (req, res) => {
                     /></noscript>
                 `;
 
-                // Inserir tudo no HTML - INCLUINDO O NOVO SCRIPT ANTI-CORRUPÇÃO
+                // Inserir tudo no HTML - INCLUINDO O SCRIPT ANTI-CORRUPÇÃO
                 html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
                 
-                console.log('🤖✅ ANDROID: Scripts com preservação de UTMs no trialChoice!');
+                console.log('🤖✅ ANDROID: RELOAD DO TRIALCHOICE RESTAURADO + UTMs preservadas!');
                 console.log('🎯✅ ANDROID: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
                 return res.status(response.status).send(html);
             }
@@ -1559,7 +1530,7 @@ app.use(async (req, res) => {
             
             const $ = cheerio.load(html);
 
-            // Script para iOS/Desktop - REMOVIDO O RELOAD DO TRIALCHOICE
+            // Script para iOS/Desktop - COM RELOAD DO TRIALCHOICE DE VOLTA!
             $('head').append(`
                 <script>
                 (function() {
@@ -1569,6 +1540,12 @@ app.use(async (req, res) => {
                         if (path === '/pt/witch-power/email') {
                             console.log('📱 iOS: /email → /onboarding');
                             window.location.href = '/pt/witch-power/onboarding';
+                            return true;
+                        }
+                        
+                        if (path === '/pt/witch-power/trialChoice') {
+                            console.log('📱✅ iOS: /trialChoice → reload COM UTMs preservadas!');
+                            window.location.reload();
                             return true;
                         }
                         
@@ -1864,7 +1841,7 @@ app.use(async (req, res) => {
                 return `R$${brlValue.replace('.', ',')}`;
             });
 
-            console.log('🎯✅ iOS/Desktop: Scripts com preservação de UTMs no trialChoice!');
+            console.log('🎯✅ iOS/Desktop: RELOAD DO TRIALCHOICE RESTAURADO + UTMs preservadas!');
             console.log('🎯✅ iOS/Desktop: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
             res.status(response.status).send(html);
         } else {
@@ -1985,10 +1962,9 @@ app.get('/health', (req, res) => {
 // === INICIAR SERVIDOR ===
 app.listen(PORT, () => {
     console.log(`🚀 SERVIDOR PROXY CORRIGIDO DEFINITIVAMENTE na porta ${PORT}`);
-    console.log(`✅ TRIALCHOICE: UTMs PRESERVADOS - sem reload!`);
-    console.log(`✅ IMAGEM PALMA: Proxy corrigido para palmistry-media.appnebula.co!`);
-    console.log(`✅ UPLOAD PALMA: 100% intacto e funcionando!`);
-    console.log(`✅ TODAS funcionalidades: preservadas!`);
-    console.log(`🧹 UTM ANTI-CORRUPTION: Script DEFINITIVO contra corrupção de UTMs!`);
-    console.log(`🎯 TRIALCHOICE UTM FIX: Preservação de UTMs na rota RESOLVIDA 100%!`);
+    console.log(`✅ TRIALCHOICE: VOLTOU AO NORMAL + UTMs PRESERVADAS!`);
+    console.log(`✅ RELOAD RESTAURADO: Funciona igualzinho antes!`);
+    console.log(`✅ UTM ANTI-CORRUPTION: Preserva UTMs mesmo com reload!`);
+    console.log(`✅ LOOP INFINITO: CORRIGIDO - sem mais redirecionamento em excesso!`);
+    console.log(`🎯 SOLUÇÃO DEFINITIVA: trialChoice.tsx volta + UTMs preservadas + tudo intacto!`);
 });

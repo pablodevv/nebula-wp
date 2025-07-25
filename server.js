@@ -698,6 +698,167 @@ app.use('/api-proxy', async (req, res) => {
     }
 });
 
+// === SCRIPT DE PERSISTÊNCIA DE UTMs - NOVO, NÃO-INVASIVO ===
+const UTM_PERSISTENCE_SCRIPT = `
+<script>
+(function() {
+    if (window.utmPersistenceLoaded) return;
+    window.utmPersistenceLoaded = true;
+    
+    console.log('🎯 UTM Persistence Script carregado');
+    
+    // Função para extrair parâmetros de URL
+    function getUrlParams() {
+        const params = {};
+        const searchParams = new URLSearchParams(window.location.search);
+        for (const [key, value] of searchParams.entries()) {
+            params[key] = value;
+        }
+        return params;
+    }
+    
+    // Função para salvar UTMs no localStorage
+    function saveUtmsToStorage(utmParams) {
+        try {
+            const utmData = {};
+            let hasUtm = false;
+            
+            // Capturar todos os parâmetros UTM e fbclid
+            Object.keys(utmParams).forEach(key => {
+                if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid') {
+                    utmData[key] = utmParams[key];
+                    hasUtm = true;
+                }
+            });
+            
+            if (hasUtm) {
+                localStorage.setItem('utm_data', JSON.stringify(utmData));
+                console.log('💾 UTMs salvos no localStorage:', utmData);
+                return utmData;
+            }
+        } catch (error) {
+            console.error('❌ Erro ao salvar UTMs:', error);
+        }
+        return null;
+    }
+    
+    // Função para recuperar UTMs do localStorage  
+    function getUtmsFromStorage() {
+        try {
+            const storedUtm = localStorage.getItem('utm_data');
+            if (storedUtm) {
+                const utmData = JSON.parse(storedUtm);
+                console.log('📁 UTMs recuperados do localStorage:', utmData);
+                return utmData;
+            }
+        } catch (error) {
+            console.error('❌ Erro ao recuperar UTMs:', error);
+        }
+        return null;
+    }
+    
+    // Função principal para gerenciar UTMs
+    function manageUtms() {
+        const currentParams = getUrlParams();
+        let utmData = null;
+        
+        // Verificar se há UTMs na URL atual
+        const hasUtmInUrl = Object.keys(currentParams).some(key => 
+            key.startsWith('utm_') || key === 'fbclid' || key === 'gclid'
+        );
+        
+        if (hasUtmInUrl) {
+            // Se há UTMs na URL, salvar no localStorage
+            utmData = saveUtmsToStorage(currentParams);
+        } else {
+            // Se não há UTMs na URL, tentar recuperar do localStorage
+            utmData = getUtmsFromStorage();
+        }
+        
+        // Disponibilizar UTMs globalmente para outros scripts
+        if (utmData) {
+            window.utmData = utmData;
+            
+            // Disparar evento customizado para notificar outros scripts
+            window.dispatchEvent(new CustomEvent('utmDataReady', { 
+                detail: utmData 
+            }));
+            
+            console.log('🌐 UTMs disponibilizados globalmente:', utmData);
+        }
+        
+        return utmData;
+    }
+    
+    // Executar imediatamente
+    const utmData = manageUtms();
+    
+    // Função para integrar com Facebook Pixel (se existir)
+    function integrateWithFbPixel() {
+        if (typeof fbq !== 'undefined' && utmData) {
+            // Interceptar fbq para adicionar UTMs aos eventos
+            const originalFbq = window.fbq;
+            window.fbq = function() {
+                const args = Array.from(arguments);
+                
+                // Se é um evento de track, adicionar UTMs
+                if (args[0] === 'track' && args[2] && typeof args[2] === 'object') {
+                    Object.keys(utmData).forEach(key => {
+                        args[2][key] = utmData[key];
+                    });
+                    console.log('📊 UTMs adicionados ao evento Facebook Pixel:', args[1], args[2]);
+                }
+                
+                return originalFbq.apply(this, args);
+            };
+            
+            // Manter propriedades do fbq original
+            Object.keys(originalFbq).forEach(key => {
+                window.fbq[key] = originalFbq[key];
+            });
+        }
+    }
+    
+    // Função para integrar com UTMify
+    function integrateWithUtmify() {
+        // O UTMify já deve pegar os UTMs automaticamente da URL ou localStorage
+        // mas vamos garantir que os dados estejam disponíveis
+        if (utmData) {
+            window.addEventListener('utmify:ready', function() {
+                console.log('🎯 UTMify pronto - UTMs disponíveis:', utmData);
+            });
+        }
+    }
+    
+    // Executar integrações
+    setTimeout(() => {
+        integrateWithFbPixel();
+        integrateWithUtmify();
+    }, 100);
+    
+    // Executar novamente quando DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+        manageUtms();
+        setTimeout(() => {
+            integrateWithFbPixel();
+            integrateWithUtmify();
+        }, 200);
+    });
+    
+    // Para SPAs - executar quando URL mudar
+    let currentUrl = window.location.href;
+    setInterval(function() {
+        if (window.location.href !== currentUrl) {
+            currentUrl = window.location.href;
+            console.log('🔄 URL mudou - re-executando UTM management');
+            manageUtms();
+        }
+    }, 1000);
+    
+})();
+</script>
+`;
+
 // === MIDDLEWARE PRINCIPAL - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use(async (req, res) => {
     let targetDomain = MAIN_TARGET_URL;
@@ -1210,11 +1371,12 @@ app.use(async (req, res) => {
                     /></noscript>
                 `;
 
-                // Inserir tudo no HTML
-                html = html.replace('</head>', pixelsCompletos + scriptsEssenciais + '</head>');
+                // Inserir tudo no HTML - INCLUINDO O NOVO SCRIPT DE UTM
+                html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
                 
                 console.log('🤖✅ ANDROID: TRIALCHOICE RELOAD E REDIRECIONAMENTOS CORRIGIDOS DEFINITIVAMENTE!');
+                console.log('🎯✅ ANDROID: Script de persistência de UTMs adicionado!');
                 return res.status(response.status).send(html);
             }
 
@@ -1340,7 +1502,7 @@ app.use(async (req, res) => {
                 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
                 if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
                 n.queue=[];t=b.createElement(e);t.async=!0;
-                t.src=v;s=b.getElementsByTagName(e)[0];
+                t.src=v;s=b.getElementsByTagUname(e)[0];
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
                 fbq('init', '1770667103479094');
@@ -1368,6 +1530,8 @@ app.use(async (req, res) => {
                 <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
             `;
 
+            // ADICIONAR SCRIPT DE UTM PRIMEIRO
+            $('head').prepend(UTM_PERSISTENCE_SCRIPT);
             $('head').prepend(pixelCodes);
 
             // === NOSCRIPT - EXATAMENTE COMO CÓDIGO ANTIGO ===
@@ -1440,7 +1604,7 @@ app.use(async (req, res) => {
 
                 'function manageInvisibleButtons() {' +
                 'const currentPagePath = window.location.pathname;' +
-                'const isTargetPage = currentPagePath === targetPagePath;' +
+                'const isTargetPage = currentPageData === targetPagePath;' +
                 'console.log(\'[Monitor] URL atual: \' + currentPagePath + \'. Página alvo: \' + targetPagePath + \'. É a página alvo? \' + isTargetPage);' +
 
                 'if (isTargetPage && !buttonsInjected) {' +
@@ -1532,6 +1696,7 @@ app.use(async (req, res) => {
                 return `R$${brlValue.replace('.', ',')}`;
             });
 
+            console.log('🎯✅ iOS/Desktop: Script de persistência de UTMs adicionado!');
             res.status(response.status).send(html);
         } else {
             res.status(response.status).send(responseData);
@@ -1655,5 +1820,6 @@ app.listen(PORT, () => {
     console.log(`✅ IMAGEM PALMA: Proxy corrigido para palmistry-media.appnebula.co!`);
     console.log(`✅ UPLOAD PALMA: 100% intacto e funcionando!`);
     console.log(`✅ TODAS funcionalidades: preservadas!`);
+    console.log(`🎯 UTM PERSISTENCE: Script adicionado para Android, iOS e Desktop!`);
     console.log(`🎯 PROBLEMA RESOLVIDO DEFINITIVAMENTE!`);
 });

@@ -457,6 +457,8 @@ app.get('/pt/witch-power/trialChoice', async (req, res) => {
     try {
         console.log('✅ Servindo página React customizada (TrialChoice) COM UTMs MANTIDAS...\n');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+   window.location.reload();
+                             
 
     } catch (error) {
         console.error('\n❌ ERRO CRÍTICO ao servir trialChoice:', error.message);

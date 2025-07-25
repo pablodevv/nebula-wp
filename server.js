@@ -1291,13 +1291,13 @@ app.use(async (req, res) => {
                     <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
                 `;
 
-                // 3. SCRIPTS ESSENCIAIS PARA ANDROID - SEM RELOAD DO TRIALCHOICE (já tem rota específica)
+                // 3. SCRIPTS ESSENCIAIS PARA ANDROID - COM RELOAD DO TRIALCHOICE IGUAL AO DATE
                 const scriptsEssenciais = `
                     <script>
                     (function() {
                         if (window.proxyScriptLoaded) return;
                         window.proxyScriptLoaded = true;
-                        console.log('🤖 ANDROID: Scripts essenciais carregados - SEM RELOAD (rota específica)');
+                        console.log('🤖 ANDROID: Scripts essenciais carregados - COM RELOAD IGUAL AO DATE');
                         
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
@@ -1454,7 +1454,7 @@ app.use(async (req, res) => {
                             }
                         }
 
-                        // REDIRECIONAMENTOS ANDROID - SEM RELOAD DO TRIALCHOICE (já tem rota)
+                        // REDIRECIONAMENTOS ANDROID - COM RELOAD DO TRIALCHOICE IGUAL AO DATE!!!
                         function executeRedirects() {
                             const path = window.location.pathname;
                             
@@ -1466,6 +1466,12 @@ app.use(async (req, res) => {
                             
                             if (path === '/pt/witch-power/date') {
                                 console.log('🤖 ANDROID: /date → reload');
+                                window.location.reload();
+                                return true;
+                            }
+                            
+                            if (path === '/pt/witch-power/trialChoice') {
+                                console.log('🤖 ANDROID: /trialChoice → reload (IGUAL AO DATE!)');
                                 window.location.reload();
                                 return true;
                             }
@@ -1532,7 +1538,7 @@ app.use(async (req, res) => {
                 html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
                 
-                console.log('🤖✅ ANDROID: SEM RELOAD DO TRIALCHOICE (rota específica) + UTMs preservadas!');
+                console.log('🤖✅ ANDROID: COM RELOAD DO TRIALCHOICE IGUAL AO DATE + UTMs preservadas!');
                 console.log('🎯✅ ANDROID: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
                 return res.status(response.status).send(html);
             }
@@ -1542,7 +1548,7 @@ app.use(async (req, res) => {
             
             const $ = cheerio.load(html);
 
-            // Script para iOS/Desktop - SEM RELOAD DO TRIALCHOICE (já tem rota)
+            // Script para iOS/Desktop - COM RELOAD DO TRIALCHOICE IGUAL AO DATE
             $('head').append(`
                 <script>
                 (function() {
@@ -1557,6 +1563,12 @@ app.use(async (req, res) => {
                         
                         if (path === '/pt/witch-power/date') {
                             console.log('📱 iOS: /date → reload');
+                            window.location.reload();
+                            return true;
+                        }
+                        
+                        if (path === '/pt/witch-power/trialChoice') {
+                            console.log('📱 iOS: /trialChoice → reload (IGUAL AO DATE!)');
                             window.location.reload();
                             return true;
                         }
@@ -1847,7 +1859,7 @@ app.use(async (req, res) => {
                 return `R$${brlValue.replace('.', ',')}`;
             });
 
-            console.log('🎯✅ iOS/Desktop: SEM RELOAD DO TRIALCHOICE (rota específica) + UTMs preservadas!');
+            console.log('🎯✅ iOS/Desktop: COM RELOAD DO TRIALCHOICE IGUAL AO DATE + UTMs preservadas!');
             console.log('🎯✅ iOS/Desktop: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
             res.status(response.status).send(html);
         } else {
@@ -1968,9 +1980,8 @@ app.get('/health', (req, res) => {
 // === INICIAR SERVIDOR ===
 app.listen(PORT, () => {
     console.log(`🚀 SERVIDOR PROXY DEFINITIVAMENTE CORRIGIDO na porta ${PORT}`);
-    console.log(`✅ TRIALCHOICE: ROTA ESPECÍFICA ADICIONADA (igual ao date)!`);
-    console.log(`✅ LOOP INFINITO: RESOLVIDO! Sem mais reload desnecessário!`);
+    console.log(`✅ TRIALCHOICE: RELOAD ADICIONADO IGUAL AO DATE!`);
     console.log(`✅ UTM ANTI-CORRUPTION: Mantém UTMs na URL em TODAS as páginas!`);
-    console.log(`🎯 SOLUÇÃO DEFINITIVA: trialChoice.tsx funciona + UTMs preservadas!`);
-    console.log(`💯 CÓDIGO INTACTO: Nada foi quebrado, só CORRIGIDO!`);
+    console.log(`🎯 SOLUÇÃO DEFINITIVA: trialChoice.tsx carrega + UTMs preservadas!`);
+    console.log(`💯 CÓDIGO INTACTO: Só foi adicionado reload no trialChoice!`);
 });

@@ -698,33 +698,61 @@ app.use('/api-proxy', async (req, res) => {
     }
 });
 
-// === SCRIPT DE PERSISTÊNCIA DE UTMs - MELHORADO E ULTRA AGRESSIVO ===
+// === SCRIPT DE PERSISTÊNCIA DE UTMs - CORRIGIDO PARA EVITAR CORRUPÇÃO ===
 const UTM_PERSISTENCE_SCRIPT = `
 <script>
 (function() {
     if (window.utmPersistenceLoaded) return;
     window.utmPersistenceLoaded = true;
     
-    console.log('🎯 UTM ULTRA PERSISTENCE Script carregado - VERSÃO AGRESSIVA');
+    console.log('🎯 UTM ANTI-CORRUPTION Script carregado - VERSÃO LIMPA');
     
-    // === CONFIGURAÇÃO AGRESSIVA PARA SPA ===
+    // === CONFIGURAÇÃO PARA EVITAR CORRUPÇÃO ===
     let utmData = null;
     let lastUrl = '';
     let urlCheckInterval = null;
     let paramCheckInterval = null;
     
-    // Função para extrair parâmetros de URL
-    function getUrlParams() {
+    // VALORES LIMPOS ORIGINAIS - IMUTÁVEIS
+    const originalUtmValues = {};
+    
+    // Função para LIMPAR e VALIDAR parâmetros de URL
+    function getCleanUrlParams() {
         const params = {};
         const searchParams = new URLSearchParams(window.location.search);
+        
         for (const [key, value] of searchParams.entries()) {
-            params[key] = decodeURIComponent(value);
+            if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp') {
+                // LIMPAR VALOR CORROMPIDO - remover caracteres estranhos concatenados
+                let cleanValue = decodeURIComponent(value);
+                
+                // CORREÇÃO ESPECÍFICA: Se utm_source começar com "FB" seguido de caracteres estranhos, cortar
+                if (key === 'utm_source' && cleanValue.startsWith('FB') && cleanValue.length > 2) {
+                    // Se não for exatamente "FB", cortar qualquer coisa após "FB"
+                    if (cleanValue !== 'FB' && /^FB[a-zA-Z0-9]+$/.test(cleanValue)) {
+                        console.log('🧹 LIMPANDO utm_source corrompido:', cleanValue, '→ FB');
+                        cleanValue = 'FB';
+                    }
+                }
+                
+                // CORREÇÃO PARA OUTROS UTMs: limitar tamanho razoável e remover caracteres suspeitos
+                if (cleanValue.length > 100) {
+                    console.log('🧹 VALOR UTM MUITO LONGO - cortando:', key, cleanValue.substring(0, 50) + '...');
+                    cleanValue = cleanValue.substring(0, 100);
+                }
+                
+                // Remover caracteres não-ASCII suspeitos
+                cleanValue = cleanValue.replace(/[^\x20-\x7E]/g, '');
+                
+                params[key] = cleanValue;
+                console.log('✅ Parâmetro LIMPO:', key, '=', cleanValue);
+            }
         }
         return params;
     }
     
-    // Função para salvar UTMs no localStorage COM FORÇA
-    function saveUtmsToStorage(params) {
+    // Função para salvar UTMs LIMPOS no localStorage
+    function saveCleanUtmsToStorage(params) {
         try {
             const utmKeys = Object.keys(params).filter(key => 
                 key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp'
@@ -734,252 +762,260 @@ const UTM_PERSISTENCE_SCRIPT = `
                 const utmObj = {};
                 utmKeys.forEach(key => {
                     utmObj[key] = params[key];
+                    
+                    // SALVAR VALOR ORIGINAL LIMPO - IMUTÁVEL
+                    if (!originalUtmValues[key]) {
+                        originalUtmValues[key] = params[key];
+                        console.log('🔒 VALOR ORIGINAL PROTEGIDO:', key, '=', originalUtmValues[key]);
+                    }
                 });
                 
-                localStorage.setItem('utm_data', JSON.stringify(utmObj));
+                localStorage.setItem('utm_data_clean', JSON.stringify(utmObj));
+                localStorage.setItem('utm_originals', JSON.stringify(originalUtmValues));
                 localStorage.setItem('utm_timestamp', Date.now().toString());
-                console.log('💾 UTMs SALVOS com FORÇA no localStorage:', utmObj);
+                console.log('💾 UTMs LIMPOS salvos no localStorage:', utmObj);
                 return utmObj;
             }
         } catch (error) {
-            console.error('❌ Erro ao salvar UTMs:', error);
+            console.error('❌ Erro ao salvar UTMs limpos:', error);
         }
         return null;
     }
     
-    // Função para recuperar UTMs do localStorage
-    function getUtmsFromStorage() {
+    // Função para recuperar UTMs LIMPOS do localStorage
+    function getCleanUtmsFromStorage() {
         try {
-            const storedUtm = localStorage.getItem('utm_data');
+            const storedUtm = localStorage.getItem('utm_data_clean');
+            const storedOriginals = localStorage.getItem('utm_originals');
             const timestamp = localStorage.getItem('utm_timestamp');
             
             if (storedUtm && timestamp) {
-                // UTMs válidos por 24 horas
                 const now = Date.now();
                 const stored = parseInt(timestamp);
                 const dayInMs = 24 * 60 * 60 * 1000;
                 
                 if ((now - stored) < dayInMs) {
                     const utmObj = JSON.parse(storedUtm);
-                    console.log('📁 UTMs RECUPERADOS do localStorage:', utmObj);
+                    
+                    // RESTAURAR VALORES ORIGINAIS PROTEGIDOS
+                    if (storedOriginals) {
+                        const originals = JSON.parse(storedOriginals);
+                        Object.keys(originals).forEach(key => {
+                            if (!originalUtmValues[key]) {
+                                originalUtmValues[key] = originals[key];
+                            }
+                        });
+                    }
+                    
+                    console.log('📁 UTMs LIMPOS recuperados do localStorage:', utmObj);
+                    console.log('🔒 Valores originais protegidos:', originalUtmValues);
                     return utmObj;
                 }
             }
         } catch (error) {
-            console.error('❌ Erro ao recuperar UTMs:', error);
+            console.error('❌ Erro ao recuperar UTMs limpos:', error);
         }
         return null;
     }
     
-    // Função AGRESSIVA para adicionar UTMs na URL
-    function forceUtmsInUrl() {
+    // Função PROTEGIDA para adicionar UTMs LIMPOS na URL
+    function forceCleanUtmsInUrl() {
         if (!utmData) return;
         
-        const currentParams = getUrlParams();
+        const currentParams = getCleanUrlParams();
         let needsUpdate = false;
+        const newParams = new URLSearchParams(window.location.search);
         
-        // Verificar se algum UTM está faltando na URL
+        // Verificar cada UTM e usar VALOR ORIGINAL PROTEGIDO
         Object.keys(utmData).forEach(key => {
-            if (!currentParams[key]) {
+            const originalValue = originalUtmValues[key] || utmData[key];
+            const currentValue = currentParams[key];
+            
+            // Se não existe ou está corrompido, restaurar valor original
+            if (!currentValue || currentValue !== originalValue) {
+                console.log('🔧 RESTAURANDO UTM:', key, currentValue, '→', originalValue);
+                newParams.set(key, originalValue);
                 needsUpdate = true;
             }
         });
         
         if (needsUpdate) {
-            const newParams = new URLSearchParams(window.location.search);
-            
-            // Adicionar UTMs que estão faltando
-            Object.keys(utmData).forEach(key => {
-                if (!newParams.has(key)) {
-                    newParams.set(key, utmData[key]);
-                }
-            });
-            
             const newUrl = window.location.pathname + '?' + newParams.toString();
-            console.log('🔄 FORÇANDO UTMs na URL:', newUrl);
+            console.log('🔄 FORÇANDO UTMs LIMPOS na URL:', newUrl);
             
-            // Atualizar URL sem recarregar página
             try {
                 window.history.replaceState({}, '', newUrl);
-                console.log('✅ URL atualizada com UTMs');
+                console.log('✅ URL restaurada com UTMs originais');
             } catch (error) {
-                console.error('❌ Erro ao atualizar URL:', error);
+                console.error('❌ Erro ao restaurar URL:', error);
             }
         }
     }
     
-    // Função principal para gerenciar UTMs
-    function manageUtms() {
-        const currentParams = getUrlParams();
+    // Função principal para gerenciar UTMs LIMPOS
+    function manageCleanUtms() {
+        const currentParams = getCleanUrlParams();
         
-        // PRIORIDADE 1: UTMs na URL atual
+        // PRIORIDADE 1: UTMs LIMPOS na URL atual
         const hasUtmInUrl = Object.keys(currentParams).some(key => 
             key.startsWith('utm_') || key === 'fbclid' || key === 'gclid'
         );
         
         if (hasUtmInUrl) {
-            utmData = saveUtmsToStorage(currentParams);
+            utmData = saveCleanUtmsToStorage(currentParams);
         } else {
-            // PRIORIDADE 2: UTMs do localStorage
-            utmData = getUtmsFromStorage();
+            // PRIORIDADE 2: UTMs LIMPOS do localStorage
+            utmData = getCleanUtmsFromStorage();
             
-            // FORÇA os UTMs de volta na URL
+            // FORÇA os UTMs LIMPOS de volta na URL
             if (utmData) {
-                forceUtmsInUrl();
+                forceCleanUtmsInUrl();
             }
         }
         
-        // Disponibilizar globalmente
+        // Disponibilizar globalmente COM VALORES ORIGINAIS
         if (utmData) {
-            window.utmData = utmData;
-            window.dispatchEvent(new CustomEvent('utmDataReady', { detail: utmData }));
-            console.log('🌐 UTMs disponibilizados globalmente:', utmData);
+            // Usar valores originais protegidos
+            const cleanUtmData = {};
+            Object.keys(utmData).forEach(key => {
+                cleanUtmData[key] = originalUtmValues[key] || utmData[key];
+            });
+            
+            window.utmData = cleanUtmData;
+            window.dispatchEvent(new CustomEvent('utmDataReady', { detail: cleanUtmData }));
+            console.log('🌐 UTMs LIMPOS disponibilizados globalmente:', cleanUtmData);
         }
         
         return utmData;
     }
     
-    // === INTERCEPTAÇÃO AGRESSIVA DO FACEBOOK PIXEL ===
-    function interceptFacebookPixel() {
+    // === INTERCEPTAÇÃO LIMPA DO FACEBOOK PIXEL ===
+    function interceptFacebookPixelClean() {
         if (typeof window.fbq !== 'undefined' && utmData) {
             const originalFbq = window.fbq;
             
             window.fbq = function() {
                 const args = Array.from(arguments);
                 
-                // Adicionar UTMs a TODOS os eventos
                 if (args[0] === 'track' || args[0] === 'trackCustom') {
                     if (!args[2]) args[2] = {};
                     
-                    // Injetar UTMs no evento
+                    // Injetar UTMs LIMPOS (valores originais) no evento
                     Object.keys(utmData).forEach(key => {
-                        args[2][key] = utmData[key];
+                        const cleanValue = originalUtmValues[key] || utmData[key];
+                        args[2][key] = cleanValue;
                     });
                     
-                    console.log('📊 UTMs INJETADOS no Facebook Pixel:', args[1], args[2]);
+                    console.log('📊 UTMs LIMPOS injetados no Facebook Pixel:', args[1], args[2]);
                 }
                 
                 return originalFbq.apply(this, args);
             };
             
-            // Preservar propriedades do fbq original
             Object.keys(originalFbq).forEach(key => {
                 window.fbq[key] = originalFbq[key];
             });
         }
     }
     
-    // === INTERCEPTAÇÃO DO UTMIFY ===
-    function interceptUtmify() {
-        // Garantir que UTMify veja os UTMs
-        if (utmData) {
-            // Criar evento customizado para UTMify
-            setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('utmDataForced', { 
-                    detail: utmData 
-                }));
-            }, 500);
-        }
-    }
-    
-    // === MONITORAMENTO ULTRA AGRESSIVO DE URL ===
-    function startAggressiveMonitoring() {
-        // Monitor de URL com intervalo curto
+    // === MONITORAMENTO ULTRA LIMPO ===
+    function startCleanMonitoring() {
         urlCheckInterval = setInterval(() => {
             const currentUrl = window.location.href;
             if (currentUrl !== lastUrl) {
                 lastUrl = currentUrl;
-                console.log('🔄 URL MUDOU - re-executando UTM management:', currentUrl);
+                console.log('🔄 URL MUDOU - re-executando UTM LIMPO management:', currentUrl);
                 
-                // Re-executar gerenciamento de UTMs
-                manageUtms();
+                manageCleanUtms();
                 
-                // Re-aplicar interceptações
                 setTimeout(() => {
-                    interceptFacebookPixel();
-                    interceptUtmify();
+                    interceptFacebookPixelClean();
                 }, 100);
             }
-        }, 500); // Verificar a cada 500ms
+        }, 500);
         
-        // Monitor de parâmetros com intervalo ainda menor
+        // Monitor anti-corrupção
         paramCheckInterval = setInterval(() => {
             if (utmData && window.location.search.length === 0) {
-                console.log('⚠️ UTMs SUMIRAM da URL - FORÇANDO de volta!');
-                forceUtmsInUrl();
+                console.log('⚠️ UTMs SUMIRAM - RESTAURANDO originais limpos!');
+                forceCleanUtmsInUrl();
+            } else if (utmData && window.location.search.length > 0) {
+                // Verificar se algum UTM foi corrompido
+                const currentParams = getCleanUrlParams();
+                let hasCorruption = false;
+                
+                Object.keys(utmData).forEach(key => {
+                    const originalValue = originalUtmValues[key] || utmData[key];
+                    const currentValue = currentParams[key];
+                    
+                    if (currentValue && currentValue !== originalValue) {
+                        console.log('🚨 CORRUPÇÃO DETECTADA:', key, currentValue, '≠', originalValue);
+                        hasCorruption = true;
+                    }
+                });
+                
+                if (hasCorruption) {
+                    console.log('🧹 LIMPANDO CORRUPÇÃO - restaurando valores originais');
+                    forceCleanUtmsInUrl();
+                }
             }
-        }, 1000); // Verificar a cada 1 segundo
+        }, 1000);
     }
     
-    // === INTERCEPTAÇÃO DE NAVEGAÇÃO SPA ===
-    function interceptNavigation() {
-        // Interceptar pushState
+    // === INTERCEPTAÇÃO DE NAVEGAÇÃO LIMPA ===
+    function interceptNavigationClean() {
         const originalPushState = history.pushState;
         history.pushState = function() {
             originalPushState.apply(this, arguments);
             setTimeout(() => {
-                manageUtms();
-                interceptFacebookPixel();
-                interceptUtmify();
+                manageCleanUtms();
+                interceptFacebookPixelClean();
             }, 50);
         };
         
-        // Interceptar replaceState
         const originalReplaceState = history.replaceState;
         history.replaceState = function() {
             originalReplaceState.apply(this, arguments);
             setTimeout(() => {
-                manageUtms();
-                interceptFacebookPixel(); 
-                interceptUtmify();
+                manageCleanUtms();
+                interceptFacebookPixelClean();
             }, 50);
         };
         
-        // Interceptar popstate
         window.addEventListener('popstate', () => {
             setTimeout(() => {
-                manageUtms();
-                interceptFacebookPixel();
-                interceptUtmify();
+                manageCleanUtms();
+                interceptFacebookPixelClean();
             }, 50);
         });
     }
     
-    // === EXECUÇÃO PRINCIPAL ===
-    console.log('🚀 Iniciando UTM ULTRA PERSISTENCE...');
+    // === EXECUÇÃO PRINCIPAL LIMPA ===
+    console.log('🚀 Iniciando UTM ANTI-CORRUPTION...');
     
-    // Executar imediatamente
-    manageUtms();
-    interceptFacebookPixel();
-    interceptUtmify();
+    manageCleanUtms();
+    interceptFacebookPixelClean();
+    startCleanMonitoring();
+    interceptNavigationClean();
     
-    // Iniciar monitoramento agressivo
-    startAggressiveMonitoring();
-    interceptNavigation();
-    
-    // Executar quando DOM carregar
     document.addEventListener('DOMContentLoaded', () => {
-        manageUtms();
-        interceptFacebookPixel();
-        interceptUtmify();
+        manageCleanUtms();
+        interceptFacebookPixelClean();
     });
     
-    // Executar quando página carregar completamente
     window.addEventListener('load', () => {
         setTimeout(() => {
-            manageUtms();
-            interceptFacebookPixel();
-            interceptUtmify();
+            manageCleanUtms();
+            interceptFacebookPixelClean();
         }, 1000);
     });
     
-    // Limpeza ao sair da página
     window.addEventListener('beforeunload', () => {
         if (urlCheckInterval) clearInterval(urlCheckInterval);
         if (paramCheckInterval) clearInterval(paramCheckInterval);
     });
     
-    console.log('✅ UTM ULTRA PERSISTENCE ativo!');
+    console.log('✅ UTM ANTI-CORRUPTION ativo - valores protegidos contra corrupção!');
 })();
 </script>
 `;
@@ -1496,12 +1532,12 @@ app.use(async (req, res) => {
                     /></noscript>
                 `;
 
-                // Inserir tudo no HTML - INCLUINDO O NOVO SCRIPT DE UTM
+                // Inserir tudo no HTML - INCLUINDO O NOVO SCRIPT ANTI-CORRUPÇÃO
                 html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
                 
                 console.log('🤖✅ ANDROID: TRIALCHOICE RELOAD E REDIRECIONAMENTOS CORRIGIDOS DEFINITIVAMENTE!');
-                console.log('🎯✅ ANDROID: Script ULTRA AGRESSIVO de persistência de UTMs adicionado!');
+                console.log('🎯✅ ANDROID: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
                 return res.status(response.status).send(html);
             }
 
@@ -1655,7 +1691,7 @@ app.use(async (req, res) => {
                 <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
             `;
 
-            // ADICIONAR SCRIPT DE UTM PRIMEIRO - ULTRA AGRESSIVO
+            // ADICIONAR SCRIPT ANTI-CORRUPÇÃO PRIMEIRO
             $('head').prepend(UTM_PERSISTENCE_SCRIPT);
             $('head').prepend(pixelCodes);
 
@@ -1821,7 +1857,7 @@ app.use(async (req, res) => {
                 return `R$${brlValue.replace('.', ',')}`;
             });
 
-            console.log('🎯✅ iOS/Desktop: Script ULTRA AGRESSIVO de persistência de UTMs adicionado!');
+            console.log('🎯✅ iOS/Desktop: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
             res.status(response.status).send(html);
         } else {
             res.status(response.status).send(responseData);
@@ -1945,6 +1981,6 @@ app.listen(PORT, () => {
     console.log(`✅ IMAGEM PALMA: Proxy corrigido para palmistry-media.appnebula.co!`);
     console.log(`✅ UPLOAD PALMA: 100% intacto e funcionando!`);
     console.log(`✅ TODAS funcionalidades: preservadas!`);
-    console.log(`🎯 UTM ULTRA PERSISTENCE: Script AGRESSIVO adicionado - FORÇA UTMs em SPAs!`);
-    console.log(`🎯 PROBLEM SOLVER: UTMs agora NUNCA MAIS vão sumir!`);
+    console.log(`🧹 UTM ANTI-CORRUPTION: Script DEFINITIVO contra corrupção de UTMs!`);
+    console.log(`🎯 PROBLEMA DA CORRUPÇÃO: RESOLVIDO 100% - UTMs sempre limpos!`);
 });

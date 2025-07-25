@@ -701,13 +701,13 @@ app.use('/api-proxy', async (req, res) => {
     }
 });
 
-// === SCRIPT DE PERSISTÊNCIA DE UTMs - DEFINITIVO ANTI-CORRUPÇÃO ===
+// === SCRIPT DE PERSISTÊNCIA DE UTMs - CORRIGIDO PARA PRESERVAR NO RELOAD DO TRIALCHOICE ===
 const UTM_PERSISTENCE_SCRIPT = `
 <script>
 (function() {
     if (window.utmPersistenceLoaded) return;
     window.utmPersistenceLoaded = true;
-    console.log('🎯 UTM ANTI-CORRUPTION Script carregado - VERSÃO DEFINITIVA');
+    console.log('🎯 UTM ANTI-CORRUPTION Script carregado - VERSÃO DEFINITIVA + TRIALCHOICE RELOAD FIX');
     
     // === CONFIGURAÇÃO PARA EVITAR CORRUPÇÃO ===
     let utmData = null;
@@ -717,6 +717,89 @@ const UTM_PERSISTENCE_SCRIPT = `
     
     // VALORES LIMPOS ORIGINAIS - IMUTÁVEIS
     const originalUtmValues = {};
+    
+    // FUNÇÃO ESPECIAL PARA SALVAR UTMs ANTES DO RELOAD DO TRIALCHOICE
+    function saveUtmsBeforeTrialChoiceReload() {
+        const currentParams = getCleanUrlParams();
+        const hasUtms = Object.keys(currentParams).some(key => 
+            key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp'
+        );
+        
+        if (hasUtms) {
+            console.log('🚨 TRIALCHOICE: Salvando UTMs ANTES do reload:', currentParams);
+            saveCleanUtmsToStorage(currentParams);
+            
+            // SALVAR TAMBÉM EM sessionStorage como backup
+            sessionStorage.setItem('utm_backup_trialchoice', JSON.stringify(currentParams));
+            sessionStorage.setItem('utm_backup_timestamp', Date.now().toString());
+        }
+    }
+    
+    // FUNÇÃO ESPECIAL PARA RESTAURAR UTMs APÓS RELOAD DO TRIALCHOICE
+    function restoreUtmsAfterTrialChoiceReload() {
+        const currentPath = window.location.pathname;
+        
+        if (currentPath === '/pt/witch-power/trialChoice') {
+            console.log('🔄 TRIALCHOICE: Página detectada após possível reload - verificando UTMs...');
+            
+            const currentParams = getCleanUrlParams();
+            const hasUtmsInUrl = Object.keys(currentParams).length > 0;
+            
+            if (!hasUtmsInUrl) {
+                console.log('⚠️ TRIALCHOICE: UTMs não encontradas na URL - tentando restaurar...');
+                
+                // TENTAR RESTAURAR DO sessionStorage PRIMEIRO
+                const backupUtms = sessionStorage.getItem('utm_backup_trialchoice');
+                const backupTimestamp = sessionStorage.getItem('utm_backup_timestamp');
+                
+                if (backupUtms && backupTimestamp) {
+                    const timestamp = parseInt(backupTimestamp);
+                    const now = Date.now();
+                    
+                    // Se o backup é recente (menos de 5 minutos)
+                    if ((now - timestamp) < (5 * 60 * 1000)) {
+                        try {
+                            const utmsToRestore = JSON.parse(backupUtms);
+                            console.log('🎯 TRIALCHOICE: Restaurando UTMs do sessionStorage:', utmsToRestore);
+                            
+                            const newParams = new URLSearchParams();
+                            Object.keys(utmsToRestore).forEach(key => {
+                                newParams.set(key, utmsToRestore[key]);
+                                originalUtmValues[key] = utmsToRestore[key];
+                            });
+                            
+                            const newUrl = window.location.pathname + '?' + newParams.toString();
+                            window.history.replaceState({}, '', newUrl);
+                            
+                            // Salvar no localStorage também
+                            saveCleanUtmsToStorage(utmsToRestore);
+                            utmData = utmsToRestore;
+                            
+                            console.log('✅ TRIALCHOICE: UTMs restauradas na URL:', newUrl);
+                            return true;
+                        } catch (error) {
+                            console.error('❌ TRIALCHOICE: Erro ao restaurar UTMs do sessionStorage:', error);
+                        }
+                    }
+                }
+                
+                // FALLBACK: TENTAR RESTAURAR DO localStorage
+                const storedUtms = getCleanUtmsFromStorage();
+                if (storedUtms) {
+                    console.log('🔄 TRIALCHOICE: Restaurando UTMs do localStorage:', storedUtms);
+                    forceCleanUtmsInUrl();
+                    return true;
+                }
+                
+                console.log('❌ TRIALCHOICE: Nenhum backup de UTMs encontrado');
+            } else {
+                console.log('✅ TRIALCHOICE: UTMs já presentes na URL:', currentParams);
+                saveCleanUtmsToStorage(currentParams);
+            }
+        }
+        
+        return false;
+    }
     
     // Função para LIMPAR e VALIDAR parâmetros de URL
     function getCleanUrlParams() {
@@ -922,7 +1005,7 @@ const UTM_PERSISTENCE_SCRIPT = `
         }
     }
     
-    // === MONITORAMENTO ULTRA LIMPO ===
+    // === MONITORAMENTO ULTRA LIMPO COM PROTEÇÃO ESPECIAL PARA TRIALCHOICE ===
     function startCleanMonitoring() {
         urlCheckInterval = setInterval(() => {
             const currentUrl = window.location.href;
@@ -930,7 +1013,17 @@ const UTM_PERSISTENCE_SCRIPT = `
                 lastUrl = currentUrl;
                 console.log('🔄 URL MUDOU - re-executando UTM LIMPO management:', currentUrl);
                 
-                manageCleanUtms();
+                // VERIFICAR SE É TRIALCHOICE E RESTAURAR UTMs SE NECESSÁRIO
+                const currentPath = window.location.pathname;
+                if (currentPath === '/pt/witch-power/trialChoice') {
+                    const restored = restoreUtmsAfterTrialChoiceReload();
+                    if (!restored) {
+                        manageCleanUtms();
+                    }
+                } else {
+                    manageCleanUtms();
+                }
+                
                 setTimeout(() => {
                     interceptFacebookPixelClean();
                 }, 100);
@@ -965,10 +1058,16 @@ const UTM_PERSISTENCE_SCRIPT = `
         }, 1000);
     }
     
-    // === INTERCEPTAÇÃO DE NAVEGAÇÃO LIMPA ===
+    // === INTERCEPTAÇÃO DE NAVEGAÇÃO LIMPA COM PROTEÇÃO TRIALCHOICE ===
     function interceptNavigationClean() {
         const originalPushState = history.pushState;
         history.pushState = function() {
+            // SALVAR UTMs ANTES DE NAVEGAR PARA TRIALCHOICE
+            const newPath = arguments[2];
+            if (typeof newPath === 'string' && newPath.includes('/pt/witch-power/trialChoice')) {
+                saveUtmsBeforeTrialChoiceReload();
+            }
+            
             originalPushState.apply(this, arguments);
             setTimeout(() => {
                 manageCleanUtms();
@@ -991,23 +1090,47 @@ const UTM_PERSISTENCE_SCRIPT = `
                 interceptFacebookPixelClean();
             }, 50);
         });
+        
+        // INTERCEPTAR BEFOREUNLOAD PARA SALVAR UTMs
+        window.addEventListener('beforeunload', () => {
+            const currentPath = window.location.pathname;
+            if (currentPath === '/pt/witch-power/trialChoice') {
+                saveUtmsBeforeTrialChoiceReload();
+            }
+        });
     }
     
-    // === EXECUÇÃO PRINCIPAL LIMPA ===
-    console.log('🚀 Iniciando UTM ANTI-CORRUPTION...');
+    // === EXECUÇÃO PRINCIPAL LIMPA COM PROTEÇÃO TRIALCHOICE ===
+    console.log('🚀 Iniciando UTM ANTI-CORRUPTION + TRIALCHOICE RELOAD FIX...');
     
-    manageCleanUtms();
+    // VERIFICAR SE É TRIALCHOICE LOGO NO INÍCIO
+    const initialPath = window.location.pathname;
+    if (initialPath === '/pt/witch-power/trialChoice') {
+        const restored = restoreUtmsAfterTrialChoiceReload();
+        if (!restored) {
+            manageCleanUtms();
+        }
+    } else {
+        manageCleanUtms();
+    }
+    
     interceptFacebookPixelClean();
     startCleanMonitoring();
     interceptNavigationClean();
     
     document.addEventListener('DOMContentLoaded', () => {
+        if (window.location.pathname === '/pt/witch-power/trialChoice') {
+            restoreUtmsAfterTrialChoiceReload();
+        }
         manageCleanUtms();
         interceptFacebookPixelClean();
     });
     
     window.addEventListener('load', () => {
         setTimeout(() => {
+            if (window.location.pathname === '/pt/witch-power/trialChoice') {
+                restoreUtmsAfterTrialChoiceReload();
+            }
             manageCleanUtms();
             interceptFacebookPixelClean();
         }, 1000);
@@ -1018,7 +1141,7 @@ const UTM_PERSISTENCE_SCRIPT = `
         if (paramCheckInterval) clearInterval(paramCheckInterval);
     });
     
-    console.log('✅ UTM ANTI-CORRUPTION ativo - valores protegidos contra corrupção!');
+    console.log('✅ UTM ANTI-CORRUPTION + TRIALCHOICE RELOAD FIX ativo - UTMs protegidas contra reload!');
 })();
 </script>
 `;
@@ -1291,13 +1414,13 @@ app.use(async (req, res) => {
                     <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
                 `;
 
-                // 3. SCRIPTS ESSENCIAIS PARA ANDROID - COM RELOAD DO TRIALCHOICE IGUAL AO DATE
+                // 3. SCRIPTS ESSENCIAIS PARA ANDROID - COM RELOAD DO TRIALCHOICE IGUAL AO DATE + SALVAR UTMs
                 const scriptsEssenciais = `
                     <script>
                     (function() {
                         if (window.proxyScriptLoaded) return;
                         window.proxyScriptLoaded = true;
-                        console.log('🤖 ANDROID: Scripts essenciais carregados - COM RELOAD IGUAL AO DATE');
+                        console.log('🤖 ANDROID: Scripts essenciais carregados - COM RELOAD + UTMs PRESERVADAS');
                         
                         const readingSubdomainTarget = '${READING_SUBDOMAIN_TARGET}';
                         const mainTargetOrigin = '${MAIN_TARGET_URL}';
@@ -1305,6 +1428,62 @@ app.use(async (req, res) => {
                         const proxyApiPrefix = '${currentProxyHost}/api-proxy';
                         const currentProxyHost = '${currentProxyHost}';
                         const targetPagePath = '/pt/witch-power/wpGoal';
+
+                        // FUNÇÃO PARA SALVAR UTMs ANTES DO RELOAD
+                        function saveUtmsBeforeReload() {
+                            const currentParams = new URLSearchParams(window.location.search);
+                            const utmParams = {};
+                            
+                            for (const [key, value] of currentParams.entries()) {
+                                if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp') {
+                                    utmParams[key] = value;
+                                }
+                            }
+                            
+                            if (Object.keys(utmParams).length > 0) {
+                                sessionStorage.setItem('utm_backup_trialchoice', JSON.stringify(utmParams));
+                                sessionStorage.setItem('utm_backup_timestamp', Date.now().toString());
+                                console.log('🤖💾 ANDROID: UTMs salvas antes do reload:', utmParams);
+                            }
+                        }
+
+                        // FUNÇÃO PARA RESTAURAR UTMs APÓS RELOAD
+                        function restoreUtmsAfterReload() {
+                            const path = window.location.pathname;
+                            if (path === '/pt/witch-power/trialChoice') {
+                                const currentParams = new URLSearchParams(window.location.search);
+                                const hasUtms = Array.from(currentParams.keys()).some(key => 
+                                    key.startsWith('utm_') || key === 'fbclid' || key === 'gclid'
+                                );
+                                
+                                if (!hasUtms) {
+                                    const backup = sessionStorage.getItem('utm_backup_trialchoice');
+                                    const timestamp = sessionStorage.getItem('utm_backup_timestamp');
+                                    
+                                    if (backup && timestamp) {
+                                        const now = Date.now();
+                                        const stored = parseInt(timestamp);
+                                        
+                                        if ((now - stored) < (5 * 60 * 1000)) { // 5 minutos
+                                            try {
+                                                const utmParams = JSON.parse(backup);
+                                                const newParams = new URLSearchParams();
+                                                
+                                                Object.keys(utmParams).forEach(key => {
+                                                    newParams.set(key, utmParams[key]);
+                                                });
+                                                
+                                                const newUrl = window.location.pathname + '?' + newParams.toString();
+                                                window.history.replaceState({}, '', newUrl);
+                                                console.log('🤖✅ ANDROID: UTMs restauradas após reload:', newUrl);
+                                            } catch (error) {
+                                                console.error('🤖❌ ANDROID: Erro ao restaurar UTMs:', error);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         // Proxy Shim - EXATAMENTE COMO CÓDIGO ANTIGO
                         const originalFetch = window.fetch;
@@ -1454,7 +1633,7 @@ app.use(async (req, res) => {
                             }
                         }
 
-                        // REDIRECIONAMENTOS ANDROID - COM RELOAD DO TRIALCHOICE IGUAL AO DATE!!!
+                        // REDIRECIONAMENTOS ANDROID - COM RELOAD DO TRIALCHOICE + SALVAR UTMs
                         function executeRedirects() {
                             const path = window.location.pathname;
                             
@@ -1471,8 +1650,11 @@ app.use(async (req, res) => {
                             }
                             
                             if (path === '/pt/witch-power/trialChoice') {
-                                console.log('🤖 ANDROID: /trialChoice → reload (IGUAL AO DATE!)');
-                                window.location.reload();
+                                console.log('🤖 ANDROID: /trialChoice → SALVANDO UTMs + reload');
+                                saveUtmsBeforeReload();
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 100);
                                 return true;
                             }
                             
@@ -1480,6 +1662,10 @@ app.use(async (req, res) => {
                         }
 
                         // EXECUÇÃO MÚLTIPLA PARA GARANTIR FUNCIONAMENTO
+                        if (window.location.pathname === '/pt/witch-power/trialChoice') {
+                            restoreUtmsAfterReload();
+                        }
+                        
                         executeRedirects();
                         setTimeout(executeRedirects, 50);
                         setTimeout(executeRedirects, 100);
@@ -1487,6 +1673,9 @@ app.use(async (req, res) => {
 
                         // Executar quando DOM carregar
                         document.addEventListener('DOMContentLoaded', function() {
+                            if (window.location.pathname === '/pt/witch-power/trialChoice') {
+                                restoreUtmsAfterReload();
+                            }
                             executeRedirects();
                             manageInvisibleButtons();
                             setInterval(manageInvisibleButtons, 500);
@@ -1534,12 +1723,12 @@ app.use(async (req, res) => {
                     /></noscript>
                 `;
 
-                // Inserir tudo no HTML - INCLUINDO O SCRIPT ANTI-CORRUPÇÃO
+                // Inserir tudo no HTML - INCLUINDO O SCRIPT ANTI-CORRUPÇÃO CORRIGIDO
                 html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
                 
-                console.log('🤖✅ ANDROID: COM RELOAD DO TRIALCHOICE IGUAL AO DATE + UTMs preservadas!');
-                console.log('🎯✅ ANDROID: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
+                console.log('🤖✅ ANDROID: COM RELOAD DO TRIALCHOICE + UTMs PRESERVADAS NO RELOAD!');
+                console.log('🎯✅ ANDROID: Script ANTI-CORRUPÇÃO de UTMs CORRIGIDO para trialChoice!');
                 return res.status(response.status).send(html);
             }
 
@@ -1548,10 +1737,66 @@ app.use(async (req, res) => {
             
             const $ = cheerio.load(html);
 
-            // Script para iOS/Desktop - COM RELOAD DO TRIALCHOICE IGUAL AO DATE
+            // Script para iOS/Desktop - COM RELOAD DO TRIALCHOICE + UTMs PRESERVADAS
             $('head').append(`
                 <script>
                 (function() {
+                    // FUNÇÃO PARA SALVAR UTMs ANTES DO RELOAD
+                    function saveUtmsBeforeReload() {
+                        const currentParams = new URLSearchParams(window.location.search);
+                        const utmParams = {};
+                        
+                        for (const [key, value] of currentParams.entries()) {
+                            if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp') {
+                                utmParams[key] = value;
+                            }
+                        }
+                        
+                        if (Object.keys(utmParams).length > 0) {
+                            sessionStorage.setItem('utm_backup_trialchoice', JSON.stringify(utmParams));
+                            sessionStorage.setItem('utm_backup_timestamp', Date.now().toString());
+                            console.log('📱💾 iOS/Desktop: UTMs salvas antes do reload:', utmParams);
+                        }
+                    }
+
+                    // FUNÇÃO PARA RESTAURAR UTMs APÓS RELOAD
+                    function restoreUtmsAfterReload() {
+                        const path = window.location.pathname;
+                        if (path === '/pt/witch-power/trialChoice') {
+                            const currentParams = new URLSearchParams(window.location.search);
+                            const hasUtms = Array.from(currentParams.keys()).some(key => 
+                                key.startsWith('utm_') || key === 'fbclid' || key === 'gclid'
+                            );
+                            
+                            if (!hasUtms) {
+                                const backup = sessionStorage.getItem('utm_backup_trialchoice');
+                                const timestamp = sessionStorage.getItem('utm_backup_timestamp');
+                                
+                                if (backup && timestamp) {
+                                    const now = Date.now();
+                                    const stored = parseInt(timestamp);
+                                    
+                                    if ((now - stored) < (5 * 60 * 1000)) { // 5 minutos
+                                        try {
+                                            const utmParams = JSON.parse(backup);
+                                            const newParams = new URLSearchParams();
+                                            
+                                            Object.keys(utmParams).forEach(key => {
+                                                newParams.set(key, utmParams[key]);
+                                            });
+                                            
+                                            const newUrl = window.location.pathname + '?' + newParams.toString();
+                                            window.history.replaceState({}, '', newUrl);
+                                            console.log('📱✅ iOS/Desktop: UTMs restauradas após reload:', newUrl);
+                                        } catch (error) {
+                                            console.error('📱❌ iOS/Desktop: Erro ao restaurar UTMs:', error);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     function executeRedirects() {
                         const path = window.location.pathname;
                         
@@ -1568,12 +1813,20 @@ app.use(async (req, res) => {
                         }
                         
                         if (path === '/pt/witch-power/trialChoice') {
-                            console.log('📱 iOS: /trialChoice → reload (IGUAL AO DATE!)');
-                            window.location.reload();
+                            console.log('📱 iOS: /trialChoice → SALVANDO UTMs + reload');
+                            saveUtmsBeforeReload();
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 100);
                             return true;
                         }
                         
                         return false;
+                    }
+
+                    // VERIFICAR SE É TRIALCHOICE NO CARREGAMENTO
+                    if (window.location.pathname === '/pt/witch-power/trialChoice') {
+                        restoreUtmsAfterReload();
                     }
 
                     // Executar imediatamente
@@ -1596,7 +1849,12 @@ app.use(async (req, res) => {
                     };
 
                     window.addEventListener('popstate', () => setTimeout(executeRedirects, 50));
-                    document.addEventListener('DOMContentLoaded', executeRedirects);
+                    document.addEventListener('DOMContentLoaded', () => {
+                        if (window.location.pathname === '/pt/witch-power/trialChoice') {
+                            restoreUtmsAfterReload();
+                        }
+                        executeRedirects();
+                    });
                 })();
                 </script>
             `);
@@ -1859,8 +2117,8 @@ app.use(async (req, res) => {
                 return `R$${brlValue.replace('.', ',')}`;
             });
 
-            console.log('🎯✅ iOS/Desktop: COM RELOAD DO TRIALCHOICE IGUAL AO DATE + UTMs preservadas!');
-            console.log('🎯✅ iOS/Desktop: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
+            console.log('🎯✅ iOS/Desktop: COM RELOAD DO TRIALCHOICE + UTMs PRESERVADAS NO RELOAD!');
+            console.log('🎯✅ iOS/Desktop: Script ANTI-CORRUPÇÃO de UTMs CORRIGIDO para trialChoice!');
             res.status(response.status).send(html);
         } else {
             res.status(response.status).send(responseData);
@@ -1980,8 +2238,8 @@ app.get('/health', (req, res) => {
 // === INICIAR SERVIDOR ===
 app.listen(PORT, () => {
     console.log(`🚀 SERVIDOR PROXY DEFINITIVAMENTE CORRIGIDO na porta ${PORT}`);
-    console.log(`✅ TRIALCHOICE: RELOAD ADICIONADO IGUAL AO DATE!`);
-    console.log(`✅ UTM ANTI-CORRUPTION: Mantém UTMs na URL em TODAS as páginas!`);
-    console.log(`🎯 SOLUÇÃO DEFINITIVA: trialChoice.tsx carrega + UTMs preservadas!`);
-    console.log(`💯 CÓDIGO INTACTO: Só foi adicionado reload no trialChoice!`);
+    console.log(`✅ TRIALCHOICE: RELOAD MANTIDO + UTMs PRESERVADAS NO RELOAD!`);
+    console.log(`✅ SOLUÇÃO: UTMs são salvas antes do reload e restauradas depois!`);
+    console.log(`🎯 FUNCIONAMENTO: trialChoice + reload + UTMs permanentes na URL!`);
+    console.log(`💯 PERFEITO: Reload continua + UTMs nunca somem!`);
 });

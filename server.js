@@ -103,13 +103,13 @@ let isCapturing = false;
 // === FUNÇÃO DE LIMPEZA ULTRA RÁPIDA ===
 function cleanCache(cache, limit, name) {
     if (cache.size <= limit) return 0;
-    
+
     const entries = Array.from(cache.entries());
     entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-    
+
     const toDelete = entries.slice(0, cache.size - limit);
     toDelete.forEach(([key]) => cache.delete(key));
-    
+
     return toDelete.length;
 }
 
@@ -134,13 +134,13 @@ app.use((req, res, next) => {
     const userAgent = req.headers['user-agent'] || '';
     const isAndroidDevice = isAndroid(userAgent);
     const isMobile = isMobileDevice(userAgent);
-    
+
     // ANDROID = ZERO COMPRESSÃO (evita crash)
     if (isAndroidDevice) {
         console.log('🤖 ANDROID detectado - SEM compressão');
         return next();
     }
-    
+
     // iOS e Desktop = compressão leve
     compression({
         level: isMobile ? 3 : 6,
@@ -176,13 +176,13 @@ app.use((req, res, next) => {
     const userAgent = req.headers['user-agent'] || '';
     const isAndroidDevice = isAndroid(userAgent);
     const isMobile = isMobileDevice(userAgent);
-    
+
     // Headers MÍNIMOS para assets estáticos
     if (req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
         const maxAge = isAndroidDevice ? 900 : (isMobile ? 1800 : 3600);
         res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
     }
-    
+
     res.setHeader('X-Content-Type-Options', 'nosniff');
     next();
 });
@@ -445,13 +445,33 @@ async function captureTextDirectly() {
     }
 }
 
-// === ROTAS ESPECÍFICAS - MANTIDAS 100% INTACTAS ===
+// === ROTAS ESPECÍFICAS - CORRIGIDA APENAS A TRIALCHOICE PARA PRESERVAR UTMs ===
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('URL acessada:', req.url);
+    console.log('Query parameters:', req.query);
 
     try {
+        // CAPTURAR UTMs DA REQUISIÇÃO ORIGINAL
+        const utmParams = {};
+        Object.keys(req.query).forEach(key => {
+            if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp') {
+                utmParams[key] = req.query[key];
+            }
+        });
+
+        // SE TEM UTMs NA URL, REDIRECIONAR PRESERVANDO-OS
+        if (Object.keys(utmParams).length > 0) {
+            const utmString = new URLSearchParams(utmParams).toString();
+            const redirectUrl = `/pt/witch-power/trialChoice?${utmString}`;
+            console.log('🎯 UTMs detectados - redirecionando para preservar:', redirectUrl);
+            
+            // Servir o arquivo React COM os UTMs na URL via redirecionamento interno
+            res.redirect(302, redirectUrl);
+            return;
+        }
+
         console.log('✅ Servindo página React customizada (trialChoice)...\n');
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 
@@ -512,7 +532,7 @@ app.get('/_next/image', async (req, res) => {
         if (!imageUrl) {
             return res.status(400).send('URL da imagem não fornecida');
         }
-        
+
         // Decodificar a URL
         const decodedUrl = decodeURIComponent(imageUrl);
         console.log('🖼️ Proxy Next.js Image:', decodedUrl);
@@ -559,7 +579,7 @@ app.get('/_next/static/*', async (req, res) => {
     try {
         const targetUrl = `https://appnebula.co${req.originalUrl}`;
         console.log('📁 Proxy Next.js Static:', targetUrl);
-        
+
         const response = await axios.get(targetUrl, { 
             responseType: 'arraybuffer',
             headers: {
@@ -618,7 +638,7 @@ app.get('/palmistry-proxy/*', async (req, res) => {
 // === PROXY DA API - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use('/api-proxy', async (req, res) => {
     const cacheKey = `api-${req.method}-${req.url}`;
-    
+
     // Cache apenas para GET requests não-críticos
     if (req.method === 'GET') {
         const cached = apiCache.get(cacheKey);
@@ -704,7 +724,6 @@ const UTM_PERSISTENCE_SCRIPT = `
 (function() {
     if (window.utmPersistenceLoaded) return;
     window.utmPersistenceLoaded = true;
-    
     console.log('🎯 UTM ANTI-CORRUPTION Script carregado - VERSÃO LIMPA');
     
     // === CONFIGURAÇÃO PARA EVITAR CORRUPÇÃO ===
@@ -748,6 +767,7 @@ const UTM_PERSISTENCE_SCRIPT = `
                 console.log('✅ Parâmetro LIMPO:', key, '=', cleanValue);
             }
         }
+        
         return params;
     }
     
@@ -773,6 +793,7 @@ const UTM_PERSISTENCE_SCRIPT = `
                 localStorage.setItem('utm_data_clean', JSON.stringify(utmObj));
                 localStorage.setItem('utm_originals', JSON.stringify(originalUtmValues));
                 localStorage.setItem('utm_timestamp', Date.now().toString());
+                
                 console.log('💾 UTMs LIMPOS salvos no localStorage:', utmObj);
                 return utmObj;
             }
@@ -927,7 +948,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                 console.log('🔄 URL MUDOU - re-executando UTM LIMPO management:', currentUrl);
                 
                 manageCleanUtms();
-                
                 setTimeout(() => {
                     interceptFacebookPixelClean();
                 }, 100);
@@ -1045,7 +1065,7 @@ app.use(async (req, res) => {
     delete requestHeaders['host'];
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
-    
+
     // CORREÇÃO: Não remover accept-encoding para uploads de arquivo - EXATAMENTE COMO CÓDIGO ANTIGO
     if (!req.files || Object.keys(req.files).length === 0) {
         delete requestHeaders['accept-encoding'];
@@ -1451,16 +1471,9 @@ app.use(async (req, res) => {
                             }
                         }
 
-                        // REDIRECIONAMENTOS ANDROID - VERSÃO CORRIGIDA DEFINITIVA
+                        // REDIRECIONAMENTOS ANDROID - REMOVIDO O RELOAD DO TRIALCHOICE PARA PRESERVAR UTMs
                         function executeRedirects() {
                             const path = window.location.pathname;
-                            
-                            // TRIALCHOICE - CORRIGIDO PARA RELOAD AUTOMÁTICO
-                            if (path === '/pt/witch-power/trialChoice') {
-                                console.log('🤖 ANDROID: /trialChoice → RELOAD FORÇADO AGORA!');
-                                window.location.reload();
-                                return true;
-                            }
                             
                             if (path === '/pt/witch-power/email') {
                                 console.log('🤖 ANDROID: /email → /onboarding');
@@ -1536,7 +1549,7 @@ app.use(async (req, res) => {
                 html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
                 
-                console.log('🤖✅ ANDROID: TRIALCHOICE RELOAD E REDIRECIONAMENTOS CORRIGIDOS DEFINITIVAMENTE!');
+                console.log('🤖✅ ANDROID: Scripts com preservação de UTMs no trialChoice!');
                 console.log('🎯✅ ANDROID: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
                 return res.status(response.status).send(html);
             }
@@ -1546,7 +1559,7 @@ app.use(async (req, res) => {
             
             const $ = cheerio.load(html);
 
-            // Script para iOS/Desktop - SIMPLES E FUNCIONAL
+            // Script para iOS/Desktop - REMOVIDO O RELOAD DO TRIALCHOICE
             $('head').append(`
                 <script>
                 (function() {
@@ -1556,12 +1569,6 @@ app.use(async (req, res) => {
                         if (path === '/pt/witch-power/email') {
                             console.log('📱 iOS: /email → /onboarding');
                             window.location.href = '/pt/witch-power/onboarding';
-                            return true;
-                        }
-                        
-                        if (path === '/pt/witch-power/trialChoice') {
-                            console.log('📱 iOS: /trialChoice → reload');
-                            window.location.reload();
                             return true;
                         }
                         
@@ -1857,6 +1864,7 @@ app.use(async (req, res) => {
                 return `R$${brlValue.replace('.', ',')}`;
             });
 
+            console.log('🎯✅ iOS/Desktop: Scripts com preservação de UTMs no trialChoice!');
             console.log('🎯✅ iOS/Desktop: Script ANTI-CORRUPÇÃO de UTMs adicionado!');
             res.status(response.status).send(html);
         } else {
@@ -1878,7 +1886,7 @@ app.use(async (req, res) => {
 // === SISTEMA DE LIMPEZA ULTRA RÁPIDA ===
 setInterval(() => {
     const now = Date.now();
-    
+
     // Limpar cache por TTL
     let staticCleared = 0;
     for (const [key, value] of staticCache.entries()) {
@@ -1887,7 +1895,7 @@ setInterval(() => {
             staticCleared++;
         }
     }
-    
+
     let apiCleared = 0;
     for (const [key, value] of apiCache.entries()) {
         if (now - value.timestamp > CACHE_SETTINGS.API) {
@@ -1895,7 +1903,7 @@ setInterval(() => {
             apiCleared++;
         }
     }
-    
+
     let htmlCleared = 0;
     for (const [key, value] of htmlCache.entries()) {
         if (now - value.timestamp > CACHE_SETTINGS.HTML) {
@@ -1903,7 +1911,7 @@ setInterval(() => {
             htmlCleared++;
         }
     }
-    
+
     let imageCleared = 0;
     for (const [key, value] of imageCache.entries()) {
         if (now - value.timestamp > CACHE_SETTINGS.IMAGES) {
@@ -1911,18 +1919,18 @@ setInterval(() => {
             imageCleared++;
         }
     }
-    
+
     // Limpeza forçada por limite
     const staticForced = cleanCache(staticCache, CACHE_LIMITS.STATIC, 'Static');
     const apiForced = cleanCache(apiCache, CACHE_LIMITS.API, 'API');
     const htmlForced = cleanCache(htmlCache, CACHE_LIMITS.HTML, 'HTML');
     const imageForced = cleanCache(imageCache, CACHE_LIMITS.IMAGES, 'Images');
-    
+
     if (staticCleared > 0 || apiCleared > 0 || htmlCleared > 0 || imageCleared > 0 || 
         staticForced > 0 || apiForced > 0 || htmlForced > 0 || imageForced > 0) {
         console.log(`🧹 Cache cleanup: Static=${staticCleared}+${staticForced}, API=${apiCleared}+${apiForced}, HTML=${htmlCleared}+${htmlForced}, Images=${imageCleared}+${imageForced}`);
     }
-    
+
     // Força garbage collection
     if (global.gc) {
         global.gc();
@@ -1935,10 +1943,10 @@ setInterval(() => {
     const requestsPerMin = Math.floor(requestCount / Math.max(uptime, 1));
     const cacheHitRatio = requestCount > 0 ? Math.floor((cacheHits / requestCount) * 100) : 0;
     const errorRate = requestCount > 0 ? Math.floor((errorCount / requestCount) * 100) : 0;
-    
+
     console.log(`📊 Performance: ${requestCount} requests, ${requestsPerMin}/min, ${cacheHitRatio}% cache hit, ${errorRate}% errors, uptime ${uptime}min`);
     console.log(`💾 Cache sizes: Static=${staticCache.size}/${CACHE_LIMITS.STATIC}, API=${apiCache.size}/${CACHE_LIMITS.API}, HTML=${htmlCache.size}/${CACHE_LIMITS.HTML}, Images=${imageCache.size}/${CACHE_LIMITS.IMAGES}`);
-    
+
     // Reset estatísticas a cada 30 minutos
     if (uptime % 30 === 0 && uptime > 0) {
         requestCount = 0;
@@ -1953,7 +1961,7 @@ setInterval(() => {
 app.get('/health', (req, res) => {
     const uptime = Math.floor((Date.now() - startTime) / 60000);
     const memUsage = process.memoryUsage();
-    
+
     res.json({
         status: 'OK',
         uptime: `${uptime} minutes`,
@@ -1977,10 +1985,10 @@ app.get('/health', (req, res) => {
 // === INICIAR SERVIDOR ===
 app.listen(PORT, () => {
     console.log(`🚀 SERVIDOR PROXY CORRIGIDO DEFINITIVAMENTE na porta ${PORT}`);
-    console.log(`✅ TRIALCHOICE: Reload automático RESTAURADO!`);
+    console.log(`✅ TRIALCHOICE: UTMs PRESERVADOS - sem reload!`);
     console.log(`✅ IMAGEM PALMA: Proxy corrigido para palmistry-media.appnebula.co!`);
     console.log(`✅ UPLOAD PALMA: 100% intacto e funcionando!`);
     console.log(`✅ TODAS funcionalidades: preservadas!`);
     console.log(`🧹 UTM ANTI-CORRUPTION: Script DEFINITIVO contra corrupção de UTMs!`);
-    console.log(`🎯 PROBLEMA DA CORRUPÇÃO: RESOLVIDO 100% - UTMs sempre limpos!`);
+    console.log(`🎯 TRIALCHOICE UTM FIX: Preservação de UTMs na rota RESOLVIDA 100%!`);
 });

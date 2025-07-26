@@ -705,52 +705,56 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             <div className="grid grid-cols-2 gap-6 mb-8">
               {/* Row 1 */}
               <div className="flex justify-center">
-                <div className="text-black font-serif text-lg font-bold" style={{fontFamily: 'Old English Text MT, serif'}}>
-                  The New York Times
+                <div className="text-blue-600 font-bold text-xl">
+                  Globo.com
                 </div>
               </div>
               <div className="flex justify-center">
-                <div className="text-black font-bold text-xl">
-                  Lifewire
+                <div className="text-blue-700 font-bold text-xl">
+                  UOL
                 </div>
               </div>
               
               {/* Row 2 */}
-              <div className="flex justify-center items-center">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center mr-2">
-                    <span className="text-black font-bold text-sm">R</span>
-                  </div>
-                  <span className="text-black font-bold text-lg">REFINERY29</span>
+              <div className="flex justify-center">
+                <div className="text-black font-bold text-lg">
+                  Folha de S.Paulo
                 </div>
               </div>
               <div className="flex justify-center">
-                <div className="text-black font-bold text-xl">
-                  Bustle
+                <div className="text-red-600 font-bold text-xl">
+                  G1
                 </div>
               </div>
               
               {/* Row 3 */}
-              <div className="flex justify-center col-span-2">
-                <div className="text-black font-light text-xl tracking-widest">
-                  WELL+GOOD
+              <div className="flex justify-center">
+                <div className="text-orange-600 font-bold text-xl">
+                  R7
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <div className="text-red-700 font-bold text-xl">
+                  VEJA
                 </div>
               </div>
               
               {/* Row 4 */}
               <div className="flex justify-center">
-                <div className="text-black font-bold text-lg">
-                  URBAN<br/>LIST
+                <div className="text-blue-800 font-bold text-lg">
+                  Terra
                 </div>
               </div>
               <div className="flex justify-center">
-                <div className="text-black font-bold text-xl">
-                  Beebom
+                <div className="text-purple-600 font-bold text-lg">
+                  IstoÉ
                 </div>
               </div>
-              <div className="flex justify-center">
-                <div className="text-pink-400 font-bold text-xl">
-                  HYPEBAE
+              
+              {/* Row 5 */}
+              <div className="flex justify-center col-span-2">
+                <div className="text-blue-600 font-bold text-lg">
+                  O Estado de S. Paulo
                 </div>
               </div>
             </div>

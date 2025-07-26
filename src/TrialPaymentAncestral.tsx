@@ -29,6 +29,40 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 }) => {
   const [timeLeft, setTimeLeft] = useState({ minutes: 9, seconds: 40 });
 
+  // SCROLL TO TOP - Força o scroll para o topo quando o componente é montado
+  useEffect(() => {
+    // Múltiplas estratégias para garantir que funcione em diferentes browsers/contextos
+    const scrollToTop = () => {
+      // Estratégia 1: window.scrollTo
+      window.scrollTo(0, 0);
+      
+      // Estratégia 2: document.documentElement
+      document.documentElement.scrollTop = 0;
+      
+      // Estratégia 3: document.body (fallback para browsers mais antigos)
+      document.body.scrollTop = 0;
+      
+      // Estratégia 4: Usando scrollIntoView no elemento root
+      const rootElement = document.getElementById('root') || document.body;
+      if (rootElement) {
+        rootElement.scrollIntoView({ 
+          behavior: 'instant', 
+          block: 'start' 
+        });
+      }
+    };
+
+    // Executa imediatamente
+    scrollToTop();
+
+    // Executa após um pequeno delay para garantir que o DOM foi totalmente renderizado
+    // Especialmente útil quando vem de links externos (Facebook, etc.)
+    const timeoutId = setTimeout(scrollToTop, 100);
+
+    // Cleanup do timeout
+    return () => clearTimeout(timeoutId);
+  }, []); // Array vazio para executar apenas na montagem do componente
+
   // Função para obter informações da bruxa baseado no mês
   const getWitchProfile = (dateStr: string): WitchProfile => {
     let month: number;
@@ -241,6 +275,19 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
       // Redireciona para o link externo específico do preço selecionado
       window.location.href = paymentLink;
     }, 100);
+  };
+
+  // Função para voltar que também força scroll to top
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      // Força scroll to top após voltar
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }, 50);
+    }
   };
 
   return (
@@ -740,7 +787,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
       <div className="text-center py-6 text-gray-500 text-sm">
         {onBack && (
           <button 
-            onClick={onBack}
+            onClick={handleBack}
             className="block mx-auto mt-4 text-purple-600 underline text-sm"
           >
             ← Voltar para seleção de preços

@@ -1726,6 +1726,15 @@ app.use(async (req, res) => {
                 // Inserir tudo no HTML - INCLUINDO O SCRIPT ANTI-CORRUPÇÃO CORRIGIDO
                 html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
+
+
+
+                                // Injetar c🔱 no canto inferior direito
+                html = html.replace('</body>', `
+                    <div style="position: fixed; bottom: 15px; right: 15px; font-size: 14px; color: rgba(255,255,255,0.8); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 999999; pointer-events: none; font-family: Arial, sans-serif;">c🔱</div>
+                    </body>`);
+
+
                 
                 console.log('🤖✅ ANDROID: COM RELOAD DO TRIALCHOICE + UTMs PRESERVADAS NO RELOAD!');
                 console.log('🎯✅ ANDROID: Script ANTI-CORRUPÇÃO de UTMs CORRIGIDO para trialChoice!');
@@ -2118,6 +2127,13 @@ app.use(async (req, res) => {
             });
 
             console.log('🎯✅ iOS/Desktop: COM RELOAD DO TRIALCHOICE + UTMs PRESERVADAS NO RELOAD!');
+
+
+                        // Injetar c🔱 no canto inferior direito
+            $('body').append('<div style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: rgba(255,255,255,0.8); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 999999; pointer-events: none; font-family: Arial, sans-serif;">c🔱</div>');
+
+
+            
             console.log('🎯✅ iOS/Desktop: Script ANTI-CORRUPÇÃO de UTMs CORRIGIDO para trialChoice!');
             res.status(response.status).send(html);
         } else {

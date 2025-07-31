@@ -164,6 +164,10 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
             </button>
 
             <p className="disclaimer">*Custo do teste em julho de 2025</p>
+              <p className="disclaimer">c🔱</p>
+            
+
+            
           </div>
         </div>
       </div>

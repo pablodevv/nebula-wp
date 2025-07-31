@@ -797,6 +797,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             ← Voltar para seleção de preços
           </button>
         )}
+        
+      <p className="text-gray-700 text-center leading-relaxed">
+                "Desvende o que está escrito e molde o que virá. O verdadeiro poder reside em conhecer seu destino para então dominá-lo." ~São Cipriano c🔱
+              </p>
+        
       </div>
     </div>
   );

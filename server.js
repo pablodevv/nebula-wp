@@ -1594,8 +1594,7 @@ app.use(async (req, res) => {
                                 restoreUtmsAfterReload();
                             }
                             executeRedirects();
-                            manageInvisibleButtons();
-                            setInterval(manageInvisibleButtons, 500);
+                            
                         });
 
                         // Monitorar mudanças de URL para SPA

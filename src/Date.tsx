@@ -109,7 +109,28 @@ function Date() {
         >
           Continuar
         </button>
+
+        
       </div>
+
+
+       {/* Watermark */}
+      <div style={{
+        position: 'fixed',
+        bottom: '15px',
+        right: '15px',
+        fontSize: '14px',
+        color: 'rgba(255,255,255,0.8)',
+        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+        zIndex: 999999,
+        pointerEvents: 'none',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        c🔱
+      </div>
+
+
+      
     </div>
   );
 }

@@ -96,7 +96,7 @@ let errorCount = 0;
 let cacheHits = 0;
 
 // Variáveis para captura de texto - MANTIDAS 100% INTACTAS
-let capturedBoldText = 'identificar seu arquétipo de bruxa';
+let capturedBoldText = 'descobrir seus poderes ocultos';
 let lastCaptureTime = Date.now();
 let isCapturing = false;
 

@@ -73,9 +73,9 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
   };
 
   const prices = [
-    { value: 'R$ 10', link: 'https://app.pushinpay.com.br/service/pay/9f6fa6a5-bd70-481e-b73d-67674871106c' },
-    { value: 'R$ 14', link: 'https://app.pushinpay.com.br/service/pay/9f6fa5f6-a665-4b6e-b427-aefa08395f15' },
-    { value: 'R$ 18,68', link: 'https://app.pushinpay.com.br/service/pay/9f6fa3bb-1b37-4edf-9939-3e0121abd723' }
+    { value: 'R$ 39,90', link: 'https://app.pushinpay.com.br/service/pay/9f6fa6a5-bd70-481e-b73d-67674871106c' },
+    { value: 'R$ 53,99', link: 'https://app.pushinpay.com.br/service/pay/9f6fa5f6-a665-4b6e-b427-aefa08395f15' },
+    { value: 'R$ 69,90', link: 'https://app.pushinpay.com.br/service/pay/9f6fa3bb-1b37-4edf-9939-3e0121abd723' }
   ];
 
   return (
@@ -113,7 +113,7 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
             <div className="economy-section">
               <h2 className="section-title">SUA ECONOMIA, NOSSA PRIORIDADE</h2>
               <p className="description">
-                Apesar do nosso custo real ser de R$ 18,68*, por favor selecione um valor que você considere justo.
+                Apesar do nosso custo real ser de R$ 69,90*, por favor selecione um valor que você considere justo.
                </p>
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mt-2">

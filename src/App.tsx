@@ -17,11 +17,9 @@ function App() {
   const [selectedPrice, setSelectedPrice] = useState<PriceOption | null>(null);
   const [selectedBirthDate, setSelectedBirthDate] = useState('1990-01-01');
 
-  // Carregar data de nascimento do localStorage
   useEffect(() => {
     const savedDate = localStorage.getItem('selectedBirthDate');
     if (savedDate) {
-      // Converter formato DD/MM/AAAA para AAAA-MM-DD
       const [day, month, year] = savedDate.split('/');
       const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       setSelectedBirthDate(formattedDate);
@@ -29,7 +27,6 @@ function App() {
     }
   }, []);
 
-  // Detectar se estamos na rota /date
   useEffect(() => {
     const currentPath = window.location.pathname;
     console.log('🔍 App.tsx: Detectando rota atual:', currentPath);
@@ -48,7 +45,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Só buscar texto capturado se não estivermos na página de data
     if (currentPage === 'date') {
       console.log('⏭️ App.tsx: Página de data ativa, não buscando texto capturado');
       return;
@@ -97,7 +93,6 @@ function App() {
     setCurrentPage('trial');
   };
 
-  // Se estivermos na página de data, mostrar diretamente
   if (currentPage === 'date') {
     console.log('📱 App.tsx: Renderizando componente Date');
     return <Date />;

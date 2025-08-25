@@ -13,20 +13,11 @@ interface QuizChoiceMessage {
 
 const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
-  // Inicializa displayText com capturedText ou um valor padrão
   const [displayText, setDisplayText] = useState<string>(capturedText && capturedText.trim() ? capturedText : "explorar origens de vidas passadas");
 
-  // Este useEffect agora só lida com a escuta de mensagens via postMessage
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // É CRUCIAL verificar a origem da mensagem para segurança!
-      // Em produção, substitua 'window.location.origin' pelo URL completo do seu proxy/servidor,
-      // por exemplo: 'https://appnebula-wp-3kdx.onrender.com'
-      // Se a mensagem vem da mesma origem do React app, window.location.origin está ok.
-      // Se vem de um IFRAME ou janela diferente, verifique o ORIGIN do remetente.
-      // Exemplo para produção, se o proxy estiver em um domínio diferente:
-      // if (event.origin !== 'https://appnebula-wp-3kdx.onrender.com') {
-      if (event.origin !== window.location.origin) { // Mantido para cenário de mesma origem ou localhost
+      if (event.origin !== window.location.origin) {
         console.warn('❌ TrialChoice: Mensagem recebida de origem desconhecida:', event.origin);
         return;
       }
@@ -44,20 +35,18 @@ const TrialChoice: React.FC<TrialChoiceProps> = ({ capturedText, onPriceSelect }
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, []); // Dependências vazias para rodar apenas uma vez no mount/unmount
+  }, []); 
 
-  // Este useEffect é para quando a prop capturedText muda *após* a montagem inicial.
-  // No seu caso de uso (buscado uma vez no App.tsx), ele pode ser redundante se o App
-  // já passa o valor correto na montagem inicial. Mas mantê-lo não prejudica.
+
   useEffect(() => {
     if (capturedText && capturedText.trim()) {
       console.log('🔄 TrialChoice: Atualizando texto exibido (via prop):', `"${capturedText}"`);
       setDisplayText(capturedText);
-    } else if (!displayText) { // Só atualiza para o padrão se displayText ainda não tiver sido definido por prop ou postMessage
+    } else if (!displayText) { 
       console.log('⚠️ TrialChoice: Texto vazio na prop, mantendo padrão');
       setDisplayText("explorar origens de vidas passadas");
     }
-  }, [capturedText, displayText]); // Adicionado displayText às dependências para evitar loop infinito se a condição acima for satisfeita
+  }, [capturedText, displayText]); 
 
   const handlePriceSelect = (price: string) => {
     setSelectedPrice(price);

@@ -13,15 +13,12 @@ const compression = require('compression');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// URLs de destino
 const MAIN_TARGET_URL = 'https://appnebula.co';
 const READING_SUBDOMAIN_TARGET = 'https://reading.nebulahoroscope.com';
 
-// Configurações para Modificação de Conteúdo
 const USD_TO_BRL_RATE = 5.00;
 const CONVERSION_PATTERN = /\$(\d+(\.\d{2})?)/g;
 
-// === DETECÇÃO MOBILE E ANDROID ESPECÍFICA ===
 function isMobileDevice(userAgent) {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent || '');
 }
@@ -30,13 +27,11 @@ function isAndroid(userAgent) {
     return /Android/i.test(userAgent || '');
 }
 
-// === SISTEMA DE CACHE ULTRA MINIMALISTA ===
 const staticCache = new Map();
 const apiCache = new Map();
 const htmlCache = new Map();
 const imageCache = new Map();
 
-// LIMITES ULTRA BAIXOS PARA VELOCIDADE MÁXIMA
 const CACHE_LIMITS = {
     STATIC: 30,
     API: 10,
@@ -44,7 +39,6 @@ const CACHE_LIMITS = {
     IMAGES: 20
 };
 
-// TTLs ULTRA OTIMIZADOS
 const CACHE_SETTINGS = {
     STATIC: 15 * 60 * 1000,
     API: 30 * 1000,
@@ -53,7 +47,6 @@ const CACHE_SETTINGS = {
     CRITICAL: 0
 };
 
-// Blacklist COMPLETA de source maps
 const SOURCE_MAP_BLACKLIST = new Set([
     '/_next/static/chunks/webpack-9ea6f8e4303b980f.js.map',
     '/_next/static/chunks/webpack-882ffb4e25098804.js.map',
@@ -79,7 +72,6 @@ const SOURCE_MAP_BLACKLIST = new Set([
     '/_next/static/chunks/2650.ddc083ba35803bee.js.map'
 ]);
 
-// Rotas críticas que NUNCA devem ser cacheadas
 const CRITICAL_ROUTES = new Set([
     '/api/captured-text',
     '/api/set-selected-choice',
@@ -89,18 +81,15 @@ const CRITICAL_ROUTES = new Set([
     '/reading/'
 ]);
 
-// === PERFORMANCE MONITORING ===
 let requestCount = 0;
 let startTime = Date.now();
 let errorCount = 0;
 let cacheHits = 0;
 
-// Variáveis para captura de texto - MANTIDAS 100% INTACTAS
 let capturedBoldText = 'descobrir seus poderes ocultos';
 let lastCaptureTime = Date.now();
 let isCapturing = false;
 
-// === FUNÇÃO DE LIMPEZA ULTRA RÁPIDA ===
 function cleanCache(cache, limit, name) {
     if (cache.size <= limit) return 0;
 
@@ -113,35 +102,28 @@ function cleanCache(cache, limit, name) {
     return toDelete.length;
 }
 
-// HTTPS Agent EXATAMENTE COMO CÓDIGO ANTIGO
 const agent = new https.Agent({
     rejectUnauthorized: false,
 });
 
-// === MIDDLEWARE EXATAMENTE COMO CÓDIGO ANTIGO QUE FUNCIONAVA ===
 
-// CORREÇÃO: Configurar fileUpload ANTES de outros middlewares - EXATAMENTE COMO CÓDIGO ANTIGO
 app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 },
     createParentPath: true,
     uriDecodeFileNames: true,
     preserveExtension: true
-    // SEM debug, SEM abortOnLimit - EXATAMENTE como código antigo
 }));
 
-// Compressão INTELIGENTE - ZERO para Android
 app.use((req, res, next) => {
     const userAgent = req.headers['user-agent'] || '';
     const isAndroidDevice = isAndroid(userAgent);
     const isMobile = isMobileDevice(userAgent);
 
-    // ANDROID = ZERO COMPRESSÃO (evita crash)
     if (isAndroidDevice) {
         console.log('🤖 ANDROID detectado - SEM compressão');
         return next();
     }
 
-    // iOS e Desktop = compressão leve
     compression({
         level: isMobile ? 3 : 6,
         threshold: 2048,
@@ -155,7 +137,6 @@ app.use((req, res, next) => {
     })(req, res, next);
 });
 
-// Bloqueio TOTAL de source maps
 app.use((req, res, next) => {
     if (SOURCE_MAP_BLACKLIST.has(req.url) || req.url.endsWith('.js.map') || req.url.endsWith('.css.map')) {
         console.log(`Source map bloqueado: ${req.url}`);
@@ -164,20 +145,16 @@ app.use((req, res, next) => {
     next();
 });
 
-// Middleware para servir arquivos estáticos - EXATAMENTE COMO CÓDIGO ANTIGO
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// CORREÇÃO: Configurar CORS antes de outros middlewares - EXATAMENTE COMO CÓDIGO ANTIGO
 app.use(cors());
 
-// Headers MINIMALISTAS
 app.use((req, res, next) => {
     requestCount++;
     const userAgent = req.headers['user-agent'] || '';
     const isAndroidDevice = isAndroid(userAgent);
     const isMobile = isMobileDevice(userAgent);
 
-    // Headers MÍNIMOS para assets estáticos
     if (req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
         const maxAge = isAndroidDevice ? 900 : (isMobile ? 1800 : 3600);
         res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
@@ -187,9 +164,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// CORREÇÃO: express.json e express.urlencoded - EXATAMENTE COMO CÓDIGO ANTIGO
 app.use((req, res, next) => {
-    // Só aplicar JSON parsing se não for upload de arquivo
     if (!req.files || Object.keys(req.files).length === 0) {
         express.json()(req, res, () => {
             express.urlencoded({ extended: true })(req, res, next);
@@ -199,7 +174,6 @@ app.use((req, res, next) => {
     }
 });
 
-// === ENDPOINTS COM PROTEÇÃO TOTAL DOS DADOS ===
 app.get('/api/captured-text', async (req, res) => {
     console.log('📡 API /api/captured-text chamada');
 
@@ -219,7 +193,6 @@ app.get('/api/captured-text', async (req, res) => {
         timestamp: Date.now()
     };
 
-    // NUNCA cachear dados críticos
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -238,7 +211,6 @@ app.post('/api/set-selected-choice', (req, res) => {
     }
 });
 
-// === FUNÇÕES DE EXTRAÇÃO - MANTIDAS 100% INTACTAS ===
 function extractTextFromHTML(html) {
     console.log('\n🔍 EXTRAINDO TEXTO DO HTML');
 
@@ -445,9 +417,7 @@ async function captureTextDirectly() {
     }
 }
 
-// === ROTAS ESPECÍFICAS - VOLTOU EXATAMENTE COMO ESTAVA ANTES ===
 
-// ROTA TRIALCHOICE - EXATAMENTE IGUAL AO DATE!!!
 app.get('/pt/witch-power/trialChoice', async (req, res) => {
     console.log('\n=== INTERCEPTANDO TRIALCHOICE ===');
     console.log('Timestamp:', new Date().toISOString());
@@ -479,7 +449,6 @@ app.get('/pt/witch-power/date', async (req, res) => {
     }
 });
 
-// ROTA EMAIL ÚNICA - REDIRECIONAMENTO LIMPO
 app.get('/pt/witch-power/email', async (req, res) => {
     console.log('\n=== INTERCEPTANDO EMAIL - REDIRECIONANDO PARA ONBOARDING ===');
     console.log('Timestamp:', new Date().toISOString());
@@ -495,7 +464,6 @@ app.get('/pt/witch-power/email', async (req, res) => {
     }
 });
 
-// Proxy direto para arquivos SVG da media.appnebula.co
 app.get('/quiz/:filename.svg', async (req, res) => {
     const svgUrl = `https://media.appnebula.co/quiz/${req.params.filename}.svg`;
     try {
@@ -508,7 +476,6 @@ app.get('/quiz/:filename.svg', async (req, res) => {
     }
 });
 
-// Proxy para imagens otimizadas do Next.js - CORRIGIDO PARA PALMISTRY
 app.get('/_next/image', async (req, res) => {
     try {
         const imageUrl = req.query.url;
@@ -516,13 +483,11 @@ app.get('/_next/image', async (req, res) => {
             return res.status(400).send('URL da imagem não fornecida');
         }
 
-        // Decodificar a URL
         const decodedUrl = decodeURIComponent(imageUrl);
         console.log('🖼️ Proxy Next.js Image:', decodedUrl);
         
         let targetUrl;
         
-        // CORRIGIDO: Verificar palmistry-media.appnebula.co PRIMEIRO
         if (decodedUrl.includes('palmistry-media.appnebula.co')) {
             targetUrl = decodedUrl;
             console.log('🖐️ Imagem da palma detectada:', targetUrl);
@@ -557,7 +522,6 @@ app.get('/_next/image', async (req, res) => {
     }
 });
 
-// Proxy para assets estáticos do Next.js
 app.get('/_next/static/*', async (req, res) => {
     try {
         const targetUrl = `https://appnebula.co${req.originalUrl}`;
@@ -570,7 +534,6 @@ app.get('/_next/static/*', async (req, res) => {
             }
         });
         
-        // Definir content-type baseado na extensão
         let contentType = response.headers['content-type'];
         if (!contentType) {
             if (req.originalUrl.endsWith('.png')) contentType = 'image/png';
@@ -604,7 +567,6 @@ app.get('/media-proxy/*', async (req, res) => {
     }
 });
 
-// Proxy para imagens da palma (palmistry-media.appnebula.co)
 app.get('/palmistry-proxy/*', async (req, res) => {
     const targetUrl = 'https://palmistry-media.appnebula.co' + req.originalUrl.replace('/palmistry-proxy', '');
     try {
@@ -618,11 +580,9 @@ app.get('/palmistry-proxy/*', async (req, res) => {
     }
 });
 
-// === PROXY DA API - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use('/api-proxy', async (req, res) => {
     const cacheKey = `api-${req.method}-${req.url}`;
 
-    // Cache apenas para GET requests não-críticos
     if (req.method === 'GET') {
         const cached = apiCache.get(cacheKey);
         if (cached && (Date.now() - cached.timestamp < CACHE_SETTINGS.API)) {
@@ -675,7 +635,6 @@ app.use('/api-proxy', async (req, res) => {
             res.setHeader('Set-Cookie', modifiedCookies);
         }
 
-        // Cache para GET requests com limite
         if (req.method === 'GET') {
             cleanCache(apiCache, CACHE_LIMITS.API, 'API');
             
@@ -701,7 +660,6 @@ app.use('/api-proxy', async (req, res) => {
     }
 });
 
-// === SCRIPT DE PERSISTÊNCIA DE UTMs - CORRIGIDO PARA PRESERVAR NO RELOAD DO TRIALCHOICE ===
 const UTM_PERSISTENCE_SCRIPT = `
 <script>
 (function() {
@@ -709,16 +667,13 @@ const UTM_PERSISTENCE_SCRIPT = `
     window.utmPersistenceLoaded = true;
     console.log('🎯 UTM ANTI-CORRUPTION Script carregado - VERSÃO DEFINITIVA + TRIALCHOICE RELOAD FIX');
     
-    // === CONFIGURAÇÃO PARA EVITAR CORRUPÇÃO ===
     let utmData = null;
     let lastUrl = '';
     let urlCheckInterval = null;
     let paramCheckInterval = null;
     
-    // VALORES LIMPOS ORIGINAIS - IMUTÁVEIS
     const originalUtmValues = {};
     
-    // FUNÇÃO ESPECIAL PARA SALVAR UTMs ANTES DO RELOAD DO TRIALCHOICE
     function saveUtmsBeforeTrialChoiceReload() {
         const currentParams = getCleanUrlParams();
         const hasUtms = Object.keys(currentParams).some(key => 
@@ -729,13 +684,11 @@ const UTM_PERSISTENCE_SCRIPT = `
             console.log('🚨 TRIALCHOICE: Salvando UTMs ANTES do reload:', currentParams);
             saveCleanUtmsToStorage(currentParams);
             
-            // SALVAR TAMBÉM EM sessionStorage como backup
             sessionStorage.setItem('utm_backup_trialchoice', JSON.stringify(currentParams));
             sessionStorage.setItem('utm_backup_timestamp', Date.now().toString());
         }
     }
     
-    // FUNÇÃO ESPECIAL PARA RESTAURAR UTMs APÓS RELOAD DO TRIALCHOICE
     function restoreUtmsAfterTrialChoiceReload() {
         const currentPath = window.location.pathname;
         
@@ -748,7 +701,6 @@ const UTM_PERSISTENCE_SCRIPT = `
             if (!hasUtmsInUrl) {
                 console.log('⚠️ TRIALCHOICE: UTMs não encontradas na URL - tentando restaurar...');
                 
-                // TENTAR RESTAURAR DO sessionStorage PRIMEIRO
                 const backupUtms = sessionStorage.getItem('utm_backup_trialchoice');
                 const backupTimestamp = sessionStorage.getItem('utm_backup_timestamp');
                 
@@ -756,7 +708,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                     const timestamp = parseInt(backupTimestamp);
                     const now = Date.now();
                     
-                    // Se o backup é recente (menos de 5 minutos)
                     if ((now - timestamp) < (5 * 60 * 1000)) {
                         try {
                             const utmsToRestore = JSON.parse(backupUtms);
@@ -771,7 +722,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                             const newUrl = window.location.pathname + '?' + newParams.toString();
                             window.history.replaceState({}, '', newUrl);
                             
-                            // Salvar no localStorage também
                             saveCleanUtmsToStorage(utmsToRestore);
                             utmData = utmsToRestore;
                             
@@ -783,7 +733,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                     }
                 }
                 
-                // FALLBACK: TENTAR RESTAURAR DO localStorage
                 const storedUtms = getCleanUtmsFromStorage();
                 if (storedUtms) {
                     console.log('🔄 TRIALCHOICE: Restaurando UTMs do localStorage:', storedUtms);
@@ -801,32 +750,26 @@ const UTM_PERSISTENCE_SCRIPT = `
         return false;
     }
     
-    // Função para LIMPAR e VALIDAR parâmetros de URL
     function getCleanUrlParams() {
         const params = {};
         const searchParams = new URLSearchParams(window.location.search);
         
         for (const [key, value] of searchParams.entries()) {
             if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid' || key === 'fbc' || key === 'fbp') {
-                // LIMPAR VALOR CORROMPIDO - remover caracteres estranhos concatenados
                 let cleanValue = decodeURIComponent(value);
                 
-                // CORREÇÃO ESPECÍFICA: Se utm_source começar com "FB" seguido de caracteres estranhos, cortar
                 if (key === 'utm_source' && cleanValue.startsWith('FB') && cleanValue.length > 2) {
-                    // Se não for exatamente "FB", cortar qualquer coisa após "FB"
                     if (cleanValue !== 'FB' && /^FB[a-zA-Z0-9]+$/.test(cleanValue)) {
                         console.log('🧹 LIMPANDO utm_source corrompido:', cleanValue, '→ FB');
                         cleanValue = 'FB';
                     }
                 }
                 
-                // CORREÇÃO PARA OUTROS UTMs: limitar tamanho razoável e remover caracteres suspeitos
                 if (cleanValue.length > 100) {
                     console.log('🧹 VALOR UTM MUITO LONGO - cortando:', key, cleanValue.substring(0, 50) + '...');
                     cleanValue = cleanValue.substring(0, 100);
                 }
                 
-                // Remover caracteres não-ASCII suspeitos
                 cleanValue = cleanValue.replace(/[^\x20-\x7E]/g, '');
                 
                 params[key] = cleanValue;
@@ -837,7 +780,6 @@ const UTM_PERSISTENCE_SCRIPT = `
         return params;
     }
     
-    // Função para salvar UTMs LIMPOS no localStorage
     function saveCleanUtmsToStorage(params) {
         try {
             const utmKeys = Object.keys(params).filter(key => 
@@ -849,7 +791,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                 utmKeys.forEach(key => {
                     utmObj[key] = params[key];
                     
-                    // SALVAR VALOR ORIGINAL LIMPO - IMUTÁVEL
                     if (!originalUtmValues[key]) {
                         originalUtmValues[key] = params[key];
                         console.log('🔒 VALOR ORIGINAL PROTEGIDO:', key, '=', originalUtmValues[key]);
@@ -869,7 +810,6 @@ const UTM_PERSISTENCE_SCRIPT = `
         return null;
     }
     
-    // Função para recuperar UTMs LIMPOS do localStorage
     function getCleanUtmsFromStorage() {
         try {
             const storedUtm = localStorage.getItem('utm_data_clean');
@@ -884,7 +824,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                 if ((now - stored) < dayInMs) {
                     const utmObj = JSON.parse(storedUtm);
                     
-                    // RESTAURAR VALORES ORIGINAIS PROTEGIDOS
                     if (storedOriginals) {
                         const originals = JSON.parse(storedOriginals);
                         Object.keys(originals).forEach(key => {
@@ -905,7 +844,6 @@ const UTM_PERSISTENCE_SCRIPT = `
         return null;
     }
     
-    // Função PROTEGIDA para adicionar UTMs LIMPOS na URL
     function forceCleanUtmsInUrl() {
         if (!utmData) return;
         
@@ -913,12 +851,10 @@ const UTM_PERSISTENCE_SCRIPT = `
         let needsUpdate = false;
         const newParams = new URLSearchParams(window.location.search);
         
-        // Verificar cada UTM e usar VALOR ORIGINAL PROTEGIDO
         Object.keys(utmData).forEach(key => {
             const originalValue = originalUtmValues[key] || utmData[key];
             const currentValue = currentParams[key];
             
-            // Se não existe ou está corrompido, restaurar valor original
             if (!currentValue || currentValue !== originalValue) {
                 console.log('🔧 RESTAURANDO UTM:', key, currentValue, '→', originalValue);
                 newParams.set(key, originalValue);
@@ -939,11 +875,9 @@ const UTM_PERSISTENCE_SCRIPT = `
         }
     }
     
-    // Função principal para gerenciar UTMs LIMPOS
     function manageCleanUtms() {
         const currentParams = getCleanUrlParams();
         
-        // PRIORIDADE 1: UTMs LIMPOS na URL atual
         const hasUtmInUrl = Object.keys(currentParams).some(key => 
             key.startsWith('utm_') || key === 'fbclid' || key === 'gclid'
         );
@@ -951,18 +885,14 @@ const UTM_PERSISTENCE_SCRIPT = `
         if (hasUtmInUrl) {
             utmData = saveCleanUtmsToStorage(currentParams);
         } else {
-            // PRIORIDADE 2: UTMs LIMPOS do localStorage
             utmData = getCleanUtmsFromStorage();
             
-            // FORÇA os UTMs LIMPOS de volta na URL
             if (utmData) {
                 forceCleanUtmsInUrl();
             }
         }
         
-        // Disponibilizar globalmente COM VALORES ORIGINAIS
         if (utmData) {
-            // Usar valores originais protegidos
             const cleanUtmData = {};
             Object.keys(utmData).forEach(key => {
                 cleanUtmData[key] = originalUtmValues[key] || utmData[key];
@@ -976,7 +906,6 @@ const UTM_PERSISTENCE_SCRIPT = `
         return utmData;
     }
     
-    // === INTERCEPTAÇÃO LIMPA DO FACEBOOK PIXEL ===
     function interceptFacebookPixelClean() {
         if (typeof window.fbq !== 'undefined' && utmData) {
             const originalFbq = window.fbq;
@@ -987,7 +916,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                 if (args[0] === 'track' || args[0] === 'trackCustom') {
                     if (!args[2]) args[2] = {};
                     
-                    // Injetar UTMs LIMPOS (valores originais) no evento
                     Object.keys(utmData).forEach(key => {
                         const cleanValue = originalUtmValues[key] || utmData[key];
                         args[2][key] = cleanValue;
@@ -1005,7 +933,6 @@ const UTM_PERSISTENCE_SCRIPT = `
         }
     }
     
-    // === MONITORAMENTO ULTRA LIMPO COM PROTEÇÃO ESPECIAL PARA TRIALCHOICE ===
     function startCleanMonitoring() {
         urlCheckInterval = setInterval(() => {
             const currentUrl = window.location.href;
@@ -1013,7 +940,6 @@ const UTM_PERSISTENCE_SCRIPT = `
                 lastUrl = currentUrl;
                 console.log('🔄 URL MUDOU - re-executando UTM LIMPO management:', currentUrl);
                 
-                // VERIFICAR SE É TRIALCHOICE E RESTAURAR UTMs SE NECESSÁRIO
                 const currentPath = window.location.pathname;
                 if (currentPath === '/pt/witch-power/trialChoice') {
                     const restored = restoreUtmsAfterTrialChoiceReload();
@@ -1030,13 +956,11 @@ const UTM_PERSISTENCE_SCRIPT = `
             }
         }, 500);
         
-        // Monitor anti-corrupção
         paramCheckInterval = setInterval(() => {
             if (utmData && window.location.search.length === 0) {
                 console.log('⚠️ UTMs SUMIRAM - RESTAURANDO originais limpos!');
                 forceCleanUtmsInUrl();
             } else if (utmData && window.location.search.length > 0) {
-                // Verificar se algum UTM foi corrompido
                 const currentParams = getCleanUrlParams();
                 let hasCorruption = false;
                 
@@ -1058,11 +982,9 @@ const UTM_PERSISTENCE_SCRIPT = `
         }, 1000);
     }
     
-    // === INTERCEPTAÇÃO DE NAVEGAÇÃO LIMPA COM PROTEÇÃO TRIALCHOICE ===
     function interceptNavigationClean() {
         const originalPushState = history.pushState;
         history.pushState = function() {
-            // SALVAR UTMs ANTES DE NAVEGAR PARA TRIALCHOICE
             const newPath = arguments[2];
             if (typeof newPath === 'string' && newPath.includes('/pt/witch-power/trialChoice')) {
                 saveUtmsBeforeTrialChoiceReload();
@@ -1091,7 +1013,6 @@ const UTM_PERSISTENCE_SCRIPT = `
             }, 50);
         });
         
-        // INTERCEPTAR BEFOREUNLOAD PARA SALVAR UTMs
         window.addEventListener('beforeunload', () => {
             const currentPath = window.location.pathname;
             if (currentPath === '/pt/witch-power/trialChoice') {
@@ -1100,10 +1021,8 @@ const UTM_PERSISTENCE_SCRIPT = `
         });
     }
     
-    // === EXECUÇÃO PRINCIPAL LIMPA COM PROTEÇÃO TRIALCHOICE ===
     console.log('🚀 Iniciando UTM ANTI-CORRUPTION + TRIALCHOICE RELOAD FIX...');
     
-    // VERIFICAR SE É TRIALCHOICE LOGO NO INÍCIO
     const initialPath = window.location.pathname;
     if (initialPath === '/pt/witch-power/trialChoice') {
         const restored = restoreUtmsAfterTrialChoiceReload();
@@ -1146,7 +1065,6 @@ const UTM_PERSISTENCE_SCRIPT = `
 </script>
 `;
 
-// === MIDDLEWARE PRINCIPAL - EXATAMENTE COMO CÓDIGO ANTIGO ===
 app.use(async (req, res) => {
     let targetDomain = MAIN_TARGET_URL;
     let requestPath = req.url;
@@ -1157,7 +1075,6 @@ app.use(async (req, res) => {
 
     console.log(`🌐 [${isAndroidDevice ? 'ANDROID' : (isMobile ? 'MOBILE' : 'DESKTOP')}] ${req.method} ${req.url}`);
 
-    // Verificar cache primeiro (apenas para assets estáticos)
     if (req.method === 'GET' && req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
         const cached = staticCache.get(req.url);
         if (cached && (Date.now() - cached.timestamp < CACHE_SETTINGS.STATIC)) {
@@ -1172,12 +1089,10 @@ app.use(async (req, res) => {
     delete requestHeaders['connection'];
     delete requestHeaders['x-forwarded-for'];
 
-    // CORREÇÃO: Não remover accept-encoding para uploads de arquivo - EXATAMENTE COMO CÓDIGO ANTIGO
     if (!req.files || Object.keys(req.files).length === 0) {
         delete requestHeaders['accept-encoding'];
     }
 
-    // Lógica para Proxeamento do Subdomínio de Leitura - EXATAMENTE COMO CÓDIGO ANTIGO
     if (req.url.startsWith('/reading/')) {
         targetDomain = READING_SUBDOMAIN_TARGET;
         requestPath = req.url.substring('/reading'.length);
@@ -1185,7 +1100,6 @@ app.use(async (req, res) => {
         console.log(`[READING PROXY] Requisição: ${req.url} -> Proxy para: ${targetDomain}${requestPath}`);
         console.log(`[READING PROXY] Método: ${req.method}`);
 
-        // LOG DETALHADO PARA UPLOAD DE ARQUIVOS - EXATAMENTE COMO CÓDIGO ANTIGO
         if (req.files && Object.keys(req.files).length > 0) {
             console.log(`[READING PROXY] Arquivos recebidos: ${JSON.stringify(Object.keys(req.files))}`);
             const photoFile = req.files.photo;
@@ -1204,12 +1118,10 @@ app.use(async (req, res) => {
     try {
         let requestData = req.body;
 
-        // CORREÇÃO: Lógica de upload EXATAMENTE COMO CÓDIGO ANTIGO QUE FUNCIONAVA
         if (req.files && Object.keys(req.files).length > 0) {
             const photoFile = req.files.photo;
             if (photoFile) {
                 console.log('[UPLOAD] Processando upload de arquivo:', photoFile.name);
-                // CORREÇÃO: Usar a forma EXATA que funcionava no código antigo
                 const formData = new FormData();
                 formData.append('photo', photoFile.data, {
                     filename: photoFile.name,
@@ -1223,14 +1135,13 @@ app.use(async (req, res) => {
             }
         }
 
-        // TIMEOUT FIXO COMO CÓDIGO ANTIGO
         const response = await axios({
             method: req.method,
             url: targetUrl,
             headers: requestHeaders,
             data: requestData,
             responseType: 'arraybuffer',
-            timeout: 30000, // FIXO como código antigo
+            timeout: 30000, 
             maxRedirects: 0,
             validateStatus: function (status) {
                 return status >= 200 && status < 400;
@@ -1238,7 +1149,6 @@ app.use(async (req, res) => {
             httpsAgent: agent,
         });
 
-        // Cache para assets estáticos com limite
         if (req.method === 'GET' && req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
             cleanCache(staticCache, CACHE_LIMITS.STATIC, 'Static');
             
@@ -1255,7 +1165,6 @@ app.use(async (req, res) => {
             });
         }
 
-        // --- MANUSEIO DA DESCOMPRESSÃO E HTML - EXATAMENTE COMO CÓDIGO ANTIGO ---
         let responseData = response.data;
         const contentEncoding = response.headers['content-encoding'];
         let htmlContent = null;
@@ -1279,7 +1188,6 @@ app.use(async (req, res) => {
             console.log(`SERVER: Conteúdo não é HTML. Tipo: ${contentType}`);
         }
 
-        // Redirecionamentos - EXATAMENTE COMO CÓDIGO ANTIGO
         if (response.status >= 300 && response.status < 400) {
             const redirectLocation = response.headers.location;
             if (redirectLocation) {
@@ -1317,7 +1225,6 @@ app.use(async (req, res) => {
             }
         }
 
-        // Headers de resposta - EXATAMENTE COMO CÓDIGO ANTIGO
         Object.keys(response.headers).forEach(header => {
             if (!['transfer-encoding', 'content-encoding', 'content-length', 'set-cookie', 'host', 'connection'].includes(header.toLowerCase())) {
                 res.setHeader(header, response.headers[header]);
@@ -1336,11 +1243,9 @@ app.use(async (req, res) => {
             res.setHeader('Set-Cookie', modifiedCookies);
         }
 
-        // === PROCESSAMENTO HTML ESPECÍFICO PARA SPA NEXT.JS ===
         if (htmlContent) {
             let html = htmlContent;
 
-            // Captura de texto para quiz - MANTIDA INTACTA
             if (html.includes('Ajudamos milhões de pessoas a') && !isCapturing && !capturedBoldText) {
                 console.log('SERVER: INTERCEPTANDO HTML NO MIDDLEWARE para pré-popular capturedBoldText!');
                 const extractedText = extractTextFromHTML(html);
@@ -1351,18 +1256,15 @@ app.use(async (req, res) => {
                 }
             }
 
-            // === ANDROID = PROCESSAMENTO COMPLETO COMO CÓDIGO ANTIGO QUE FUNCIONAVA ===
             if (isAndroidDevice) {
                 console.log('🤖 ANDROID: Processamento completo com funcionalidades essenciais - BASEADO NO CÓDIGO ANTIGO');
                 
-                // 1. Conversão de moeda - SEMPRE
                 html = html.replace(CONVERSION_PATTERN, (match, p1) => {
                     const usdValue = parseFloat(p1);
                     const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2);
                     return `R$${brlValue.replace('.', ',')}`;
                 });
 
-                // 2. Pixels COMPLETOS para Android
                 const pixelsCompletos = `
                     <!-- Meta Pixel Code -->
                     <script>
@@ -1414,7 +1316,6 @@ app.use(async (req, res) => {
                     <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
                 `;
 
-                // 3. SCRIPTS ESSENCIAIS PARA ANDROID - COM RELOAD DO TRIALCHOICE IGUAL AO DATE + SALVAR UTMs
                 const scriptsEssenciais = `
                     <script>
                     (function() {
@@ -1429,7 +1330,6 @@ app.use(async (req, res) => {
                         const currentProxyHost = '${currentProxyHost}';
                         const targetPagePath = '/pt/witch-power/wpGoal';
 
-                        // FUNÇÃO PARA SALVAR UTMs ANTES DO RELOAD
                         function saveUtmsBeforeReload() {
                             const currentParams = new URLSearchParams(window.location.search);
                             const utmParams = {};
@@ -1447,7 +1347,6 @@ app.use(async (req, res) => {
                             }
                         }
 
-                        // FUNÇÃO PARA RESTAURAR UTMs APÓS RELOAD
                         function restoreUtmsAfterReload() {
                             const path = window.location.pathname;
                             if (path === '/pt/witch-power/trialChoice') {
@@ -1485,7 +1384,6 @@ app.use(async (req, res) => {
                             }
                         }
 
-                        // Proxy Shim - EXATAMENTE COMO CÓDIGO ANTIGO
                         const originalFetch = window.fetch;
                         window.fetch = function(input, init) {
                             let url = input;
@@ -1550,7 +1448,6 @@ app.use(async (req, res) => {
                         };
 
 
-                        // REDIRECIONAMENTOS ANDROID - COM RELOAD DO TRIALCHOICE + SALVAR UTMs
                         function executeRedirects() {
                             const path = window.location.pathname;
                             
@@ -1578,7 +1475,6 @@ app.use(async (req, res) => {
                             return false;
                         }
 
-                        // EXECUÇÃO MÚLTIPLA PARA GARANTIR FUNCIONAMENTO
                         if (window.location.pathname === '/pt/witch-power/trialChoice') {
                             restoreUtmsAfterReload();
                         }
@@ -1588,7 +1484,6 @@ app.use(async (req, res) => {
                         setTimeout(executeRedirects, 100);
                         setTimeout(executeRedirects, 200);
 
-                        // Executar quando DOM carregar
                         document.addEventListener('DOMContentLoaded', function() {
                             if (window.location.pathname === '/pt/witch-power/trialChoice') {
                                 restoreUtmsAfterReload();
@@ -1597,7 +1492,6 @@ app.use(async (req, res) => {
                             
                         });
 
-                        // Monitorar mudanças de URL para SPA
                         let currentUrl = window.location.href;
                         setInterval(function() {
                             if (window.location.href !== currentUrl) {
@@ -1607,7 +1501,6 @@ app.use(async (req, res) => {
                             }
                         }, 100);
 
-                        // Interceptar pushState do Next.js
                         const originalPushState = history.pushState;
                         history.pushState = function() {
                             originalPushState.apply(this, arguments);
@@ -1628,7 +1521,6 @@ app.use(async (req, res) => {
                     </script>
                 `;
 
-                // 4. Noscript para pixels
                 const noscriptCodes = `
                     <noscript><img height="1" width="1" style="display:none"
                     src="https://www.facebook.com/tr?id=1162364828302806&ev=PageView&noscript=1"
@@ -1639,13 +1531,11 @@ app.use(async (req, res) => {
                     /></noscript>
                 `;
 
-                // Inserir tudo no HTML - INCLUINDO O SCRIPT ANTI-CORRUPÇÃO CORRIGIDO
                 html = html.replace('</head>', UTM_PERSISTENCE_SCRIPT + pixelsCompletos + scriptsEssenciais + '</head>');
                 html = html.replace('<body', noscriptCodes + '<body');
 
 
 
-                                // Injetar c🔱 no canto inferior direito
                 html = html.replace('</body>', `
                     <div style="position: fixed; bottom: 15px; right: 15px; font-size: 14px; color: rgba(255,255,255,0.8); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 999999; pointer-events: none; font-family: Arial, sans-serif;">c🔱</div>
                     </body>`);
@@ -1657,16 +1547,13 @@ app.use(async (req, res) => {
                 return res.status(response.status).send(html);
             }
 
-            // === iOS E DESKTOP = PROCESSAMENTO COMPLETO COMO CÓDIGO ANTIGO ===
             console.log('📱💻 iOS/Desktop: Processamento completo');
             
             const $ = cheerio.load(html);
 
-            // Script para iOS/Desktop - COM RELOAD DO TRIALCHOICE + UTMs PRESERVADAS
             $('head').append(`
                 <script>
                 (function() {
-                    // FUNÇÃO PARA SALVAR UTMs ANTES DO RELOAD
                     function saveUtmsBeforeReload() {
                         const currentParams = new URLSearchParams(window.location.search);
                         const utmParams = {};
@@ -1684,7 +1571,6 @@ app.use(async (req, res) => {
                         }
                     }
 
-                    // FUNÇÃO PARA RESTAURAR UTMs APÓS RELOAD
                     function restoreUtmsAfterReload() {
                         const path = window.location.pathname;
                         if (path === '/pt/witch-power/trialChoice') {
@@ -1749,15 +1635,12 @@ app.use(async (req, res) => {
                         return false;
                     }
 
-                    // VERIFICAR SE É TRIALCHOICE NO CARREGAMENTO
                     if (window.location.pathname === '/pt/witch-power/trialChoice') {
                         restoreUtmsAfterReload();
                     }
 
-                    // Executar imediatamente
                     executeRedirects();
 
-                    // Monitorar mudanças de URL
                     let currentUrl = window.location.href;
                     setInterval(function() {
                         if (window.location.href !== currentUrl) {
@@ -1766,7 +1649,6 @@ app.use(async (req, res) => {
                         }
                     }, 100);
 
-                    // Interceptar Next.js navigation
                     const originalPushState = history.pushState;
                     history.pushState = function() {
                         originalPushState.apply(this, arguments);
@@ -1784,7 +1666,6 @@ app.use(async (req, res) => {
                 </script>
             `);
 
-            // REMOVER NOSCRIPT CONFLITANTE DO NEXT.JS
             $('noscript').each((i, el) => {
                 const text = $(el).text();
                 if (text.includes('You need to enable JavaScript to run this app')) {
@@ -1793,7 +1674,6 @@ app.use(async (req, res) => {
                 }
             });
 
-            // Reescrever URLs - EXATAMENTE COMO CÓDIGO ANTIGO
             $('[href], [src], [action]').each((i, el) => {
                 const element = $(el);
                 let attrName = '';
@@ -1808,9 +1688,7 @@ app.use(async (req, res) => {
                 if (attrName) {
                     let originalUrl = element.attr(attrName);
                     if (originalUrl) {
-                        // URLs relativas já são tratadas pelo proxy
                         if (originalUrl.startsWith('/')) {
-                            // URLs relativas já são tratadas pelo proxy
                         } else if (originalUrl.startsWith(MAIN_TARGET_URL)) {
                             element.attr(attrName, originalUrl.replace(MAIN_TARGET_URL, ''));
                         } else if (originalUrl.startsWith(READING_SUBDOMAIN_TARGET)) {
@@ -1824,7 +1702,6 @@ app.use(async (req, res) => {
                 }
             });
 
-            // === PIXELS COMPLETOS - EXATAMENTE COMO CÓDIGO ANTIGO ===
             const pixelCodes = `
                 <!-- Meta Pixel Code -->
                 <script>
@@ -1876,11 +1753,9 @@ app.use(async (req, res) => {
                 <script src="https://curtinaz.github.io/keep-params/keep-params.js"></script>
             `;
 
-            // ADICIONAR SCRIPT ANTI-CORRUPÇÃO PRIMEIRO
             $('head').prepend(UTM_PERSISTENCE_SCRIPT);
             $('head').prepend(pixelCodes);
 
-            // === NOSCRIPT - EXATAMENTE COMO CÓDIGO ANTIGO ===
             const noscriptCodes = `
                 <noscript><img height="1" width="1" style="display:none"
                 src="https://www.facebook.com/tr?id=1162364828302806&ev=PageView&noscript=1"
@@ -1893,7 +1768,6 @@ app.use(async (req, res) => {
 
             $('body').prepend(noscriptCodes);
 
-            // === SCRIPTS CLIENT-SIDE - EXATAMENTE COMO CÓDIGO ANTIGO ===
             const clientScript =
                 '<script>' +
                 '(function() {' +
@@ -1905,7 +1779,6 @@ app.use(async (req, res) => {
                 'const currentProxyHost = \'' + currentProxyHost + '\';' +
                 'const targetPagePath = \'/pt/witch-power/wpGoal\';' +
 
-                // CORREÇÃO: Usar a mesma lógica do código antigo para interceptação
                 'const originalFetch = window.fetch;' +
                 'window.fetch = function(input, init) {' +
                 'let url = input;' +
@@ -1946,7 +1819,6 @@ app.use(async (req, res) => {
 
             console.log('SERVER: Script de cliente injetado no <head>.');
 
-            // Conversão de moeda - EXATAMENTE COMO CÓDIGO ANTIGO
             html = $.html().replace(CONVERSION_PATTERN, (match, p1) => {
                 const usdValue = parseFloat(p1);
                 const brlValue = (usdValue * USD_TO_BRL_RATE).toFixed(2);
@@ -1954,7 +1826,6 @@ app.use(async (req, res) => {
             });
 
 
-            // Injetar c🔱 no canto inferior direito
 html = html.replace('</body>', `
     <div style="position: fixed; bottom: 15px; right: 15px; font-size: 14px; color: rgba(255,255,255,0.8); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 999999; pointer-events: none; font-family: Arial, sans-serif;">c🔱</div>
     </body>`);
@@ -1979,11 +1850,9 @@ html = html.replace('</body>', `
     }
 });
 
-// === SISTEMA DE LIMPEZA ULTRA RÁPIDA ===
 setInterval(() => {
     const now = Date.now();
 
-    // Limpar cache por TTL
     let staticCleared = 0;
     for (const [key, value] of staticCache.entries()) {
         if (now - value.timestamp > CACHE_SETTINGS.STATIC) {
@@ -2016,7 +1885,6 @@ setInterval(() => {
         }
     }
 
-    // Limpeza forçada por limite
     const staticForced = cleanCache(staticCache, CACHE_LIMITS.STATIC, 'Static');
     const apiForced = cleanCache(apiCache, CACHE_LIMITS.API, 'API');
     const htmlForced = cleanCache(htmlCache, CACHE_LIMITS.HTML, 'HTML');
@@ -2027,13 +1895,11 @@ setInterval(() => {
         console.log(`🧹 Cache cleanup: Static=${staticCleared}+${staticForced}, API=${apiCleared}+${apiForced}, HTML=${htmlCleared}+${htmlForced}, Images=${imageCleared}+${imageForced}`);
     }
 
-    // Força garbage collection
     if (global.gc) {
         global.gc();
     }
 }, 5000);
 
-// === MONITORAMENTO MINIMALISTA ===
 setInterval(() => {
     const uptime = Math.floor((Date.now() - startTime) / 60000);
     const requestsPerMin = Math.floor(requestCount / Math.max(uptime, 1));
@@ -2043,7 +1909,6 @@ setInterval(() => {
     console.log(`📊 Performance: ${requestCount} requests, ${requestsPerMin}/min, ${cacheHitRatio}% cache hit, ${errorRate}% errors, uptime ${uptime}min`);
     console.log(`💾 Cache sizes: Static=${staticCache.size}/${CACHE_LIMITS.STATIC}, API=${apiCache.size}/${CACHE_LIMITS.API}, HTML=${htmlCache.size}/${CACHE_LIMITS.HTML}, Images=${imageCache.size}/${CACHE_LIMITS.IMAGES}`);
 
-    // Reset estatísticas a cada 30 minutos
     if (uptime % 30 === 0 && uptime > 0) {
         requestCount = 0;
         errorCount = 0;
@@ -2053,7 +1918,6 @@ setInterval(() => {
     }
 }, 60000);
 
-// === HEALTH CHECK ===
 app.get('/health', (req, res) => {
     const uptime = Math.floor((Date.now() - startTime) / 60000);
     const memUsage = process.memoryUsage();
@@ -2078,7 +1942,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// === INICIAR SERVIDOR ===
 app.listen(PORT, () => {
     console.log(`🚀 SERVIDOR PROXY DEFINITIVAMENTE CORRIGIDO na porta ${PORT}`);
     console.log(`✅ TRIALCHOICE: RELOAD MANTIDO + UTMs PRESERVADAS NO RELOAD!`);

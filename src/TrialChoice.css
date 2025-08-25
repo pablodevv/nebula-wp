@@ -185,7 +185,7 @@
   top: 100px;
   right: 15px;
   z-index: 10;
-  pointer-events: none; /* ← ESSENCIAL: seta visível mas não bloqueia clique */
+  pointer-events: none;
 }
 
 .arrow-svg {
@@ -228,7 +228,6 @@
   font-style: italic;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .content-wrapper {
     padding: 0 20px;

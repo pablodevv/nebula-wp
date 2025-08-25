@@ -7,7 +7,6 @@ interface TrialPaymentAncestralProps {
   onBack?: () => void;
 }
 
-// Declaração de tipos para o Facebook Pixel
 declare global {
   interface Window {
     fbq: any;
@@ -29,20 +28,14 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 }) => {
   const [timeLeft, setTimeLeft] = useState({ minutes: 9, seconds: 40 });
 
-  // SCROLL TO TOP - Força o scroll para o topo quando o componente é montado
   useEffect(() => {
-    // Múltiplas estratégias para garantir que funcione em diferentes browsers/contextos
     const scrollToTop = () => {
-      // Estratégia 1: window.scrollTo
       window.scrollTo(0, 0);
       
-      // Estratégia 2: document.documentElement
       document.documentElement.scrollTop = 0;
       
-      // Estratégia 3: document.body (fallback para browsers mais antigos)
       document.body.scrollTop = 0;
       
-      // Estratégia 4: Usando scrollIntoView no elemento root
       const rootElement = document.getElementById('root') || document.body;
       if (rootElement) {
         rootElement.scrollIntoView({ 
@@ -52,34 +45,26 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
       }
     };
 
-    // Executa imediatamente
     scrollToTop();
 
-    // Executa após um pequeno delay para garantir que o DOM foi totalmente renderizado
-    // Especialmente útil quando vem de links externos (Facebook, etc.)
     const timeoutId = setTimeout(scrollToTop, 100);
 
-    // Cleanup do timeout
     return () => clearTimeout(timeoutId);
-  }, []); // Array vazio para executar apenas na montagem do componente
+  }, []); 
 
-  // Função para obter informações da bruxa baseado no mês
   const getWitchProfile = (dateStr: string): WitchProfile => {
     let month: number;
     
-    // Determinar o mês da data
     if (dateStr.includes('/')) {
-      // Formato DD/MM/YYYY
       const parts = dateStr.split('/');
       month = parseInt(parts[1], 10);
     } else {
-      // Formato YYYY-MM-DD
       const parts = dateStr.split('-');
       month = parseInt(parts[1], 10);
     }
 
     switch (month) {
-      case 1: // Janeiro
+      case 1: 
         return {
           type: "Bruxa ancestral",
           profile: "Especializada em conectar-se e honrar seus ancestrais; habilidosa em tecer conhecimento e sabedoria ancestral em sua prática mágica.",
@@ -87,7 +72,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/ancestral.png"
         };
       
-      case 2: // Fevereiro
+      case 2: 
         return {
           type: "Bruxa do lar",
           profile: "Especialista em magia doméstica, proteção do lar e lareira, e no uso de objetos do dia a dia para fins mágicos; imprime magia nos aspectos comuns da vida.",
@@ -95,7 +80,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/lar.png"
         };
       
-      case 3: // Março
+      case 3: 
         return {
           type: "Bruxa dos cristais",
           profile: "Hábil no trabalho com cristais, pedras preciosas e minerais para adivinhação e trabalho energético; conhece as propriedades únicas de várias pedras e suas aplicações mágicas.",
@@ -103,7 +88,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/crystal.png"
         };
       
-      case 4: // Abril
+      case 4: 
         return {
           type: "Bruxa cósmica",
           profile: "Conhecedora de astrologia, alinhamentos planetários e energias celestiais; usa padrões cósmicos para guiar e fortalecer sua prática mágica.",
@@ -111,7 +96,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/cosmic.png"
         };
       
-      case 5: // Maio
+      case 5: 
         return {
           type: "Bruxa verde",
           profile: "Hábil em trabalhar com a natureza, ervas e plantas; excelente em cura, magia da fertilidade e conexão com os ciclos da Terra.",
@@ -119,7 +104,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/verde.png"
         };
       
-      case 6: // Junho
+      case 6: 
         return {
           type: "Bruxa eclética",
           profile: "Versátil em várias práticas e tradições mágicas; habilidosa em combinar elementos diferentes para criar um caminho mágico único e personalizado.",
@@ -127,7 +112,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/eclectic.png"
         };
       
-      case 7: // Julho
+      case 7: 
         return {
           type: "Bruxa cósmica",
           profile: "Conhecedora de astrologia, alinhamentos planetários e energias celestiais; usa padrões cósmicos para guiar e fortalecer sua prática mágica.",
@@ -135,7 +120,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/cosmic.png"
         };
       
-      case 8: // Agosto
+      case 8: 
         return {
           type: "Bruxa do lar",
           profile: "Especialista em magia doméstica, proteção do lar e lareira, e no uso de objetos do dia a dia para fins mágicos; imprime magia nos aspectos comuns da vida.",
@@ -143,7 +128,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/lar.png"
         };
       
-      case 9: // Setembro
+      case 9: 
         return {
           type: "Bruxa solitária",
           profile: "Independente e autodidata; confia na intuição e orientação interior para desenvolver uma prática mágica pessoal, sem estar preso a tradições específicas ou influências de grupos.",
@@ -151,7 +136,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/solitary.png"
         };
       
-      case 10: // Outubro
+      case 10: 
         return {
           type: "Bruxa verde",
           profile: "Hábil em trabalhar com a natureza, ervas e plantas; excelente em cura, magia da fertilidade e conexão com os ciclos da Terra.",
@@ -159,7 +144,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/verde.png"
         };
       
-      case 11: // Novembro
+      case 11: 
         return {
           type: "Bruxa solitária",
           profile: "Independente e autodidata; confia na intuição e orientação interior para desenvolver uma prática mágica pessoal, sem estar preso a tradições específicas ou influências de grupos.",
@@ -167,7 +152,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           image: "/images/solitary.png"
         };
       
-      case 12: // Dezembro
+      case 12: 
         return {
           type: "Bruxa eclética",
           profile: "Versátil em várias práticas e tradições mágicas; habilidosa em combinar elementos diferentes para criar um caminho mágico único e personalizado.",
@@ -176,7 +161,6 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
         };
       
       default:
-        // Fallback para bruxa ancestral
         return {
           type: "Bruxa ancestral",
           profile: "Especializada em conectar-se e honrar seus ancestrais; habilidosa em tecer conhecimento e sabedoria ancestral em sua prática mágica.",
@@ -186,14 +170,11 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
     }
   };
 
-  // Função para converter data para formato brasileiro
   const formatBrazilianDate = (dateStr: string) => {
-    // Se a data já está no formato brasileiro, retorna como está
     if (dateStr.includes('/')) {
       return dateStr;
     }
     
-    // Converte de YYYY-MM-DD para DD/MM/YYYY
     const parts = dateStr.split('-');
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -202,10 +183,8 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
     return dateStr;
   };
 
-  // Obter perfil da bruxa baseado na data de nascimento
   const witchProfile = getWitchProfile(selectedBirthDate);
 
-  // Determina o preço a ser exibido
   const displayPrice = selectedPrice?.value || '$13.67';
   const paymentLink = selectedPrice?.link || 'https://example.com/payment-13';
 
@@ -225,12 +204,9 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Função para disparar eventos de pixel
   const firePixelEvents = () => {
     try {
-      // Dispara evento InitiateCheckout para ambos os pixels do Facebook
       if (window.fbq) {
-        // Pixel 1: 1162364828302806
         window.fbq('trackSingle', '1162364828302806', 'InitiateCheckout', {
           value: displayPrice.replace('R$ ', '').replace('$', ''),
           currency: displayPrice.includes('R$') ? 'BRL' : 'USD',
@@ -238,7 +214,6 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           content_category: 'Spiritual Reading'
         });
 
-        // Pixel 2: 1770667103479094
         window.fbq('trackSingle', '1770667103479094', 'InitiateCheckout', {
           value: displayPrice.replace('R$ ', '').replace('$', ''),
           currency: displayPrice.includes('R$') ? 'BRL' : 'USD',
@@ -251,7 +226,6 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
         console.warn('⚠️ Facebook Pixel não encontrado');
       }
 
-      // Dispara evento para o pixel Utmify se disponível
       if (window.utmify) {
         window.utmify.track('InitiateCheckout', {
           value: displayPrice.replace('R$ ', '').replace('$', ''),
@@ -267,21 +241,16 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
   };
 
   const handlePayment = () => {
-    // Dispara os eventos de pixel antes do redirecionamento
     firePixelEvents();
 
-    // Pequeno delay para garantir que os eventos sejam enviados antes do redirecionamento
     setTimeout(() => {
-      // Redireciona para o link externo específico do preço selecionado
       window.location.href = paymentLink;
     }, 100);
   };
 
-  // Função para voltar que também força scroll to top
   const handleBack = () => {
     if (onBack) {
       onBack();
-      // Força scroll to top após voltar
       setTimeout(() => {
         window.scrollTo(0, 0);
         document.documentElement.scrollTop = 0;
@@ -292,7 +261,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* CSS personalizado para animação pulsante */}
+      {}
       <style jsx>{`
         @keyframes pulse {
           0%, 100% {
@@ -308,7 +277,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
         }
       `}</style>
 
-      {/* Timer Section */}
+      {}
       <div className="flex justify-between items-center px-4 py-3 bg-white">
         <div>
           <p className="text-gray-700 text-sm">O desconto expira em</p>
@@ -330,9 +299,9 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
         </button>
       </div>
 
-      {/* Main Content */}
+      {}
       <div className="px-4 py-6 space-y-6">
-        {/* Nebula Header */}
+        {}
         <div className="flex justify-between items-center">
           <div className="text-2xl font-light tracking-widest text-black">
             NEBULA
@@ -343,12 +312,12 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           </div>
         </div>
 
-        {/* Main Title */}
+        {}
         <h1 className="text-3xl font-bold text-black leading-tight">
           Conheça sua bruxa interior com o Nebula
         </h1>
 
-        {/* Features */}
+        {}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-3">
             <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
@@ -370,14 +339,14 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           </div>
         </div>
 
-        {/* Ready Section */}
+        {}
         <div className="text-center py-6">
           <h2 className="text-2xl font-bold text-black leading-tight">
             Suas Leituras de Quiromancia e Poder de Bruxa estão prontas!
           </h2>
         </div>
 
-        {/* Pricing Section */}
+        {}
         <div className="bg-white rounded-2xl border-2 border-purple-600 overflow-hidden">
           <div className="bg-purple-600 text-white text-center py-3">
             <span className="font-medium">Oferta especial</span>
@@ -394,13 +363,13 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           </div>
         </div>
 
-        {/* Security */}
+        {}
         <div className="flex items-center justify-center gap-2 py-4">
           <Shield className="w-5 h-5 text-green-600" />
           <span className="text-gray-700 text-sm">Pagamentos com segurança garantida</span>
         </div>
 
-        {/* CTA Button */}
+        {}
         <button 
           className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-4 rounded-xl font-bold text-lg pulse-button"
           onClick={handlePayment}
@@ -408,13 +377,13 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
           OBTER MINHA LEITURA
         </button>
 
-        {/* Personalization Section */}
+        {}
         <div className="pt-8">
           <h2 className="text-2xl font-bold text-black mb-6">
             Personalizamos sua Leitura do Poder de Bruxa
           </h2>
           
-          {/* Witch Image */}
+          {}
           <div className="bg-gradient-to-b from-purple-100 to-purple-50 rounded-2xl p-6 mb-6">
             <div className="flex justify-center mb-6">
               <img 
@@ -468,7 +437,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             </div>
           </div>
 
-          {/* Palmistry Section */}
+          {}
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-black leading-tight">
               O que suas mãos e dedos podem revelar sobre você
@@ -479,7 +448,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               linha representando um capítulo da sua vida
             </p>
 
-            {/* Palm Lines */}
+            {}
             <div className="space-y-4">
               <div className="bg-purple-50 rounded-xl p-4 flex items-start gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg overflow-hidden flex-shrink-0">
@@ -587,14 +556,14 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             </div>
           </div>
 
-          {/* Testimonials Section */}
+          {}
           <div className="pt-8">
             <h2 className="text-2xl font-bold text-black mb-6 text-center">
               Aqui estão algumas histórias de usuários do Nebula
             </h2>
 
             <div className="space-y-4">
-              {/* Testimonial 1 */}
+              {}
               <div className="bg-purple-50 rounded-xl p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center text-white font-bold">
@@ -629,7 +598,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 </div>
               </div>
 
-              {/* Testimonial 2 */}
+              {}
               <div className="bg-purple-50 rounded-xl p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center text-white font-bold">
@@ -662,7 +631,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 </div>
               </div>
 
-              {/* Testimonial 3 */}
+              {}
               <div className="bg-purple-50 rounded-xl p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center text-white font-bold">
@@ -696,14 +665,14 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
             </div>
           </div>
 
-          {/* Media Logos Section */}
+          {}
           <div className="pt-8">
             <h2 className="text-2xl font-bold text-black mb-6 text-center">
               Destaque no
             </h2>
             
             <div className="grid grid-cols-2 gap-6 mb-8">
-              {/* Row 1 */}
+              {}
               <div className="flex justify-center">
                 <div className="text-blue-600 font-bold text-xl">
                   Globo.com
@@ -715,7 +684,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 </div>
               </div>
               
-              {/* Row 2 */}
+              {}
               <div className="flex justify-center">
                 <div className="text-black font-bold text-lg">
                   Folha de S.Paulo
@@ -727,7 +696,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 </div>
               </div>
               
-              {/* Row 3 */}
+              {}
               <div className="flex justify-center">
                 <div className="text-orange-600 font-bold text-xl">
                   R7
@@ -739,7 +708,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 </div>
               </div>
               
-              {/* Row 4 */}
+              {}
               <div className="flex justify-center">
                 <div className="text-blue-800 font-bold text-lg">
                   Terra
@@ -751,7 +720,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
                 </div>
               </div>
               
-              {/* Row 5 */}
+              {}
               <div className="flex justify-center col-span-2">
                 <div className="text-blue-600 font-bold text-lg">
                   O Estado de S. Paulo
@@ -759,7 +728,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
               </div>
             </div>
 
-            {/* Money Back Guarantee */}
+            {}
             <div className="bg-purple-50 rounded-2xl p-6 mb-8">
               <div className="flex justify-center mb-4">
                 <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
@@ -787,7 +756,7 @@ const TrialPaymentAncestral: React.FC<TrialPaymentAncestralProps> = ({
         </div>
       </div>
 
-      {/* Footer */}
+      {}
       <div className="text-center py-6 text-gray-500 text-sm">
         {onBack && (
           <button 

@@ -7,21 +7,16 @@ function Date() {
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
 
-    // Remove tudo que não é número, exceto se for uma barra que está sendo excluída
-    // Isso é crucial para permitir que o usuário apague as barras ou números.
     const lastChar = value.slice(-1);
     const prevValue = birthDate;
 
-    // Lógica para lidar com a exclusão de caracteres
     if (value.length < prevValue.length) {
-      // O usuário está apagando
-      setBirthDate(value); // Permite que o valor bruto seja setado para a exclusão funcionar
-      return; // Sai da função para evitar reformatar imediatamente e atrapalhar a exclusão
+      setBirthDate(value); 
+      return; 
     }
 
-    value = value.replace(/\D/g, ''); // Remove tudo que não é número para formatação
+    value = value.replace(/\D/g, ''); 
 
-    // Adiciona as barras automaticamente
     if (value.length > 2) {
       value = value.substring(0, 2) + '/' + value.substring(2);
     }
@@ -29,7 +24,6 @@ function Date() {
       value = value.substring(0, 5) + '/' + value.substring(5, 9);
     }
 
-    // Garante que o comprimento máximo seja 10 (DD/MM/AAAA)
     if (value.length <= 10) {
       setBirthDate(value);
     }
@@ -39,11 +33,9 @@ function Date() {
     if (birthDate.length === 10) {
       console.log('📅 Date.tsx: Redirecionando para scanPreview com data:', birthDate);
 
-      // Salva a data no localStorage para usar em outras páginas
       localStorage.setItem('selectedBirthDate', birthDate);
       console.log('💾 Date.tsx: Data salva no localStorage:', birthDate);
 
-      // Redireciona para scanPreview mantendo no proxy (URL absoluta)
       window.location.href = `${window.location.origin}/pt/witch-power/scanPreview`;
     } else {
       alert('Por favor, digite uma data válida no formato DD/MM/AAAA');
@@ -54,34 +46,34 @@ function Date() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col max-w-sm mx-auto relative overflow-hidden">
-      {/* Header */}
+      {}
       <div className="flex justify-between items-center px-6 py-4">
         <div></div>
         <div className="text-2xl font-bold text-black">N</div>
         <Menu className="w-6 h-6 text-black" />
       </div>
 
-      {/* Navigation */}
+      {}
       <div className="flex items-center justify-between px-6 py-2">
         <ChevronLeft className="w-6 h-6 text-purple-500" />
         <span className="text-gray-500 text-base">Abrace seu potencial</span>
         <span className="text-purple-500 text-base font-medium">33/33</span>
       </div>
 
-      {/* Progress Bar */}
+      {}
       <div className="px-6 mb-8">
         <div className="w-full bg-gray-200 rounded-full h-1">
           <div className="bg-purple-500 h-1 rounded-full w-full"></div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {}
       <div className="flex-1 px-6">
         <h1 className="text-2xl font-bold text-black mb-8 leading-tight">
           Qual é a sua data de nascimento?
         </h1>
 
-        {/* Date Input */}
+        {}
         <div className="mt-16 mb-8">
           <div className="bg-gray-50 rounded-2xl p-6 mx-4">
             <input
@@ -94,14 +86,14 @@ function Date() {
             />
           </div>
 
-          {/* Formato de exemplo */}
+          {}
           <div className="text-center mt-4 text-gray-500 text-sm">
             Formato: DD/MM/AAAA (ex: 15/03/1990)
           </div>
         </div>
       </div>
 
-      {/* Continue Button */}
+      {}
       <div className="p-6" style={{ marginBottom: '100px' }}>
         <button
           onClick={handleContinue}
@@ -114,7 +106,7 @@ function Date() {
       </div>
 
 
-       {/* Watermark */}
+       {}
       <div style={{
         position: 'fixed',
         bottom: '15px',
